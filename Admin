@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeP Operations Command</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  
+  <link rel="icon" type="image/png" id="favicon" href="data:image/png;base64,YOUR_BASE64_LOGO_HERE">
+
+  <script>
+    // ==========================================
+    // PLACE YOUR DEPLOYED WEB APP URL HERE:
+    const API_URL = "https://script.google.com/macros/s/AKfycbyAGXJQFQZ0VSEeCYSuHinwiMdSm35f7_letZ7p8AGvrn6LaQuCThdEUPEBewo2QIvL/exec";
+    // ==========================================
+
+    async function apiCall(actionName, payloadData) {
+      try {
+        let response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: actionName, data: payloadData })
+        });
+        return await response.json();
+      } catch (error) {
+        return { error: "Server connection failed. Please check internet or API URL." };
+      }
+    }
+  </script>
+
+  <style>
+    :root { --primary: #0f172a; --secondary: #1e293b; --accent: #2563eb; --success: #059669; --danger: #dc2626; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --border: #e2e8f0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); overflow: hidden; font-size: 15px;}
+    
+    .layout-wrapper { display: flex; height: 100vh; width: 100vw; }
+    .sidebar { width: 270px; background: var(--primary); color: #cbd5e1; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 10;}
+    .main-content { flex: 1; overflow-y: auto; background: var(--bg); padding: 35px; position: relative;}
+    
+    .brand { padding: 30px 20px; font-size: 22px; font-weight: 800; color: white; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; margin-bottom: 15px;}
+    .brand-logo { width: 36px; height: 36px; background: #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #0f172a; font-weight: bold;}
+    
+    .nav-item { padding: 16px 20px; cursor: pointer; transition: 0.2s; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; border-left: 4px solid transparent;}
+    .nav-item:hover { background: var(--secondary); color: white;}
+    .nav-item.active { background: var(--secondary); color: white; border-left-color: var(--accent); }
+    .role-badge { margin: auto 20px 20px 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600;}
+
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;}
+    .page-header h1 { margin: 0; font-size: 26px; color: var(--primary); font-weight: 800;}
+    .refresh-btn { background: white; color: var(--text); border: 1px solid var(--border); font-size: 15px; cursor: pointer; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 8px;}
+    .refresh-btn:hover { background: #f1f5f9; transform: translateY(-1px);}
+
+    .box { background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid var(--border); }
+    input, select, textarea, button { padding: 12px 16px; margin: 6px 0 16px 0; border-radius: 8px; border: 1px solid var(--border); outline:none; font-size: 15px; width: 100%; box-sizing: border-box; font-family:inherit; transition: 0.2s;}
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: 600; }
+    button:hover { background: #1d4ed8; }
+    .btn-green { background: var(--success); } .btn-green:hover{ background: #047857; }
+    .btn-export { background: #0f766e; width: auto; padding: 10px 18px; font-size: 14px; margin:0;}
+    .btn-export-sm { background: #0f766e; color: white; border: none; padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 600;}
+    .btn-export-sm:hover { background: #115e59; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
+    th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: 0.5px;}
+    
+    .flex-row { display: flex; gap: 18px; margin-bottom: 10px; align-items:flex-start; flex-wrap: wrap;}
+    .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 25px;}
+    .chart-box { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.02);}
+    .chart-container { position: relative; height: 280px; width: 100%; margin-top: 15px;}
+    .large-chart-container { position: relative; height: 400px; width: 100%; margin-top: 15px;}
+
+    #toast-container { position: fixed; top: 25px; right: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;}
+    .toast { background: var(--primary); color: white; padding: 14px 24px; border-radius: 8px; font-size: 15px; font-weight:500; box-shadow: 0 10px 20px rgba(0,0,0,0.2); border-left: 5px solid var(--accent); animation: slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards;}
+    .toast.error { border-left-color: var(--danger); }
+    @keyframes slideIn { from{ transform: translateX(100%); } to { transform: translateX(0); } }
+    @keyframes fadeOut { to { opacity: 0; } }
+  </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- Login Screen -->
+<div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0;">
+  <div class="box" style="max-width: 420px; width:100%; text-align:center; padding: 50px 40px;">
+    <div style="width: 64px; height: 64px; background: var(--primary); border-radius: 14px; margin: 0 auto 25px auto; display:flex; align-items:center; justify-content:center; color:white; font-weight:900; font-size:28px;">W</div>
+    <h2 style="color: var(--primary); margin-top:0; font-size: 26px;">WeP Solutions</h2>
+    <p style="color: #64748b; font-size: 15px; margin-bottom: 35px; line-height:1.5;">Evaluation & Training Command Center</p>
+    <input type="password" id="pin" placeholder="Enter Secure Passcode" style="text-align:center; letter-spacing: 2px; font-size:16px;">
+    <button id="authBtn" onclick="login()" style="padding: 14px; font-size: 16px; margin-top:10px;">Authenticate Access</button>
+  </div>
+</div>
+
+<!-- Main App Layout -->
+<div id="dashboard" class="layout-wrapper" style="display:none;">
+  
+  <div class="sidebar">
+    <div class="brand">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="WeP" class="brand-logo" id="sidebar-logo">
+      WeP Admin
+    </div>
+    
+    <div class="nav-item active admin-only" onclick="switchTab('analytics', this)">📈 Dashboard Hub</div>
+    <div class="nav-item admin-only" onclick="switchTab('controls', this)">⚙️ Quiz Config & Security</div>
+    <div class="nav-item admin-only" onclick="switchTab('current', this)">📊 Live Batch Status</div>
+    <div class="nav-item admin-only" onclick="switchTab('attendance', this)">🗓️ Attendance Matrix</div>
+    <div class="nav-item admin-only" onclick="switchTab('userlogs', this)">🔍 Telemetry Audit</div>
+    <div class="nav-item admin-only" onclick="switchTab('bulkexport', this)">📥 Bulk Extraction</div>
+    <div class="nav-item admin-only" onclick="switchTab('summary', this)">📋 Master Summary</div>
+    <div class="nav-item" onclick="switchTab('qbank', this)">📚 Central Question Bank</div>
+    
+    <div style="flex:1;"></div>
+    <div class="role-badge" id="role-display">Role: Verifying...</div>
+  </div>
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1 id="page-title">Dashboard Hub</h1>
+      <button class="refresh-btn" id="refBtn" onclick="forceRefresh()">🔄 Sync Data</button>
+    </div>
+
+    <!-- ALL TABS HTML EXACTLY SAME AS BEFORE -->
+    <div id="view-analytics" class="tab-content">
+      <div class="chart-box" style="margin-bottom: 25px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h3 style="margin:0 0 5px 0; color:var(--primary);">User-Wise Execution Analytics</h3>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <select id="user-chart-month" onchange="renderCharts()" style="margin:0; padding:6px; width:auto;"><option value="All">All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select>
+            <select id="user-chart-week" onchange="renderCharts()" style="margin:0; padding:6px; width:auto;"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select>
+            <button onclick="exportChart('chartUserWise', 'User_Wise_Analytics')" class="btn-export-sm">💾 Export PNG</button>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:5px;">Performance mapping isolated per resource. Displays averages if multiple attempts exist within the filter.</p>
+        <div class="large-chart-container"><canvas id="chartUserWise"></canvas></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Average Score Trend</h3><button onclick="exportChart('chartAverage', 'Average_Score')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartAverage"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Pass vs Fail Ratio</h3><button onclick="exportChart('chartPassFail', 'Pass_Fail')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartPassFail"></canvas></div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Top 5 Elite Performers</h3><button onclick="exportChart('chartTop5', 'Top_5')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartTop5"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Needs Improvement</h3><button onclick="exportChart('chartBottom5', 'Bottom_5')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartBottom5"></canvas></div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Assessment Volume</h3><button onclick="exportChart('chartParticipation', 'Volume')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartParticipation"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Score Distribution</h3><button onclick="exportChart('chartDistribution', 'Distribution')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartDistribution"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Rest of the HTML layout remains same -->
+    <!-- TAB 1: MASTER CONTROLS -->
+    <div id="view-controls" class="tab-content" style="display:none;">
+      <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 1: Evaluation Module Activation</h3><div class="flex-row"><div style="flex:1;"><label>Target Month</label><select id="ctrl-month"><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Target Week</label><select id="ctrl-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><button onclick="setLiveStatus()" style="width:auto; padding:12px 24px;">Deploy Active Module</button><p style="font-size:14px; color:#64748b; margin-top:15px; background: #f8fafc; padding:10px; border-radius:8px;">Currently Active Infrastructure: <b id="disp-live-status" style="color:var(--primary);"></b></p></div>
+      <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 2: Security & Accessibility</h3><div class="flex-row" style="gap:25px;"><div style="flex:1;"><label>Portal Access</label><select id="ctrl-status"><option value="LIVE">🟢 LIVE (Open)</option><option value="PAUSED">🛑 PAUSED (Closed)</option></select><button onclick="updateState()" class="btn-green">Apply Access</button></div><div style="flex:1;"><label>Timer (Mins)</label><input type="number" id="ctrl-timer" placeholder="10"><button onclick="updateTimer()" style="background:#475569;">Apply Timer</button></div><div style="flex:1;"><label style="color:var(--danger);">Strict Anti-Cheat</label><select id="ctrl-strict"><option value="ON">🛡️ ENABLED</option><option value="OFF">⚪ DISABLED</option></select><button onclick="updateStrict()" style="background:var(--danger);">Apply Security</button></div></div></div>
+      <div class="box" style="background: #eff6ff; border-color:#bfdbfe;"><h3 style="color:#1d4ed8; margin-top:0;">Step 3: Result Publication</h3><p style="font-size: 14px; color:#475569; margin-top:0; margin-bottom:15px;">End users see "Evaluating" until you declassify the results.</p><button onclick="publishResults()" style="width:auto; padding:12px 24px; background:#1d4ed8; font-size:15px;">✅ Publish Results to Trainees</button></div>
+      <div class="box" style="background: #fff1f2; border-color:#fecdd3;"><h3 style="color:#be123c; margin-top:0;">Step 4: Trainer/Uploader Security</h3><div class="flex-row" style="align-items: flex-end;"><div style="flex:1;"><label style="color:#be123c;">New Trainer Passcode</label><input type="text" id="ctrl-uploader-pass" placeholder="e.g. 9999" style="margin:0; border-color:#fda4af;"></div><button onclick="changeTrainerPass()" style="width:auto; margin:0; background:#be123c;">Update Trainer Passcode</button></div></div>
+    </div>
+
+    <!-- TAB 2: CURRENT WEEK DATA -->
+    <div id="view-current" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Active Batch Execution Roster</h3><button class="btn-export" onclick="downloadCSV('current-week-table', 'Active_Week.csv')">Export CSV</button></div><div style="overflow-x: auto;"><table id="current-week-table"></table></div></div></div>
+
+    <!-- TAB 3: ATTENDANCE -->
+    <div id="view-attendance" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Attendance Matrix</h3><button class="btn-export" onclick="downloadCSV('attendance-table', 'Attendance.csv')">Export CSV</button></div><label style="font-weight:600;">Filter by Cycle:</label><select id="att-month-filter" onchange="renderAttendancePivot()" style="width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto; margin-top:10px;"><table id="attendance-table"></table></div></div></div>
+
+    <!-- TAB 4: DETAILED ANSWER LOGS -->
+    <div id="view-userlogs" class="tab-content" style="display:none;"><div class="box"><h3 style="margin-top:0; color:var(--primary); font-size:20px;">Micro-Telemetry Audit Engine</h3><div class="flex-row"><div style="flex:1;"><label>Select User</label><select id="log-user-select" onchange="populateLogModules()"><option>Loading...</option></select></div><div style="flex:1;"><label>Select Assessment</label><select id="log-module-select" onchange="renderDetailedLogs()"><option>Select User First</option></select></div></div><div style="overflow-x: auto;"><table id="detailed-log-table"><tr><th>Q. ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr></table></div></div></div>
+
+    <!-- TAB 5: BULK DATA EXPORT -->
+    <div id="view-bulkexport" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Bulk Data Extraction</h3><button class="btn-export" onclick="downloadCSV('bulk-export-table', 'Bulk_Dump.csv')">Download Dataset</button></div><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="export-month"><option value="All">All Months</option><option>July</option><option>August</option><option>September</option><option>October</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="export-week"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div><div style="flex:0.5; padding-top:20px;"><button class="btn-green" onclick="renderBulkExport()" style="margin:0;">Load Data</button></div></div><div style="overflow-x: auto; max-height: 400px; border:1px solid var(--border); border-radius:6px;"><table id="bulk-export-table"></table></div></div></div>
+
+    <!-- TAB 6: SUMMARY -->
+    <div id="view-summary" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Operations Summary</h3><button class="btn-export" onclick="downloadCSV('summary-table', 'Summary.csv')">Export CSV</button></div><label>Filter Month:</label><select id="sum-month-filter" onchange="renderSummaryPivot()" style="width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option></select><div style="overflow-x: auto;"><table id="summary-table"></table></div></div></div>
+
+    <!-- TAB 7: QUESTION BANK -->
+    <div id="view-qbank" class="tab-content" style="display:none;">
+      <div class="box"><h3 style="margin-top:0;">Question Repository</h3><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="qb-month" onchange="renderQuestionBank()"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="qb-week" onchange="renderQuestionBank()"><option>All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><div style="overflow-x: auto; margin-bottom: 20px; max-height:300px;"><table id="qb-table"></table></div></div>
+      <div class="box" style="background:#f8fafc;"><h3 style="margin-top:0; color:var(--primary);">➕ Upload New Question</h3><div class="flex-row"><div style="flex:1;"><label>Target Month</label><select id="nq-month"><option>August</option><option selected>September</option><option>October</option></select></div><div style="flex:1;"><label>Target Week</label><select id="nq-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><label>Question Statement</label><textarea id="nq-q" rows="2" style="resize:vertical;"></textarea><div class="flex-row"><div style="flex:1;"><label>Option A</label><input type="text" id="nq-a"></div><div style="flex:1;"><label>Option B</label><input type="text" id="nq-b"></div></div><div class="flex-row"><div style="flex:1;"><label>Option C</label><input type="text" id="nq-c"></div><div style="flex:1;"><label>Option D</label><input type="text" id="nq-d"></div></div><label>Correct Answer (A/B/C/D)</label><select id="nq-ans" style="font-weight:bold; color:var(--success);"><option>A</option><option>B</option><option>C</option><option>D</option></select><button onclick="addQ()" style="padding: 12px; margin-top:10px;">Upload to Repository</button></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let adminData = null, autoRefreshTimer;
+  let chart1 = null, chart2 = null, chart3 = null, chart4 = null, chart5 = null, chart6 = null, chartUserWise = null;
+  const monthOrder = { "January":1, "February":2, "March":3, "April":4, "May":5, "June":6, "July":7, "August":8, "September":9, "October":10, "November":11, "December":12 };
+
+  Chart.register(ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
+
+  function showToast(message, type = "success") {
+    let container = document.getElementById("toast-container");
+    let toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '⚠️'}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 3000);
+  }
+
+  function switchTab(tabId, elem) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.getElementById('view-' + tabId).style.display = 'block';
+    if(elem) {
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      elem.classList.add('active');
+      document.getElementById('page-title').innerText = elem.innerText.replace(/[^\x00-\x7F]/g, "").trim(); 
+    }
+  }
+
+  // --- API CALL HANDLER ---
+  async function login() {
+    let pin = document.getElementById('pin').value;
+    document.getElementById('authBtn').innerText = "Verifying...";
+    
+    let res = await apiCall("getAdminDashboard", { pin: pin });
+    if(res.error) { showToast(res.error, "error"); document.getElementById('authBtn').innerText = "Authenticate Access"; return; }
+    
+    adminData = res;
+    document.getElementById('login-screen').style.display = "none";
+    document.getElementById('dashboard').style.display = "flex";
+    
+    document.getElementById('role-display').innerText = "Logged in as: " + res.role.replace("_", " ");
+    if(res.role === "UPLOADER") {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        switchTab('qbank', document.querySelector('.nav-item:not(.admin-only)'));
+    } else {
+        switchTab('analytics', document.querySelector('.nav-item.admin-only'));
+    }
+
+    showToast("Access Granted");
+    initDashboard();
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(silentRefresh, 15000); 
+  }
+
+  async function forceRefresh() {
+    document.getElementById('refBtn').style.opacity = '0.5';
+    let res = await apiCall("getAdminDashboard", { pin: document.getElementById('pin').value });
+    adminData = res;
+    initDashboard();
+    document.getElementById('refBtn').style.opacity = '1';
+    showToast("Data Synchronized", "success");
+  }
+
+  async function silentRefresh() {
+    let res = await apiCall("getAdminDashboard", { pin: document.getElementById('pin').value });
+    adminData = res;
+    initDashboard(true);
+  }
+
+  function initDashboard(isSilent=false) {
+    if(adminData.role === "MASTER_ADMIN") {
+      if(!isSilent) {
+        document.getElementById('disp-live-status').innerText = adminData.settings.month + " (" + adminData.settings.week + ")";
+        document.getElementById('ctrl-month').value = adminData.settings.month;
+        document.getElementById('ctrl-week').value = adminData.settings.week;
+        document.getElementById('ctrl-status').value = adminData.settings.state || "LIVE";
+        document.getElementById('ctrl-timer').value = adminData.settings.timer || 10;
+        document.getElementById('ctrl-strict').value = adminData.settings.strict || "OFF";
+      }
+      renderCurrentWeek(); renderAttendancePivot(); renderSummaryPivot();
+      initDetailedLogsSystem(); renderCharts(); renderBulkExport();
+    }
+    renderQuestionBank();
+  }
+
+  async function updateState() { let s = document.getElementById('ctrl-status').value; await apiCall("updateAdminSettings", {type: "SET_STATE", value1: s}); forceRefresh(); }
+  async function updateTimer() { let t = document.getElementById('ctrl-timer').value; await apiCall("updateAdminSettings", {type: "SET_TIMER", value1: t}); forceRefresh(); }
+  async function updateStrict() { let t = document.getElementById('ctrl-strict').value; await apiCall("updateAdminSettings", {type: "SET_STRICT", value1: t}); forceRefresh(); }
+  async function setLiveStatus() { let m = document.getElementById('ctrl-month').value, w = document.getElementById('ctrl-week').value; await apiCall("updateAdminSettings", {type: "SET_LIVE", value1: m, value2: w}); forceRefresh(); }
+  async function publishResults() { let m = adminData.settings.month, w = adminData.settings.week; await apiCall("updateAdminSettings", {type: "PUBLISH_RESULT", value1: m, value2: w}); forceRefresh(); }
+  async function changeTrainerPass() { let newP = document.getElementById('ctrl-uploader-pass').value; if(!newP) return; await apiCall("updateAdminSettings", {type: "CHANGE_UPLOADER_PASS", value1: newP}); document.getElementById('ctrl-uploader-pass').value=""; showToast("Password Updated"); }
+
+  // ... (Rest of rendering logic remains exactly the same as previously formatted) ...
+  function renderCurrentWeek() {
+    let cwTable = document.getElementById('current-week-table');
+    cwTable.innerHTML = "<tr><th>Identity Info</th><th>Final Score</th><th>Evaluation Details</th></tr>";
+    for(let i=1; i<adminData.responses.length; i++) {
+      let r = adminData.responses[i];
+      if(r[3] === adminData.settings.month && r[4] === adminData.settings.week) {
+        let color = parseFloat(r[8]) >= 40 ? '#059669' : '#dc2626';
+        let detailLog = r[9] && r[9].includes("Disqualified") ? `<span style="color:#dc2626; font-size:11px; display:block;">(Disqualified)</span>` : "";
+        cwTable.innerHTML += `<tr><td><b style="font-size:15px;">${r[1]}</b> <br><span style="color:#64748b; font-size:13px;">${r[2]}</span> ${detailLog}</td><td><b style="color:${color}; font-size:16px;">${r[8]}</b></td><td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">${r[6]} Valid / ${r[5]} Total</span></td></tr>`;
+      }
+    }
+  }
+
+  function sortWeeksChronologically(weeksArray) {
+    return weeksArray.sort((a, b) => {
+      let [mA, wA] = a.split(" Week ");
+      let [mB, wB] = b.split(" Week ");
+      let valA = (monthOrder[mA] || 0) * 10 + parseInt(wA || 0);
+      let valB = (monthOrder[mB] || 0) * 10 + parseInt(wB || 0);
+      return valA - valB;
+    });
+  }
+
+  function renderAttendancePivot() {
+    let filterMonth = document.getElementById('att-month-filter').value;
+    let users = {}, weeksSet = new Set();
+    for(let i=1; i<adminData.responses.length; i++) {
+      let r = adminData.responses[i];
+      if(filterMonth !== "All Months" && r[3] !== filterMonth) continue;
+      let phone = r[2], mw = r[3] + " " + r[4]; 
+      weeksSet.add(mw);
+      if(!users[phone]) users[phone] = { name: r[1] };
+      users[phone][mw] = "P";
+    }
+    let weeksArray = sortWeeksChronologically(Array.from(weeksSet));
+    
+    let table = document.getElementById('attendance-table');
+    let headerHtml = "<tr><th>Identity Name</th>";
+    weeksArray.forEach(w => headerHtml += `<th>${w}</th>`); headerHtml += "</tr>";
+    if(weeksArray.length === 0) { table.innerHTML = "<tr><td style='padding:20px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
+    table.innerHTML = headerHtml;
+    for (let phone in users) {
+      let rowHtml = `<tr><td><b>${users[phone].name}</b></td>`;
+      weeksArray.forEach(w => { rowHtml += `<td><span style="font-weight:bold; font-size:15px; color:${users[phone][w]?'#059669':'#94a3b8'}">${users[phone][w]?'✔':'—'}</span></td>`; });
+      table.innerHTML += rowHtml + "</tr>";
+    }
+  }
+
+  function renderSummaryPivot() {
+    let filterMonth = document.getElementById('sum-month-filter').value;
+    let users = {}, weeksSet = new Set();
+    for(let i=1; i<adminData.responses.length; i++) {
+      let r = adminData.responses[i];
+      if(filterMonth !== "All Months" && r[3] !== filterMonth) continue;
+      let phone = r[2], mw = r[3] + " " + r[4];
+      weeksSet.add(mw);
+      if(!users[phone]) users[phone] = { name: r[1], scores: {} };
+      users[phone].scores[mw] = r[8]; 
+    }
+    let weeksArray = sortWeeksChronologically(Array.from(weeksSet));
+    
+    let table = document.getElementById('summary-table');
+    let headerHtml = "<tr><th>Identity Name</th>";
+    weeksArray.forEach(w => headerHtml += `<th>${w}</th>`); headerHtml += "</tr>";
+    if(weeksArray.length === 0) { table.innerHTML = "<tr><td style='padding:20px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
+    table.innerHTML = headerHtml;
+    for (let phone in users) {
+      let rowHtml = `<tr><td><b>${users[phone].name}</b></td>`;
+      weeksArray.forEach(w => { rowHtml += `<td><b>${users[phone].scores[w] || '-'}</b></td>`; });
+      table.innerHTML += rowHtml + "</tr>";
+    }
+  }
+
+  function initDetailedLogsSystem() {
+    let uSelect = document.getElementById('log-user-select');
+    let usersMap = {};
+    for(let i=1; i<adminData.responses.length; i++) usersMap[adminData.responses[i][2]] = adminData.responses[i][1];
+    let currentVal = uSelect.value;
+    uSelect.innerHTML = "<option value=''>-- Select Identity --</option>";
+    for (let phone in usersMap) uSelect.innerHTML += `<option value="${phone}">${usersMap[phone]}</option>`;
+    if(currentVal && usersMap[currentVal]) uSelect.value = currentVal;
+  }
+  function populateLogModules() {
+    let phone = document.getElementById('log-user-select').value;
+    let mSelect = document.getElementById('log-module-select');
+    mSelect.innerHTML = "<option value=''>-- Select Module --</option>";
+    if(!phone) return;
+    for(let i=1; i<adminData.responses.length; i++) {
+      if(adminData.responses[i][2].toString() === phone.toString()) {
+        mSelect.innerHTML += `<option value="${i}">${adminData.responses[i][3]} - ${adminData.responses[i][4]} (Final: ${adminData.responses[i][8]})</option>`;
+      }
+    }
+  }
+  function renderDetailedLogs() {
+    let rowIndex = document.getElementById('log-module-select').value;
+    let table = document.getElementById('detailed-log-table');
+    table.innerHTML = "<tr><th>ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr>";
+    if(!rowIndex) return;
+
+    try {
+      let rowData = adminData.responses[rowIndex];
+      let jsonStr = rowData[9]; 
+      if(!jsonStr) return;
+      if(jsonStr.includes("Disqualified")) { table.innerHTML += `<tr><td colspan="4" style="color:#dc2626;">🚨 Disqualified - Cheating</td></tr>`; return; }
+      
+      let logsObj = JSON.parse(jsonStr);
+      Object.keys(logsObj).forEach(qKey => {
+        let d = logsObj[qKey];
+        let cStyle = d.isRight ? "border-left:4px solid #059669;" : "border-left:4px solid #dc2626;";
+        table.innerHTML += `<tr style="${cStyle}"><td><b>${qKey}</b></td><td>${d.question}</td><td style="color:#1e3a8a;">${d.userAnswerText||d.userAnswer}</td><td style="color:#065f46;">${d.correctAnswerText||d.correctAnswer}</td></tr>`;
+      });
+    } catch(e) {}
+  }
+
+  function renderBulkExport() {
+    let fMonth = document.getElementById('export-month').value, fWeek = document.getElementById('export-week').value;
+    let table = document.getElementById('bulk-export-table');
+    table.innerHTML = "<tr><th>User Name</th><th>Q. ID</th><th>Question</th><th>User Ans</th><th>Correct Ans</th><th>Status</th></tr>";
+    for(let i=1; i<adminData.responses.length; i++) {
+      let r = adminData.responses[i];
+      if((fMonth === "All" || r[3] === fMonth) && (fWeek === "All" || r[4] === fWeek)) {
+        let jsonStr = r[9];
+        if(jsonStr && !jsonStr.includes("Disqualified")) {
+           try {
+             let logsObj = JSON.parse(jsonStr);
+             Object.keys(logsObj).forEach(k => {
+               let d = logsObj[k];
+               table.innerHTML += `<tr><td><b>${r[1]}</b></td><td>${k}</td><td>${d.question}</td><td>${d.userAnswerText||d.userAnswer}</td><td>${d.correctAnswerText||d.correctAnswer}</td><td>${d.isRight?'Correct':'Wrong'}</td></tr>`;
+             });
+           } catch(e) {}
+        }
+      }
+    }
+  }
+
+  function renderQuestionBank() {
+    let fMonth = document.getElementById('qb-month').value, fWeek = document.getElementById('qb-week').value;
+    let table = document.getElementById('qb-table');
+    table.innerHTML = "<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th></tr>";
+    for(let i=1; i<adminData.questions.length; i++) {
+      let q = adminData.questions[i];
+      if((fMonth === "All Months" || q[1] === fMonth) && (fWeek === "All Weeks" || q[2] === fWeek)) {
+        let ansLetter = q[8], realAnsText = "";
+        if(ansLetter==='A') realAnsText=q[4]; if(ansLetter==='B') realAnsText=q[5]; if(ansLetter==='C') realAnsText=q[6]; if(ansLetter==='D') realAnsText=q[7];
+        table.innerHTML += `<tr><td>${q[0]}</td><td><span style="font-size:11px; font-weight:600; color:#64748b;">${q[1]} - ${q[2]}</span></td><td>${q[3]}</td><td><b>${ansLetter})</b> ${realAnsText}</td></tr>`;
+      }
+    }
+  }
+
+  function renderCharts() {
+    let usersStats = {}, weeksMap = {}, pass=0, fail=0; 
+    let distribution = { "Excellent(>80%)":0, "Good(60-80%)":0, "Average(40-60%)":0, "Fail(<40%)":0 };
+    
+    let filterMonth = document.getElementById('user-chart-month').value;
+    let filterWeek = document.getElementById('user-chart-week').value;
+    let userWiseGraphData = {};
+
+    for(let i=1; i<adminData.responses.length; i++) {
+      let r = adminData.responses[i], phone = r[2], name = r[1], score = parseFloat(r[8]) || 0;
+      
+      if(!usersStats[phone]) usersStats[phone] = { name: name.split(" ")[0], totalScore: 0, attempts: 0 };
+      usersStats[phone].totalScore += score; usersStats[phone].attempts += 1;
+
+      let mwKey = r[3] + " " + r[4];
+      if(!weeksMap[mwKey]) weeksMap[mwKey] = { sum: 0, count: 0 };
+      weeksMap[mwKey].sum += score; weeksMap[mwKey].count++;
+
+      if(r[3] === adminData.settings.month && r[4] === adminData.settings.week) {
+        if(score >= 40) pass++; else fail++;
+      }
+
+      if(score > 80) distribution["Excellent(>80%)"]++;
+      else if(score >= 60) distribution["Good(60-80%)"]++;
+      else if(score >= 40) distribution["Average(40-60%)"]++;
+      else distribution["Fail(<40%)"]++;
+      
+      if((filterMonth === "All" || r[3] === filterMonth) && (filterWeek === "All" || r[4] === filterWeek)) {
+          if(!userWiseGraphData[name]) userWiseGraphData[name] = { score:0, count:0 };
+          userWiseGraphData[name].score += score; userWiseGraphData[name].count++;
+      }
+    }
+
+    let sortedWeeks = sortWeeksChronologically(Object.keys(weeksMap));
+    let trendScores = sortedWeeks.map(w => Math.round(weeksMap[w].sum / weeksMap[w].count));
+    
+    let barDL = { datalabels: { color: '#ffffff', font: {weight: 'bold', size: 10}, formatter: v => v > 0 ? v + '%' : '' } };
+    let lineDL = { datalabels: { color: '#1e3a8a', align: 'top', anchor: 'end', font: {weight: 'bold', size: 11}, formatter: v => v > 0 ? v + '%' : '' } };
+    let countDL = { datalabels: { color: '#ffffff', font: {weight: 'bold', size: 12}, formatter: v => v > 0 ? v : '' } };
+    let pieDL = { datalabels: { color: '#ffffff', font: {weight: 'bold', size: 12}, formatter: (v, ctx) => { let sum=0; ctx.chart.data.datasets[0].data.map(d=>sum+=d); return v>0?Math.round((v*100)/sum)+'%':''; }}};
+
+    let uwNames = [], uwScores = [];
+    for(let n in userWiseGraphData) { uwNames.push(n); uwScores.push(Math.round(userWiseGraphData[n].score / userWiseGraphData[n].count)); }
+    if(chartUserWise) chartUserWise.destroy();
+    chartUserWise = new Chart(document.getElementById('chartUserWise'), { type: 'bar', data: { labels: uwNames, datasets: [{ label: 'Average Score (%)', data: uwScores, backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: barDL } });
+
+    if(chart1) chart1.destroy();
+    chart1 = new Chart(document.getElementById('chartAverage'), { type: 'line', data: { labels: sortedWeeks, datasets: [{ label: 'Mean Score (%)', data: trendScores, borderColor: '#2563eb', tension: 0.3, fill: true, backgroundColor: 'rgba(37, 99, 235, 0.1)' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: lineDL } });
+
+    if(chart2) chart2.destroy();
+    chart2 = new Chart(document.getElementById('chartPassFail'), { type: 'doughnut', data: { labels: ['Passed', 'Failed'], datasets: [{ data: [pass, fail], backgroundColor: ['#10b981', '#ef4444'], borderWidth:0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: pieDL } });
+
+    let topUsersArray = [];
+    for(let ph in usersStats) topUsersArray.push({ n: usersStats[ph].name, avg: Math.round(usersStats[ph].totalScore / usersStats[ph].attempts) });
+    topUsersArray.sort((a,b) => b.avg - a.avg);
+    
+    let top5 = topUsersArray.slice(0, 5);
+    if(chart3) chart3.destroy();
+    chart3 = new Chart(document.getElementById('chartTop5'), { type: 'bar', data: { labels: top5.map(x=>x.n), datasets: [{ label: 'Score', data: top5.map(x=>x.avg), backgroundColor: '#0f766e', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: barDL } });
+
+    let bottom5 = [...topUsersArray].reverse().slice(0, 5);
+    if(chart4) chart4.destroy();
+    chart4 = new Chart(document.getElementById('chartBottom5'), { type: 'bar', data: { labels: bottom5.map(x=>x.n), datasets: [{ label: 'Score', data: bottom5.map(x=>x.avg), backgroundColor: '#f59e0b', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: barDL } });
+
+    let partCount = sortedWeeks.map(w => weeksMap[w].count);
+    if(chart5) chart5.destroy();
+    chart5 = new Chart(document.getElementById('chartParticipation'), { type: 'bar', data: { labels: sortedWeeks, datasets: [{ label: 'Submissions', data: partCount, backgroundColor: '#8b5cf6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: countDL } });
+
+    if(chart6) chart6.destroy();
+    chart6 = new Chart(document.getElementById('chartDistribution'), { type: 'pie', data: { labels: Object.keys(distribution), datasets: [{ data: Object.values(distribution), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth:0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: pieDL } });
+  }
+
+  function exportChart(canvasId, fileName) {
+      let canvas = document.getElementById(canvasId);
+      if(!canvas) return;
+      let destCanvas = document.createElement("canvas");
+      destCanvas.width = canvas.width; destCanvas.height = canvas.height;
+      let ctx = destCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, destCanvas.width, destCanvas.height); ctx.drawImage(canvas, 0, 0);
+      let link = document.createElement('a'); link.download = fileName + ".png"; link.href = destCanvas.toDataURL("image/png"); link.click();
+  }
+
+  function downloadCSV(tableId, filename) {
+    let table = document.getElementById(tableId);
+    let rows = table.querySelectorAll('tr');
+    let csv = [];
+    for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll('td, th');
+        for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, " ") + '"');
+        csv.push(row.join(','));
+    }
+    let csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
+    let downloadLink = document.createElement('a'); downloadLink.download = filename; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = 'none'; document.body.appendChild(downloadLink); downloadLink.click();
+  }
+
+  async function addQ() {
+    let data = { month: document.getElementById('nq-month').value, week: document.getElementById('nq-week').value, q: document.getElementById('nq-q').value, a: document.getElementById('nq-a').value, b: document.getElementById('nq-b').value, c: document.getElementById('nq-c').value, d: document.getElementById('nq-d').value, ans: document.getElementById('nq-ans').value };
+    if(!data.q || !data.a) { showToast("Error: Missing Data", "error"); return; }
+    await apiCall("addWeeklyQuestion", { questionData: data }); showToast("Question Bank Updated!"); document.getElementById('nq-q').value=""; document.getElementById('nq-a').value=""; document.getElementById('nq-b').value=""; document.getElementById('nq-c').value=""; document.getElementById('nq-d').value=""; forceRefresh();
+  }
+</script>
+</body>
+</html>
