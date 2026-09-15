@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <title>WeP Assessment Portal</title>
+  
+  <!-- FAVICON CODE: USER BASE 64 LOGO GOES HERE -->
+  <link rel="icon" type="image/png" id="favicon" href="data:image/png;base64,YOUR_BASE64_LOGO_HERE">
+
+  <script>
+    // ==========================================
+    // PLACE YOUR DEPLOYED WEB APP URL HERE:
+    const API_URL = "https://script.google.com/macros/s/AKfycbyAGXJQFQZ0VSEeCYSuHinwiMdSm35f7_letZ7p8AGvrn6LaQuCThdEUPEBewo2QIvL/exec";
+    // ==========================================
+
+    async function apiCall(actionName, payloadData) {
+      try {
+        let response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: actionName, data: payloadData })
+        });
+        return await response.json();
+      } catch (error) {
+        return { error: "Network Error: Could not connect to WeP Server." };
+      }
+    }
+  </script>
+
+  <style>
+    :root { --primary: #0f172a; --secondary: #1e3a8a; --accent: #2563eb; --accent-hover: #1d4ed8; --success: #059669; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
+    
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; color: var(--text); font-size: 15px; line-height: 1.6;}
+    .app-container { flex: 1; overflow-y: auto; padding: 25px 20px; max-width: 700px; margin: 0 auto; width: 100%; box-sizing: border-box;}
+    
+    .header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 30px 20px; border-radius: 16px; margin-bottom: 25px; text-align: center; position: relative; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);}
+    .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px; }
+    .header p { margin: 8px 0 0 0; font-size: 14px; color: #cbd5e1; font-weight: 500;}
+    .sync-icon { position: absolute; right: 20px; top: 20px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.3s; font-weight:600; display:flex; align-items:center; gap:5px; backdrop-filter: blur(4px);}
+    .sync-icon:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px);}
+
+    .box { background: var(--surface); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border); }
+    
+    .form-group { margin-bottom: 22px; text-align: left;} 
+    .form-group label { display: block; margin-bottom: 10px; font-weight: 700; color: var(--primary); font-size: 15px;}
+    .form-group input[type="text"], .form-group input[type="number"] { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; transition: 0.3s; background: #f8fafc;}
+    .form-group input[type="text"]:focus, .form-group input[type="number"]:focus { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    
+    .btn { background: var(--accent); color: white; border: none; padding: 16px 20px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 700; width: 100%; transition: 0.3s; display:inline-block; text-align:center; letter-spacing: 0.5px;}
+    .btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37,99,235,0.25);}
+    .btn-secondary { background: #64748b; box-shadow:none; } .btn-secondary:hover { background: #475569; }
+    .btn-success { background: var(--success); } .btn-success:hover { background: #047857; }
+    
+    .top-nav { display: flex; background: #e2e8f0; border-radius: 12px; margin-bottom: 30px; padding: 6px; }
+    .nav-item { flex: 1; text-align: center; color: var(--text-muted); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; padding: 14px; border-radius: 8px; }
+    .nav-item.active { color: var(--primary); background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: 800;}
+    
+    .section-title { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 15px; letter-spacing: 0.3px; border-bottom: 2px solid var(--bg); padding-bottom:10px;}
+    table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+    th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); }
+    th { background: #f8fafc; color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight:700; letter-spacing: 0.5px;}
+    .badge-pending { background:#fef08a; color:#854d0e; padding:6px 12px; border-radius:20px; font-weight:700; font-size: 12px; text-transform: uppercase;}
+    .badge-score { background:#dcfce7; color:#166534; padding:6px 14px; border-radius:20px; font-weight:800; font-size: 15px;}
+
+    .timer-bar { background: #fff1f2; color: #be123c; padding: 18px 25px; border-radius: 12px; font-weight: 800; text-align: center; margin-bottom: 25px; border: 1px solid #fecdd3; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(225, 29, 72, 0.05);}
+    .q-title { font-size: 18px; font-weight: 700; color: var(--primary); line-height: 1.6; margin-bottom: 25px; padding-bottom:15px; border-bottom: 1px solid var(--border);}
+    .option-label { display: flex; align-items:center; padding: 18px 15px; border: 1px solid var(--border); margin-bottom: 14px; border-radius: 10px; cursor: pointer; background: #f8fafc; transition: all 0.2s; font-size: 16px; font-weight: 600; color:var(--text);}
+    .option-label:hover { border-color: var(--accent); background: #eff6ff; }
+    .option-label.selected { border-color: var(--accent); background: #eff6ff; box-shadow: 0 2px 8px rgba(37,99,235,0.15);}
+    input[type="radio"] { margin-right: 18px; transform: scale(1.4); accent-color: var(--accent); }
+    
+    .progress-bar-bg { width: 100%; background: var(--border); height: 8px; border-radius: 4px; margin-bottom: 25px; overflow: hidden;}
+    .progress-bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
+    .modal-box { background: white; padding: 35px 30px; border-radius: 16px; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    
+    .tnc-box { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .tnc-box input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer;}
+    .tnc-box label { font-size: 13px; color: var(--text-muted); line-height: 1.6; font-weight: 500; text-transform: none; margin:0;}
+  </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="strictModal">
+  <div class="modal-box" style="border-top: 8px solid #dc2626;">
+    <div style="font-size: 45px; margin-bottom: 15px;">⚠️</div>
+    <h2 style="color: #dc2626; margin-top: 0; font-size:24px;">Security Violation</h2>
+    <p style="color: #475569; font-size: 16px; line-height: 1.6;">Changing tabs, minimizing the window, or opening other apps is strictly prohibited during the assessment.</p>
+    <div style="background:#fee2e2; border:1px solid #f87171; padding:12px; border-radius:8px; margin: 25px 0;">
+      <h3 id="strict-count-text" style="color: #991b1b; margin: 0; font-size:18px;">Warning 1 of 3</h3>
+    </div>
+    <p style="color:#dc2626; font-size:13px; font-weight:800;">Your test will be auto-submitted on the 4th violation.</p>
+    <button class="btn" style="background:#dc2626; padding:16px;" onclick="document.getElementById('strictModal').style.display='none'">I Understand & Agree</button>
+  </div>
+</div>
+
+<div class="app-container">
+  <div class="header">
+    <h1>WeP Solutions Assessment</h1>
+    <p>Sales Team & Student Evaluation Platform</p>
+    <button class="sync-icon" id="syncBtn" onclick="silentSync()" style="display:none;">🔄 Sync Node</button>
+  </div>
+
+  <div id="login-section" class="box" style="padding-top: 45px; padding-bottom: 45px;">
+    <h2 style="margin-top:0; color:var(--primary); text-align:center; font-size:26px;">Authorized Login</h2>
+    <p style="text-align:center; color:var(--text-muted); font-size:15px; margin-bottom:35px; line-height:1.6;">Please login with your Name & Registered Number.</p>
+    
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="uName" placeholder="e.g. Saurabh Gupta">
+    </div>
+    <div class="form-group">
+      <label>Registered Mobile Number</label>
+      <input type="number" id="uPhone" placeholder="10-Digit Mobile No.">
+    </div>
+    
+    <div class="tnc-box">
+      <input type="checkbox" id="tnc">
+      <label for="tnc">
+        I agree to the strict <b style="color:var(--primary);">Terms & Conditions</b>. I understand that my assessment is monitored. Strict action or auto-submission will be taken against tab-switching, minimizing, or any malpractices.
+      </label>
+    </div>
+
+    <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:18px;">Access Platform</button>
+    <p id="loading-msg" style="text-align:center; display:none; color:var(--accent); font-weight:800; margin-top:25px; font-size:16px;">Verifying Credentials...</p>
+  </div>
+
+  <div id="main-app" style="display:none;">
+    
+    <div class="top-nav" id="top-nav">
+      <div class="nav-item active" id="tab-results" onclick="switchView('results')">
+        <span class="nav-icon">📊</span> Assessment Results
+      </div>
+      <div class="nav-item" id="tab-assessment" onclick="switchView('assessment')">
+        <span class="nav-icon">📝</span> Attend Quiz
+      </div>
+    </div>
+    
+    <div id="view-results">
+      <div class="box" style="background: linear-gradient(to right bottom, #ffffff, #f8fafc);">
+        <h2 style="color:var(--primary); margin-top:0; font-size:24px;">Welcome, <span id="display-name" style="color:var(--accent);"></span></h2>
+        
+        <div class="section-title" style="margin-top:30px; display:flex; align-items:center; gap:10px;">🏆 WeP Team Leaderboard <span id="lb-mod-name" style="font-size:13px; background:#e2e8f0; padding:4px 10px; border-radius:6px; color:#475569;"></span></div>
+        <p style="font-size:14px; color:var(--text-muted); margin-top:-10px; margin-bottom:20px;">Results will be visible here once published by the Admin.</p>
+        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;">
+          <table id="leaderboard-table"></table>
+        </div>
+      </div>
+      
+      <div class="box">
+        <div class="section-title">📊 My Assessment History</div>
+        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;">
+          <table id="history-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-assessment" style="display:none;">
+      <div class="box" id="assessment-intro">
+        <h2 style="margin-top:0; color:var(--primary); font-size:22px;">Active Assessment Module</h2>
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 30px; border-radius: 14px; margin-top: 20px;">
+          <h3 style="margin-top:0; color:#1d4ed8; font-size: 20px;"><span id="active-mod-name"></span></h3>
+          <p id="quiz-status-msg" style="font-size:16px; color:#334155; font-weight:600; line-height: 1.6; margin-bottom:25px;"></p>
+          
+          <div style="display:flex; justify-content:space-between; background:white; padding:18px; border-radius:12px; border:1px solid #bfdbfe; font-size:15px; color:var(--text-muted); font-weight:700;">
+            <span style="display:flex; align-items:center; gap:8px;">⏱️ Timer limit: <span id="display-time-limit" style="color:var(--primary);"></span> Mins</span>
+            <span style="display:flex; align-items:center; gap:8px;">📋 Status: <span id="display-mod-status" style="color:var(--success);"></span></span>
+          </div>
+          
+          <button id="start-btn" class="btn" style="display:none; margin-top: 30px; font-size:18px; padding:18px;" onclick="startQuiz()">Start Assessment Now</button>
+        </div>
+      </div>
+
+      <div id="quiz-wizard" style="display:none;">
+        <div class="timer-bar">
+          <span style="font-size:16px; display:flex; align-items:center; gap:8px;">⏳ Time Remaining</span>
+          <span id="countdown-timer" style="font-size:28px; font-variant-numeric: tabular-nums;">00:00</span>
+        </div>
+        
+        <div class="box" style="padding:40px 25px;">
+          <div style="display:flex; justify-content:space-between; font-size:15px; color:var(--text-muted); font-weight:800; margin-bottom:15px; text-transform:uppercase;">
+            <span id="q-counter">Question 1 of 10</span><span id="q-percent">0% Done</span>
+          </div>
+          <div class="progress-bar-bg"><div id="q-progress" class="progress-bar-fill"></div></div>
+          <div id="questions-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let userData = { name: "", phone: "" };
+  let currentQuestions = [], activeModuleObj = {};
+  let quizGlobalState = "LIVE", quizTimeLimit = 10;
+  let currentQIndex = 0, userAnswers = {}, autoSyncTimer, countdownInterval;
+  let isQuizActive = false, strictModeEnabled = false, tabSwitchCount = 0, maxWarnings = 3, cheatTriggered = false;
+
+  function switchView(viewName) {
+    if(document.getElementById("quiz-wizard").style.display === "block") {
+      alert("Warning: You cannot navigate away while an assessment is active.");
+      return;
+    }
+    document.getElementById("view-results").style.display = "none";
+    document.getElementById("view-assessment").style.display = "none";
+    document.getElementById("tab-results").classList.remove("active");
+    document.getElementById("tab-assessment").classList.remove("active");
+    
+    document.getElementById("view-" + viewName).style.display = "block";
+    document.getElementById("tab-" + viewName).classList.add("active");
+  }
+
+  async function loginUser(isSilent = false) {
+    if(!isSilent) {
+      userData.name = document.getElementById("uName").value.trim();
+      userData.phone = document.getElementById("uPhone").value.trim();
+      
+      if (!userData.name || !userData.phone) { alert("Please provide both Name and Mobile Number."); return; }
+      if (!document.getElementById("tnc").checked) { alert("Please agree to the Terms & Conditions before logging in."); return; }
+
+      document.getElementById("loading-msg").style.display = "block";
+      document.getElementById("loginBtn").style.display = "none";
+    }
+
+    let res = await apiCall("fetchUserDashboard", { name: userData.name, phone: userData.phone });
+    
+    if(res.error) {
+       alert(res.error);
+       document.getElementById("loading-msg").style.display = "none";
+       document.getElementById("loginBtn").style.display = "block";
+       return;
+    }
+
+    if(!isSilent) {
+      document.getElementById("login-section").style.display = "none";
+      document.getElementById("main-app").style.display = "block";
+      document.getElementById("syncBtn").style.display = "block"; 
+    }
+    
+    document.getElementById("display-name").innerText = userData.name.split(" ")[0];
+    let modName = res.activeMonth + " (" + res.activeWeek + ")";
+    document.getElementById("active-mod-name").innerText = modName;
+    document.getElementById("lb-mod-name").innerText = modName;
+    
+    activeModuleObj = { month: res.activeMonth, week: res.activeWeek };
+    quizGlobalState = res.quizState;
+    quizTimeLimit = res.timeLimit;
+    strictModeEnabled = (res.strictMode === "ON"); 
+    
+    document.getElementById("display-time-limit").innerText = quizTimeLimit;
+    document.getElementById("display-mod-status").innerText = quizGlobalState;
+    
+    let lbTable = document.getElementById("leaderboard-table");
+    lbTable.innerHTML = "<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>";
+    res.leaderboard.forEach(lb => {
+      let displayScore = lb.isPublished ? `<span class="badge-score">${lb.score}</span>` : `<span class="badge-pending">Evaluating</span>`;
+      let detailsText = lb.isPublished ? `<span style="font-weight:800; color:var(--text-muted);">${lb.correct} / ${lb.total} Right</span>` : `-`;
+      let boldName = lb.isMe ? `<b style="color:var(--accent); font-size:15px;">${lb.name} (You)</b>` : `<span style="font-size:14px;">${lb.name}</span>`;
+      lbTable.innerHTML += `<tr><td>${boldName}</td><td>${displayScore}</td><td>${detailsText}</td></tr>`;
+    });
+    if(res.leaderboard.length === 0) lbTable.innerHTML += `<tr><td colspan="3" style="text-align:center; padding:25px; color:var(--text-muted);">No team data found for the active week.</td></tr>`;
+
+    let hTable = document.getElementById("history-table");
+    hTable.innerHTML = "<tr><th>Assessment Date</th><th>Training Module</th><th>Score %</th><th>Right / Wrong</th></tr>"; 
+    res.history.forEach(h => {
+      let displayScore = h.isPublished ? `<span class="badge-score">${h.score}</span>` : `<span class="badge-pending">Evaluating</span>`;
+      let detailsText = h.isPublished ? `<span style="color:#059669; font-weight:800;">${h.correct} Right</span><br><span style="color:#dc2626; font-weight:800;">${h.wrong} Wrong</span>` : `-`;
+      hTable.innerHTML += `<tr><td style="font-weight:600;">${h.date}</td><td><b style="color:var(--primary); font-size:14px;">${h.month} - ${h.week}</b></td><td>${displayScore}</td><td>${detailsText}</td></tr>`;
+    });
+    if(res.history.length === 0) hTable.innerHTML += `<tr><td colspan="4" style="text-align:center; padding:25px; color:var(--text-muted);">No assessment history found.</td></tr>`;
+
+    if (res.hasAttempted) {
+      document.getElementById("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score will update once the Admin publishes the results.";
+      document.getElementById("start-btn").style.display = "none";
+    } else if (res.questions.length === 0) {
+      document.getElementById("quiz-status-msg").innerHTML = "⏳ Admin has not added questions for this module yet. Please check back later.";
+      document.getElementById("start-btn").style.display = "none";
+    } else if (quizGlobalState === "PAUSED") {
+      document.getElementById("quiz-status-msg").innerHTML = "🛑 The Admin has temporarily paused this assessment. You cannot start the quiz right now.";
+      document.getElementById("start-btn").style.display = "none";
+      document.getElementById("display-mod-status").style.color = "#dc2626";
+    } else {
+      let strictAlert = strictModeEnabled ? `<br><br><span style="color:#dc2626; display:inline-block; background:#fee2e2; padding:10px; border-radius:8px;">🛡️ <b>Strict Mode ON:</b> Tab switching or opening new apps is restricted.</span>` : "";
+      document.getElementById("quiz-status-msg").innerHTML = "🚨 You have a pending assessment. Click below to begin." + strictAlert;
+      document.getElementById("start-btn").style.display = "block";
+      document.getElementById("display-mod-status").style.color = "var(--success)";
+      currentQuestions = res.questions;
+    }
+
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = setInterval(silentSync, 15000);
+  }
+
+  function silentSync() {
+    let btn = document.getElementById('syncBtn');
+    btn.style.opacity = '0.5';
+    if(isQuizActive) return; 
+    loginUser(true).then(() => { btn.style.opacity = '1'; });
+  }
+
+  function handleCheatEvent() {
+    if (!isQuizActive || !strictModeEnabled) return;
+    if (cheatTriggered) return; 
+    
+    if (document.visibilityState === "hidden" || !document.hasFocus()) {
+      cheatTriggered = true;
+      tabSwitchCount++;
+      if (tabSwitchCount <= maxWarnings) {
+        document.getElementById("strict-count-text").innerText = `Warning ${tabSwitchCount} of ${maxWarnings}`;
+        document.getElementById("strictModal").style.display = "flex";
+        setTimeout(() => { cheatTriggered = false; }, 2000); 
+      } else {
+        document.getElementById("strictModal").style.display = "none";
+        alert("🚨 You have been disqualified for switching tabs/windows multiple times. Auto-submitting your test.");
+        submitQuiz(true, "Disqualified");
+      }
+    }
+  }
+
+  document.addEventListener("visibilitychange", handleCheatEvent);
+  window.addEventListener("blur", handleCheatEvent);
+
+  function startQuiz() {
+    clearInterval(autoSyncTimer); 
+    isQuizActive = true;
+    tabSwitchCount = 0; 
+    cheatTriggered = false;
+    
+    document.getElementById("syncBtn").style.display = "none";
+    document.getElementById("assessment-intro").style.display = "none";
+    document.getElementById("top-nav").style.display = "none"; 
+    document.getElementById("quiz-wizard").style.display = "block";
+    
+    currentQIndex = 0;
+    userAnswers = {};
+    renderSingleQuestion();
+    startTimer(quizTimeLimit * 60);
+  }
+
+  function startTimer(durationInSeconds) {
+    let timer = durationInSeconds, minutes, seconds;
+    let display = document.getElementById('countdown-timer');
+    
+    countdownInterval = setInterval(function () {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+        display.textContent = minutes + ":" + seconds;
+
+        if (--timer < 0) {
+            clearInterval(countdownInterval);
+            alert("🛑 Time Limit Exceeded. Your assessment is being submitted automatically.");
+            submitQuiz(true, "Timeout");
+        }
+    }, 1000);
+  }
+
+  function handleRadioClick(elem) {
+     let labels = document.querySelectorAll('.option-label');
+     labels.forEach(l => l.classList.remove('selected'));
+     elem.closest('.option-label').classList.add('selected');
+  }
+
+  function renderSingleQuestion() {
+    let q = currentQuestions[currentQIndex];
+    let total = currentQuestions.length;
+    let progress = Math.round(((currentQIndex) / total) * 100);
+    
+    document.getElementById("q-counter").innerText = `Question ${currentQIndex + 1} of ${total}`;
+    document.getElementById("q-percent").innerText = `${progress}% Complete`;
+    document.getElementById("q-progress").style.width = `${progress}%`;
+
+    let savedAns = userAnswers[q.id] || "";
+    let html = `
+      <p class="q-title">${q.q}</p>
+      <label class="option-label ${savedAns==='A'?'selected':''}"><input type="radio" name="q_current" value="A" onchange="handleRadioClick(this)" ${savedAns === 'A' ? 'checked' : ''}> <span style="flex:1;">${q.opts[0]}</span></label>
+      <label class="option-label ${savedAns==='B'?'selected':''}"><input type="radio" name="q_current" value="B" onchange="handleRadioClick(this)" ${savedAns === 'B' ? 'checked' : ''}> <span style="flex:1;">${q.opts[1]}</span></label>
+      <label class="option-label ${savedAns==='C'?'selected':''}"><input type="radio" name="q_current" value="C" onchange="handleRadioClick(this)" ${savedAns === 'C' ? 'checked' : ''}> <span style="flex:1;">${q.opts[2]}</span></label>
+      <label class="option-label ${savedAns==='D'?'selected':''}"><input type="radio" name="q_current" value="D" onchange="handleRadioClick(this)" ${savedAns === 'D' ? 'checked' : ''}> <span style="flex:1;">${q.opts[3]}</span></label>
+    `;
+
+    let btns = `<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">`;
+    if (currentQIndex > 0) btns += `<button class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>`;
+    else btns += `<div style="flex:1;"></div>`; 
+
+    if (currentQIndex < total - 1) btns += `<button class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>`;
+    else btns += `<button class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>`;
+    btns += `</div>`;
+
+    document.getElementById("questions-container").innerHTML = html + btns;
+  }
+
+  function saveCurrentSelection() {
+    let q = currentQuestions[currentQIndex];
+    let selected = document.querySelector(`input[name="q_current"]:checked`);
+    if (selected) userAnswers[q.id] = selected.value;
+  }
+  function nextQuestion() { saveCurrentSelection(); currentQIndex++; renderSingleQuestion(); }
+  function prevQuestion() { saveCurrentSelection(); currentQIndex--; renderSingleQuestion(); }
+
+  async function submitQuiz(isAutoSubmit = false, forceReason = "") {
+    saveCurrentSelection(); 
+    
+    if(!isAutoSubmit) {
+      let missedCount = 0;
+      currentQuestions.forEach(q => { if(!userAnswers[q.id]) missedCount++; });
+      if(missedCount > 0) {
+         let conf = confirm(`You have left ${missedCount} question(s) unattempted. Are you sure you want to submit?`);
+         if(!conf) return;
+      }
+    }
+
+    isQuizActive = false; 
+    clearInterval(countdownInterval);
+    
+    let spinnerIcon = forceReason === "Disqualified" ? "🚨" : "⚙️";
+    let spinnerText = forceReason === "Disqualified" ? "Disqualified. Submitting..." : "Saving Assessment Data...";
+    let spinnerColor = forceReason === "Disqualified" ? "#dc2626" : "var(--primary)";
+    
+    document.getElementById("quiz-wizard").innerHTML = `
+      <div style='text-align:center; padding:60px 0;'>
+        <div style="font-size:50px; margin-bottom:25px; animation: spin 2s linear infinite;">${spinnerIcon}</div>
+        <h2 style='color:${spinnerColor}; margin:0; font-size:24px;'>${spinnerText}</h2>
+        <p style='color:var(--text-muted); font-size:15px; margin-top:15px; line-height:1.6;'>Please wait while your answers are submitted to the WeP server.</p>
+        <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+      </div>`;
+    
+    let correct = 0, detailedLogs = {};
+    if(forceReason === "Disqualified") {
+        detailedLogs["Status"] = "Disqualified - Cheating detected via Strict Mode";
+    }
+
+    currentQuestions.forEach((q) => {
+      let uAnsLetter = userAnswers[q.id] || "Skipped";
+      let uAnsText = "Skipped", cAnsText = "";
+      
+      if(uAnsLetter === 'A') uAnsText = q.opts[0]; if(uAnsLetter === 'B') uAnsText = q.opts[1];
+      if(uAnsLetter === 'C') uAnsText = q.opts[2]; if(uAnsLetter === 'D') uAnsText = q.opts[3];
+
+      if(q.ans === 'A') cAnsText = q.opts[0]; if(q.ans === 'B') cAnsText = q.opts[1];
+      if(q.ans === 'C') cAnsText = q.opts[2]; if(q.ans === 'D') cAnsText = q.opts[3];
+
+      if (uAnsLetter === q.ans) correct++;
+      detailedLogs["Q" + q.id] = { question: q.q, userAnswerLetter: uAnsLetter, userAnswerText: uAnsText, correctAnswerLetter: q.ans, correctAnswerText: cAnsText, isRight: (uAnsLetter === q.ans) };
+    });
+    
+    let resultPayload = { total: currentQuestions.length, correct: correct, detailedLogs: detailedLogs };
+    
+    await apiCall("submitWeeklyQuiz", { name: userData.name, phone: userData.phone, month: activeModuleObj.month, week: activeModuleObj.week, results: resultPayload });
+    
+    if(forceReason === "Disqualified") alert("You were disqualified. Your test has been submitted.");
+    else alert("Assessment Submitted Successfully!");
+    
+    location.reload(); 
+  }
+</script>
+</body>
+</html>
