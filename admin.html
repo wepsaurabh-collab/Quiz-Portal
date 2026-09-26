@@ -11,7 +11,7 @@
 
   <script>
     // ==========================================
-    // YOUR DEPLOYED WEB APP URL:
+    // PLACE YOUR DEPLOYED WEB APP URL HERE:
     const API_URL = "https://script.google.com/macros/s/AKfycbyTjVMCuVx9KzH1StvSRIGR41QKOsTUM6zyoinkmOC8fANFlbDqRPJJPYmDGCq7kwPl/exec";
     // ==========================================
 
@@ -20,7 +20,7 @@
         let response = await fetch(API_URL, {
           method: 'POST',
           headers: {
-            "Content-Type": "text/plain;charset=utf-8" // 🚀 FAST CORS BYPASS ADDED HERE
+            "Content-Type": "text/plain;charset=utf-8" 
           },
           body: JSON.stringify({ action: actionName, data: payloadData })
         });
@@ -81,9 +81,12 @@
     .training-input { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 0; }
     .training-select { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; margin:0;}
 
-    /* Skeleton Loader */
+    /* Skeleton & Loader CSS */
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+    .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 22px; overflow: hidden; position: relative; margin-top: 15px; display: none; }
+    .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
+    .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
     @media (max-width: 768px) {
       body { overflow-y: auto; }
@@ -105,16 +108,24 @@
 
 <div id="toast-container"></div>
 
-<div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0;">
-  <div class="box" style="max-width: 420px; width:100%; text-align:center; padding: 50px 40px;">
+<div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0; padding:20px;">
+  <div class="box" style="width: 100%; max-width: 420px; text-align:center; padding: 45px 30px; margin:0;">
     
     <div id="login-logo-skeleton" class="skeleton" style="height: 55px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
     
     <h2 style="color: var(--primary); margin-top:0; font-size: 26px;">WeP Solutions</h2>
     <p style="color: #64748b; font-size: 15px; margin-bottom: 35px; line-height:1.5;">Evaluation & Training Command Center</p>
+    
     <input type="password" id="pin" placeholder="Enter Secure Passcode" style="text-align:center; letter-spacing: 2px; font-size:16px;">
-    <button id="authBtn" onclick="login()" style="padding: 14px; font-size: 16px; margin-top:10px;">Authenticate Access</button>
+    <button id="authBtn" onclick="login()" style="padding: 16px; font-size: 17px; margin-top:10px; width:100%;">Authenticate Access</button>
+
+    <!-- 0-100% LOADING ANIMATION BAR -->
+    <div id="login-progress-container" class="load-container">
+       <div id="login-progress-fill" class="load-fill"></div>
+       <div id="login-progress-text" class="load-text">0%</div>
+    </div>
+
   </div>
 </div>
 
@@ -234,6 +245,41 @@
   Chart.register(ChartDataLabels);
   Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
 
+  // PROGRESS BAR ANIMATION LOGIC
+  let loginProgressInterval;
+
+  function startLoginProgress() {
+      document.getElementById('authBtn').style.display = "none";
+      let container = document.getElementById('login-progress-container');
+      let fill = document.getElementById('login-progress-fill');
+      let txt = document.getElementById('login-progress-text');
+      
+      container.style.display = "block";
+      let w = 0;
+      loginProgressInterval = setInterval(() => {
+          if(w < 90) {
+              w += Math.floor(Math.random() * 15) + 5;
+              if(w > 90) w = 90;
+              fill.style.width = w + "%";
+              txt.innerText = w + "%";
+          }
+      }, 300);
+  }
+
+  function completeLoginProgress() {
+      clearInterval(loginProgressInterval);
+      document.getElementById('login-progress-fill').style.width = "100%";
+      document.getElementById('login-progress-text').innerText = "100%";
+  }
+
+  function resetLoginProgress() {
+      clearInterval(loginProgressInterval);
+      document.getElementById('login-progress-container').style.display = "none";
+      document.getElementById('login-progress-fill').style.width = "0%";
+      document.getElementById('login-progress-text').innerText = "0%";
+      document.getElementById('authBtn').style.display = "block";
+  }
+
   // INSTANT LOAD FROM CACHE, THEN FETCH FRESH
   document.addEventListener("DOMContentLoaded", async () => {
       let cachedLogo = localStorage.getItem("wep_logo");
@@ -286,38 +332,39 @@
   }
 
   async function login() {
-    let btn = document.getElementById('authBtn');
     let pin = document.getElementById('pin').value;
+    if(!pin) { showToast("Please Enter Passcode", "error"); return; }
     
-    btn.innerText = "⏳ Verifying...";
-    btn.style.opacity = "0.7";
-    btn.disabled = true;
+    startLoginProgress();
     
     let res = await apiCall("getAdminDashboard", { pin: pin });
+    
     if(res.error) { 
         showToast(res.error, "error"); 
-        btn.innerText = "Authenticate Access"; 
-        btn.style.opacity = "1";
-        btn.disabled = false;
+        resetLoginProgress();
         return; 
     }
     
-    adminData = res;
-    document.getElementById('login-screen').style.display = "none";
-    document.getElementById('dashboard').style.display = "flex";
+    completeLoginProgress();
     
-    document.getElementById('role-display').innerText = "Logged in as: " + res.role.replace("_", " ");
-    if(res.role === "UPLOADER") {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        switchTab('qbank', document.querySelector('.nav-item:not(.admin-only)'));
-    } else {
-        switchTab('analytics', document.querySelector('.nav-item.admin-only'));
-    }
+    setTimeout(() => {
+        adminData = res;
+        document.getElementById('login-screen').style.display = "none";
+        document.getElementById('dashboard').style.display = "flex";
+        
+        document.getElementById('role-display').innerText = "Logged in as: " + res.role.replace("_", " ");
+        if(res.role === "UPLOADER") {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            switchTab('qbank', document.querySelector('.nav-item:not(.admin-only)'));
+        } else {
+            switchTab('analytics', document.querySelector('.nav-item.admin-only'));
+        }
 
-    showToast("Access Granted");
-    initDashboard();
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = setInterval(silentRefresh, 15000); 
+        showToast("Access Granted");
+        initDashboard();
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = setInterval(silentRefresh, 15000); 
+    }, 300);
   }
 
   async function forceRefresh() {
