@@ -11,14 +11,17 @@
 
   <script>
     // ==========================================
-    // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycby4mEdbdF8z4a8wi9ww63T5e_04KZ6nh-WuYnIBEZk2LYPi217cTfz4SRl3LF6KCGjC/exec";
+    // YOUR ORIGINAL DEPLOYED WEB APP URL:
+    const API_URL = "https://script.google.com/macros/s/AKfycbyTjVMCuVx9KzH1StvSRIGR41QKOsTUM6zyoinkmOC8fANFlbDqRPJJPYmDGCq7kwPl/exec";
     // ==========================================
 
     async function apiCall(actionName, payloadData) {
       try {
         let response = await fetch(API_URL, {
           method: 'POST',
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8" // 🚀 FAST CORS BYPASS FOR GOOGLE APPS SCRIPT
+          },
           body: JSON.stringify({ action: actionName, data: payloadData })
         });
         return await response.json();
@@ -231,10 +234,11 @@
   Chart.register(ChartDataLabels);
   Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
 
-  // FETCH LOGO ON LOAD using Cache
+  // INSTANT LOAD FROM CACHE, THEN FETCH FRESH
   document.addEventListener("DOMContentLoaded", async () => {
       let cachedLogo = localStorage.getItem("wep_logo");
       let cachedFav = localStorage.getItem("wep_favicon");
+      
       if(cachedLogo) {
           document.getElementById('login-logo-skeleton').style.display = 'none';
           document.getElementById('login-logo').src = cachedLogo;
@@ -245,6 +249,7 @@
       if(cachedFav) document.getElementById('favicon').href = cachedFav;
 
       let res = await apiCall("getPublicData", {});
+      
       if(res && res.settings) {
           if(res.settings.favicon) {
               document.getElementById('favicon').href = res.settings.favicon;
@@ -371,7 +376,7 @@
             <td><input type="text" class="training-input" value="${tData[i][5]||''}"></td>
             <td><input type="text" class="training-input" value="${tData[i][6]||''}"></td>
             <td><input type="text" class="training-input" value="${tData[i][7]||''}"></td>
-            <td><select class="training-select"><option ${tData[i][8]=='Pending'?'selected':''}>Pending</option><option${tData[i][8]=='Done'?'selected':''}>Done</option></select></td>
+            <td><select class="training-select"><option ${tData[i][8]=='Pending'?'selected':''}>Pending</option><option ${tData[i][8]=='Done'?'selected':''}>Done</option></select></td>
             <td><button onclick="this.parentElement.parentElement.remove()" style="background:#dc2626; padding:6px 12px; margin:0; color:white; border:none; border-radius:4px;">X</button></td>
           `;
           tbody.appendChild(tr);
@@ -422,7 +427,7 @@
       if(r[3] === adminData.settings.month && r[4] === adminData.settings.week) {
         let color = parseFloat(r[8]) >= 40 ? '#059669' : '#dc2626';
         let detailLog = r[9] && r[9].includes("Disqualified") ? `<span style="color:#dc2626; font-size:11px; display:block;">(Disqualified)</span>` : "";
-        cwTable.innerHTML += `<tr><td><b style="font-size:15px;">${r[1]}</b> <br><span style="color:#64748b; font-size:13px;">${r[2]}</span>${detailLog}</td><td><b style="color:${color}; font-size:16px;">${r[8]}</b></td><td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">${r[6]} Valid / ${r[5]} Total</span></td></tr>`;
+        cwTable.innerHTML += `<tr><td><b style="font-size:15px;">${r[1]}</b> <br><span style="color:#64748b; font-size:13px;">${r[2]}</span> ${detailLog}</td><td><b style="color:${color}; font-size:16px;">${r[8]}</b></td><td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">${r[6]} Valid / ${r[5]} Total</span></td></tr>`;
       }
     }
   }
@@ -505,7 +510,7 @@
     if(!phone) return;
     for(let i=1; i<adminData.responses.length; i++) {
       if(adminData.responses[i][2].toString() === phone.toString()) {
-        mSelect.innerHTML += `<option value="${i}">${adminData.responses[i][3]} - ${adminData.responses[i][4]} (Final:${adminData.responses[i][8]})</option>`;
+        mSelect.innerHTML += `<option value="${i}">${adminData.responses[i][3]} - ${adminData.responses[i][4]} (Final: ${adminData.responses[i][8]})</option>`;
       }
     }
   }
@@ -544,7 +549,7 @@
              let logsObj = JSON.parse(jsonStr);
              Object.keys(logsObj).forEach(k => {
                let d = logsObj[k];
-               table.innerHTML += `<tr><td><b>${r[1]}</b></td><td>${k}</td><td>${d.question}</td><td>${d.userAnswerText||d.userAnswer}</td><td>${d.correctAnswerText\vert{}\vert{}d.correctAnswer}</td><td>${d.isRight?'Correct':'Wrong'}</td></tr>`;
+               table.innerHTML += `<tr><td><b>${r[1]}</b></td><td>${k}</td><td>${d.question}</td><td>${d.userAnswerText||d.userAnswer}</td><td>${d.correctAnswerText||d.correctAnswer}</td><td>${d.isRight?'Correct':'Wrong'}</td></tr>`;
              });
            } catch(e) {}
         }
@@ -562,7 +567,7 @@
       if((fMonth === "All Months" || q[1] === fMonth) && (fWeek === "All Weeks" || q[2] === fWeek)) {
         let ansLetter = q[8], realAnsText = "";
         if(ansLetter==='A') realAnsText=q[4]; if(ansLetter==='B') realAnsText=q[5]; if(ansLetter==='C') realAnsText=q[6]; if(ansLetter==='D') realAnsText=q[7];
-        table.innerHTML += `<tr><td>${q[0]}</td><td><span style="font-size:11px; font-weight:600; color:#64748b;">${q[1]} - ${q[2]}</span></td><td>${q[3]}</td><td><b>${ansLetter})</b>${realAnsText}</td></tr>`;
+        table.innerHTML += `<tr><td>${q[0]}</td><td><span style="font-size:11px; font-weight:600; color:#64748b;">${q[1]} - ${q[2]}</span></td><td>${q[3]}</td><td><b>${ansLetter})</b> ${realAnsText}</td></tr>`;
         count++;
       }
     }
