@@ -10,7 +10,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbz12H0C3nlVhKupjXfZhwLZN_M66C1M6itgLqjwczPSbEKNOL1v40VRKzPNU5OhaIjU/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycby4mEdbdF8z4a8wi9ww63T5e_04KZ6nh-WuYnIBEZk2LYPi217cTfz4SRl3LF6KCGjC/exec";
     // ==========================================
 
     async function apiCall(actionName, payloadData) {
@@ -85,7 +85,9 @@
 
     /* SKELETON LOADER */
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+    .app-container { max-width: 900px; }
 
     @media (max-width: 600px) {
       .top-nav { flex-direction: column; gap: 8px; }
@@ -110,14 +112,14 @@
   </div>
 </div>
 
-<div id="pre-login-container" style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center; max-width:850px; margin: 5vh auto; padding: 0 15px;">
+<div id="pre-login-container" style="display:flex; flex-wrap:wrap; gap:25px; justify-content:center; max-width:900px; margin: 5vh auto; padding: 0 15px;">
   
   <!-- LEFT SIDE: TRAINING TICKET & DEFAULTERS -->
-  <div style="flex: 1; min-width: 320px; max-width: 420px; display:flex; flex-direction:column; gap:15px;">
+  <div style="flex: 1; min-width: 320px; max-width: 440px; display:flex; flex-direction:column; gap:15px;">
       
       <!-- SKELETON TICKET (While loading) -->
-      <div id="ticket-skeleton" class="skeleton" style="height: 220px; border-radius: 16px; width:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:600;">
-          ⏳ Fetching Upcoming Training...
+      <div id="ticket-skeleton" class="skeleton" style="height: 220px; border-radius: 16px; width:100%; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:600; font-size:16px;">
+          ⏳ Fetching Training Schedule...
       </div>
 
       <!-- MAIN TICKET -->
@@ -138,16 +140,15 @@
       </div>
 
       <!-- PENDING DEFAULTERS LIST -->
-      <div id="defaulter-list" class="box" style="display:none; padding: 20px; border-left: 5px solid var(--danger);">
+      <div id="defaulter-list" class="box" style="display:none; padding: 20px; border-left: 5px solid var(--danger); margin:0;">
           <h3 style="margin:0 0 10px 0; color:var(--danger); font-size:16px; display:flex; align-items:center; gap:6px;">⚠️ Overdue / Pending Presentations</h3>
           <p style="margin:0 0 15px 0; font-size:13px; color:var(--text-muted);">The following trainers have missed their scheduled presentation date.</p>
           <div id="defaulter-items" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
-
   </div>
 
   <!-- RIGHT SIDE: LOGIN SECTION -->
-  <div id="login-section" class="box" style="flex: 1; min-width: 320px; max-width: 420px; margin: 0; padding-top: 45px; padding-bottom: 45px;">
+  <div id="login-section" class="box" style="flex: 1; min-width: 320px; max-width: 440px; margin: 0; padding-top: 45px; padding-bottom: 45px;">
     
     <div id="login-logo-skeleton" class="skeleton" style="height: 50px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
@@ -172,14 +173,13 @@
     </div>
 
     <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:18px;">Access Platform</button>
-    <p id="loading-msg" style="text-align:center; display:none; color:var(--accent); font-weight:800; margin-top:25px; font-size:16px;">⏳ Verifying... Please wait</p>
   </div>
 </div>
 
 <div id="main-app" class="app-container" style="display:none;">
     
     <div class="header">
-      <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="margin-bottom: 15px;">
+      <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="margin-bottom: 15px; display:none;">
       
       <h1>WeP Solutions Assessment</h1>
       <p>Sales Team & Student Evaluation Platform</p>
@@ -256,7 +256,6 @@
   let currentQIndex = 0, userAnswers = {}, autoSyncTimer, countdownInterval;
   let isQuizActive = false, strictModeEnabled = false, tabSwitchCount = 0, maxWarnings = 3, cheatTriggered = false;
 
-  // Helper to parse dates like "15/Aug/2026"
   function parseDate(dateStr) {
       if(!dateStr) return new Date(9999,11,31);
       let p = dateStr.split("/");
@@ -268,22 +267,7 @@
       return new Date(year, month, parseInt(p[0]));
   }
 
-  // FETCH DATA ON LOAD
-  document.addEventListener("DOMContentLoaded", async () => {
-      let res = await apiCall("getPublicData", {});
-      
-      // Update Logos
-      if(res && res.settings) {
-          if(res.settings.favicon) document.getElementById('favicon').href = res.settings.favicon;
-          if(res.settings.logo) {
-              document.getElementById('login-logo-skeleton').style.display = 'none';
-              document.getElementById('login-logo').src = res.settings.logo;
-              document.getElementById('login-logo').style.display = 'block';
-              document.getElementById('dash-logo').src = res.settings.logo;
-          }
-      }
-
-      // Update Training Tickets
+  function renderTraining(res) {
       if(res && res.trainingPlan && res.trainingPlan.length > 1) {
           let now = new Date();
           now.setHours(0,0,0,0);
@@ -291,52 +275,96 @@
           let pendingRows = res.trainingPlan.slice(1).filter(r => r[8] && r[8].toString().toLowerCase() === 'pending');
           
           if(pendingRows.length > 0) {
-              // Sort by Date
               let sortedPendings = pendingRows.map(r => ({ row: r, date: parseDate(r[4]) })).sort((a,b) => a.date - b.date);
               
-              let nextTrain = sortedPendings[0].row;
-              let nextTrainDate = sortedPendings[0].date;
-              let followingTrain = sortedPendings.length > 1 ? sortedPendings[1].row : null;
+              let upcoming = sortedPendings.filter(tr => tr.date >= now);
+              let overdue = sortedPendings.filter(tr => tr.date < now);
 
-              // Hide Skeleton, Show Main Ticket
-              document.getElementById('ticket-skeleton').style.display = 'none';
-              document.getElementById('t-topic').innerText = nextTrain[7] || 'TBA';
-              document.getElementById('t-presenter').innerText = nextTrain[5] || 'TBA';
-              
-              // If it's overdue, show warning text in date
-              if(nextTrainDate < now) {
-                  document.getElementById('t-date').innerHTML = `<span style="color:#fca5a5;">⚠️ Overdue (${nextTrain[4]})</span>`;
-              } else {
+              let nextTrain = upcoming.length > 0 ? upcoming[0].row : null;
+              let followingTrain = upcoming.length > 1 ? upcoming[1].row : null;
+
+              if (nextTrain) {
+                  document.getElementById('ticket-skeleton').style.display = 'none';
+                  document.getElementById('t-topic').innerText = nextTrain[7] || 'TBA';
+                  document.getElementById('t-presenter').innerText = nextTrain[5] || 'TBA';
                   document.getElementById('t-date').innerText = nextTrain[4] || 'TBA';
-              }
-
-              if(followingTrain) {
-                  document.getElementById('t-next').innerHTML = `<b>⏭️ Upcoming Next:</b> ${followingTrain[5] || 'TBA'} (${followingTrain[0]}${followingTrain[1]})`;
-              } else {
-                  document.getElementById('t-next').innerHTML = ``;
-              }
-              document.getElementById('training-announcement').style.display = 'block';
-
-              // Missed/Defaulters Box
-              let defaultersHtml = "";
-              // Skip the first one if it's already shown in the main ticket
-              for(let i=1; i<sortedPendings.length; i++) {
-                  let tr = sortedPendings[i];
-                  if(tr.date < now) {
-                      defaultersHtml += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5;">
-                          <div><b style="color:#991b1b; display:block; font-size:14px;">${tr.row[5]}</b><span style="font-size:12px; color:#b91c1c;">${tr.row[7]}</span></div>
-                          <div style="font-size:12px; color:#991b1b; font-weight:bold;">${tr.row[4]}</div>
-                        </div>`;
+                  
+                  if(followingTrain) {
+                      document.getElementById('t-next').innerHTML = `<b>⏭️ Upcoming Next:</b> ${followingTrain[5] || 'TBA'} (${followingTrain[0]}${followingTrain[1]})`;
+                  } else {
+                      document.getElementById('t-next').innerHTML = ``;
                   }
+                  document.getElementById('training-announcement').style.display = 'block';
+              } else {
+                  document.getElementById('ticket-skeleton').style.display = 'flex';
+                  document.getElementById('ticket-skeleton').innerText = "⚠️ All Pending Trainings are Overdue!";
+                  document.getElementById('training-announcement').style.display = 'none';
+              }
+
+              let defaultersHtml = "";
+              for(let i=0; i<overdue.length; i++) {
+                  let tr = overdue[i];
+                  defaultersHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5;">
+                      <div><b style="color:#991b1b; display:block; font-size:14px;">${tr.row[5]}</b><span style="font-size:12px; color:#b91c1c;">${tr.row[7]}</span></div>
+                      <div style="font-size:12px; color:#991b1b; font-weight:bold;">${tr.row[4]}</div>
+                    </div>`;
               }
               if(defaultersHtml !== "") {
                   document.getElementById('defaulter-items').innerHTML = defaultersHtml;
                   document.getElementById('defaulter-list').style.display = 'block';
+              } else {
+                  document.getElementById('defaulter-list').style.display = 'none';
               }
           } else {
+              document.getElementById('ticket-skeleton').style.display = 'flex';
               document.getElementById('ticket-skeleton').innerText = "✅ No Pending Trainings Scheduled";
+              document.getElementById('defaulter-list').style.display = 'none';
+              document.getElementById('training-announcement').style.display = 'none';
           }
+      } else {
+          document.getElementById('ticket-skeleton').style.display = 'flex';
+          document.getElementById('ticket-skeleton').innerText = "✅ No Pending Trainings Scheduled";
+          document.getElementById('defaulter-list').style.display = 'none';
+          document.getElementById('training-announcement').style.display = 'none';
+      }
+  }
+
+  // INSTANT LOAD FROM CACHE, THEN FETCH FRESH
+  document.addEventListener("DOMContentLoaded", async () => {
+      let cachedLogo = localStorage.getItem("wep_logo");
+      let cachedFav = localStorage.getItem("wep_favicon");
+      let cachedTraining = localStorage.getItem("wep_training");
+      
+      if(cachedLogo) {
+          document.getElementById('login-logo-skeleton').style.display = 'none';
+          document.getElementById('login-logo').src = cachedLogo;
+          document.getElementById('login-logo').style.display = 'block';
+          document.getElementById('dash-logo').src = cachedLogo;
+          document.getElementById('dash-logo').style.display = 'block';
+      }
+      if(cachedFav) document.getElementById('favicon').href = cachedFav;
+      if(cachedTraining) renderTraining(JSON.parse(cachedTraining));
+
+      let res = await apiCall("getPublicData", {});
+      
+      if(res && res.settings) {
+          if(res.settings.favicon) {
+              document.getElementById('favicon').href = res.settings.favicon;
+              localStorage.setItem("wep_favicon", res.settings.favicon);
+          }
+          if(res.settings.logo) {
+              document.getElementById('login-logo-skeleton').style.display = 'none';
+              document.getElementById('login-logo').src = res.settings.logo;
+              document.getElementById('login-logo').style.display = 'block';
+              document.getElementById('dash-logo').src = res.settings.logo;
+              document.getElementById('dash-logo').style.display = 'block';
+              localStorage.setItem("wep_logo", res.settings.logo);
+          }
+      }
+      if(res && res.trainingPlan) {
+          localStorage.setItem("wep_training", JSON.stringify(res));
+          renderTraining(res);
       }
   });
 
@@ -369,7 +397,7 @@
         return; 
       }
       
-      btn.innerText = "⏳ Verifying... Please wait";
+      btn.innerText = "⏳ Verifying...";
       btn.style.opacity = "0.7";
       btn.disabled = true;
     }
@@ -536,11 +564,11 @@
     `;
 
     let btns = `<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">`;
-    if (currentQIndex > 0) btns += `<button class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>`;
+    if (currentQIndex > 0) btns += `<button class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Prev</button>`;
     else btns += `<div style="flex:1;"></div>`; 
 
     if (currentQIndex < total - 1) btns += `<button class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>`;
-    else btns += `<button class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>`;
+    else btns += `<button class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit ✅</button>`;
     btns += `</div>`;
 
     document.getElementById("questions-container").innerHTML = html + btns;
@@ -575,9 +603,9 @@
     
     document.getElementById("quiz-wizard").innerHTML = `
       <div style='text-align:center; padding:50px 0;'>
-        <div style="font-size:50px; margin-bottom:25px; animation: spin 2s linear infinite;">${spinnerIcon}</div>
-        <h2 style='color:${spinnerColor}; margin:0; font-size:24px;'>${spinnerText}</h2>
-        <p style='color:var(--text-muted); font-size:15px; margin-top:15px; line-height:1.6;'>Please wait while your answers are submitted to the WeP server.</p>
+        <div style="font-size:45px; margin-bottom:20px; animation: spin 2s linear infinite;">${spinnerIcon}</div>
+        <h2 style='color:${spinnerColor}; margin:0; font-size:22px;'>${spinnerText}</h2>
+        <p style='color:var(--text-muted); font-size:14px; margin-top:15px; line-height:1.6;'>Please wait while your answers are submitted to the WeP server.</p>
         <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
       </div>`;
     
