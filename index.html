@@ -4,109 +4,152 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <title>WeP Assessment Portal</title>
-  
+ 
   <link rel="icon" type="image/png" id="favicon" href="">
-
+ 
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbwrQyG-WEbXdcH-ImEokNI01J4SFbB4VnKq1DhTlTH6kC3ErAygOl8G7kqjdWQRii32/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbws_hXYbCzMCmPhZiEiCsRscKDqoJiI010bD4omBLQepLiYElfhzucvw7GQtYvJY0AR/exec";
     // ==========================================
-
-    async function apiCall(actionName, payloadData) {
+ 
+    const API_TIMEOUT_MS = 45000;
+ 
+    /**
+     * Safe API wrapper for Google Apps Script.
+     * - "text/plain" content-type keeps the request a CORS "simple request"
+     *   so the browser never fires a preflight OPTIONS (Apps Script cannot answer OPTIONS).
+     * - redirect:'follow' is required because /exec 302-redirects to googleusercontent.com.
+     * - AbortController prevents the UI from hanging forever on a dead network.
+     * - Responses are read as text first, so a Google HTML error page never throws
+     *   an unreadable "Unexpected token <" JSON exception.
+     */
+    async function apiCall(actionName, payloadData, attempt) {
+      attempt = attempt || 1;
+      let controller = new AbortController();
+      let timeoutId = setTimeout(function () { controller.abort(); }, API_TIMEOUT_MS);
+ 
       try {
         let response = await fetch(API_URL, {
           method: 'POST',
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
-          body: JSON.stringify({ action: actionName, data: payloadData })
+          mode: 'cors',
+          redirect: 'follow',
+          cache: 'no-cache',
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: actionName, data: payloadData }),
+          signal: controller.signal
         });
-        return await response.json();
+        clearTimeout(timeoutId);
+ 
+        if (!response.ok) {
+          return { error: "Server responded with status " + response.status + ". Please re-deploy the Web App with access set to 'Anyone'." };
+        }
+ 
+        let raw = await response.text();
+        try {
+          return JSON.parse(raw);
+        } catch (parseErr) {
+          return { error: "Invalid server response. Please verify the deployed Web App URL." };
+        }
       } catch (error) {
+        clearTimeout(timeoutId);
+        // One silent retry for transient network blips / cold starts.
+        if (attempt < 2 && error && error.name !== 'AbortError') {
+          return await apiCall(actionName, payloadData, attempt + 1);
+        }
+        if (error && error.name === 'AbortError') {
+          return { error: "Request timed out. Please check your internet connection and try again." };
+        }
         return { error: "Network Error: Could not connect to WeP Server." };
       }
     }
   </script>
-
+ 
   <style>
     :root { --primary: #0f172a; --secondary: #1e3a8a; --accent: #2563eb; --accent-hover: #1d4ed8; --success: #059669; --danger: #dc2626; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
-    
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; color: var(--text); font-size: 15px; line-height: 1.6;}
-    
+ 
+    /* FIX: min-height instead of a locked 100vh height, so long pages scroll correctly on mobile */
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; color: var(--text); font-size: 15px; line-height: 1.6; -webkit-text-size-adjust: 100%; }
+ 
     .wep-logo { height: 50px !important; width: auto !important; max-width: 100% !important; object-fit: contain; background: white; padding: 8px 15px; border-radius: 8px; margin: 0 auto 15px auto; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-
+ 
     .header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 55px 20px 25px 20px; border-radius: 16px; margin-bottom: 25px; text-align: center; position: relative; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);}
     .header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
     .header p { margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1; font-weight: 500;}
     .sync-icon { position: absolute; right: 15px; top: 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.3s; font-weight:600; display:flex; align-items:center; gap:5px; backdrop-filter: blur(4px);}
     .sync-icon:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px);}
-
+ 
     .box { background: var(--surface); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border); }
-    
-    .form-group { margin-bottom: 22px; text-align: left;} 
+ 
+    .form-group { margin-bottom: 22px; text-align: left;}
     .form-group label { display: block; margin-bottom: 10px; font-weight: 700; color: var(--primary); font-size: 15px;}
-    .form-group input[type="text"], .form-group input[type="number"] { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; transition: 0.3s; background: #f8fafc;}
-    .form-group input[type="text"]:focus, .form-group input[type="number"]:focus { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-    
+    .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="tel"] { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; transition: 0.3s; background: #f8fafc;}
+    .form-group input[type="text"]:focus, .form-group input[type="number"]:focus, .form-group input[type="tel"]:focus { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+ 
     .btn { background: var(--accent); color: white; border: none; padding: 16px 20px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 700; width: 100%; transition: 0.3s; display:inline-block; text-align:center; letter-spacing: 0.5px;}
     .btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37,99,235,0.25);}
     .btn-secondary { background: #64748b; box-shadow:none; } .btn-secondary:hover { background: #475569; }
     .btn-success { background: var(--success); } .btn-success:hover { background: #047857; }
-    
+ 
     .top-nav { display: flex; background: #e2e8f0; border-radius: 12px; margin-bottom: 30px; padding: 6px; }
     .nav-item { flex: 1; text-align: center; color: var(--text-muted); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; padding: 14px; border-radius: 8px; }
     .nav-item.active { color: var(--primary); background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: 800;}
-    
+ 
     .section-title { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 15px; letter-spacing: 0.3px; border-bottom: 2px solid var(--bg); padding-bottom:10px;}
     table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
     th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); }
     th { background: #f8fafc; color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight:700; letter-spacing: 0.5px;}
     .badge-pending { background:#fef08a; color:#854d0e; padding:6px 12px; border-radius:20px; font-weight:700; font-size: 12px; text-transform: uppercase;}
     .badge-score { background:#dcfce7; color:#166534; padding:6px 14px; border-radius:20px; font-weight:800; font-size: 15px;}
-
+ 
     .timer-bar { background: #fff1f2; color: #be123c; padding: 18px 25px; border-radius: 12px; font-weight: 800; text-align: center; margin-bottom: 25px; border: 1px solid #fecdd3; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(225, 29, 72, 0.05);}
+    .timer-bar.warning { background:#fee2e2; border-color:#f87171; animation: pulse 1.2s infinite; }
     .status-bar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background: white; padding: 16px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 14px; color: var(--text-muted); font-weight: 700; }
-    
+ 
     /* IMPROVED QUESTION SIZING */
     .q-title { font-size: 20px; font-weight: 700; color: var(--primary); line-height: 1.5; margin-bottom: 25px; padding-bottom:15px; border-bottom: 1px solid var(--border);}
-    .option-label { display: flex; align-items:center; padding: 20px 18px; border: 1px solid var(--border); margin-bottom: 15px; border-radius: 10px; cursor: pointer; background: #f8fafc; transition: all 0.2s; font-size: 17px; font-weight: 600; color:var(--text); word-wrap: break-word; line-height: 1.4;}
+    .option-label { display: flex; align-items:center; padding: 20px 18px; border: 1px solid var(--border); margin-bottom: 15px; border-radius: 10px; cursor: pointer; background: #f8fafc; transition: all 0.2s; font-size: 17px; font-weight: 600; color:var(--text); word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4;}
     .option-label:hover { border-color: var(--accent); background: #eff6ff; }
     .option-label.selected { border-color: var(--accent); background: #eff6ff; box-shadow: 0 2px 8px rgba(37,99,235,0.15);}
     input[type="radio"] { margin-right: 18px; transform: scale(1.4); accent-color: var(--accent); flex-shrink: 0;}
-    
+ 
     .progress-bar-bg { width: 100%; background: var(--border); height: 8px; border-radius: 4px; margin-bottom: 25px; overflow: hidden;}
     .progress-bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-
+ 
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
     .modal-box { background: white; padding: 35px 30px; border-radius: 16px; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-    
+ 
     .tnc-box { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .tnc-box input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer;}
+    .tnc-box input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;}
     .tnc-box label { font-size: 13px; color: var(--text-muted); line-height: 1.6; font-weight: 500; text-transform: none; margin:0;}
-
+ 
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-
+ 
     .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 22px; overflow: hidden; position: relative; margin-top: 15px; display: none; }
     .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
     .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-
+ 
     /* INCREASED APP CONTAINER WIDTH FOR BETTER DESKTOP VIEW */
-    .app-container { max-width: 850px; padding: 20px; margin: 0 auto; }
-
+    .app-container { max-width: 850px; padding: 20px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+ 
     @media (max-width: 600px) {
       .top-nav { flex-direction: column; gap: 8px; }
       .status-bar { flex-direction: column; align-items: flex-start; }
       .timer-bar { flex-direction: column; gap: 10px; }
       .header h1 { font-size: 20px; }
+      .header { padding: 50px 15px 20px 15px; }
+      .box { padding: 22px 18px; }
+      .q-title { font-size: 18px; }
+      .option-label { font-size: 16px; padding: 16px 14px; }
+      .app-container { padding: 12px; }
     }
   </style>
 </head>
 <body>
-
+ 
 <div class="modal-overlay" id="strictModal" style="display:none;">
   <div class="modal-box" style="border-top: 8px solid #dc2626;">
     <div style="font-size: 45px; margin-bottom: 15px;">⚠️</div>
@@ -116,16 +159,16 @@
       <h3 id="strict-count-text" style="color: #991b1b; margin: 0; font-size:18px;">Warning 1 of 3</h3>
     </div>
     <p style="color:#dc2626; font-size:13px; font-weight:800;">Your test will be auto-submitted on the 4th violation.</p>
-    <button class="btn" style="background:#dc2626; padding:16px;" onclick="document.getElementById('strictModal').style.display='none'">I Understand & Agree</button>
+    <button class="btn" style="background:#dc2626; padding:16px;" onclick="closeStrictModal()">I Understand &amp; Agree</button>
   </div>
 </div>
-
+ 
 <div class="modal-overlay" id="trainingModal" style="display:none; align-items:center; padding: 15px; z-index: 9000; overflow-y:auto;">
   <div style="width: 100%; max-width: 420px; margin: auto;">
       <div id="training-announcement" style="display:none; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; position: relative; overflow: hidden; margin-bottom:15px;">
          <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
          <div style="position:absolute; bottom:-30px; right:40px; width:80px; height:80px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
-
+ 
          <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; position:relative; z-index:1;">
             <span style="background: #f8fafc; color: #1e3a8a; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">📢 Next Training</span>
          </div>
@@ -144,24 +187,24 @@
       <button onclick="document.getElementById('trainingModal').style.display='none'" class="btn" style="background: white; color: var(--primary); font-weight: 800; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); padding:16px;">Proceed to Login ➡️</button>
   </div>
 </div>
-
+ 
 <div id="login-container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; width: 100%; box-sizing: border-box;">
   <div id="login-section" class="box" style="width: 100%; max-width: 420px; padding: 45px 30px; margin: 0;">
     <div id="login-logo-skeleton" class="skeleton" style="height: 50px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
     <h2 style="margin-top:0; color:var(--primary); text-align:center; font-size:26px;">Wepsol Quiz Portal</h2>
-    <p style="text-align:center; color:var(--text-muted); font-size:15px; margin-bottom:35px; line-height:1.6;">Please login with your Name & Registered Number.</p>
+    <p style="text-align:center; color:var(--text-muted); font-size:15px; margin-bottom:35px; line-height:1.6;">Please login with your Name &amp; Registered Number.</p>
     <div class="form-group">
-      <label>Full Name</label>
-      <input type="text" id="uName" placeholder="e.g. Saurabh Gupta">
+      <label for="uName">Full Name</label>
+      <input type="text" id="uName" autocomplete="name" placeholder="e.g. Saurabh Gupta">
     </div>
     <div class="form-group">
-      <label>Registered Mobile Number</label>
-      <input type="number" id="uPhone" placeholder="10-Digit Mobile No.">
+      <label for="uPhone">Registered Mobile Number</label>
+      <input type="tel" id="uPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-Digit Mobile No.">
     </div>
     <div class="tnc-box">
       <input type="checkbox" id="tnc">
-      <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms & Conditions</b>. I understand that my assessment is monitored. Strict action or auto-submission will be taken against tab-switching, minimizing, or any malpractices.</label>
+      <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms &amp; Conditions</b>. I understand that my assessment is monitored. Strict action or auto-submission will be taken against tab-switching, minimizing, or any malpractices.</label>
     </div>
     <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:18px;">Access Platform</button>
     <div id="login-progress-container" class="load-container">
@@ -170,15 +213,15 @@
     </div>
   </div>
 </div>
-
+ 
 <div id="main-app" class="app-container" style="display:none;">
     <div class="header">
       <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="margin-bottom: 15px; display:none;">
       <h1>WeP Solutions Assessment</h1>
-      <p>Sales Team & Student Evaluation Platform</p>
+      <p>Sales Team &amp; Student Evaluation Platform</p>
       <button class="sync-icon" id="syncBtn" onclick="silentSync()" style="display:none;">🔄 Sync Node</button>
     </div>
-
+ 
     <div class="top-nav" id="top-nav">
       <div class="nav-item active" id="tab-results" onclick="switchView('results')">
         <span class="nav-icon">📊</span> Assessment Results
@@ -187,12 +230,12 @@
         <span class="nav-icon">📝</span> Attend Quiz
       </div>
     </div>
-    
+ 
     <div id="view-results">
       <div class="box" style="background: linear-gradient(to right bottom, #ffffff, #f8fafc);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
            <h2 style="color:var(--primary); margin-top:0; font-size:24px; margin-bottom:0;">Welcome, <span id="display-name" style="color:var(--accent);"></span></h2>
-           <a href="YOUR_DRIVE_PPT_LINK_HERE" target="_blank" style="background:var(--accent); color:white; padding:10px 15px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; display:flex; align-items:center; gap:5px; box-shadow: 0 4px 6px rgba(37,99,235,0.2); transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+           <a href="YOUR_DRIVE_PPT_LINK_HERE" target="_blank" rel="noopener noreferrer" style="background:var(--accent); color:white; padding:10px 15px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; display:flex; align-items:center; gap:5px; box-shadow: 0 4px 6px rgba(37,99,235,0.2); transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
               📥 Download PPT Template
            </a>
         </div>
@@ -202,7 +245,7 @@
           <table id="leaderboard-table"></table>
         </div>
       </div>
-      
+ 
       <div class="box">
         <div class="section-title">📊 My Assessment History</div>
         <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;">
@@ -210,7 +253,7 @@
         </div>
       </div>
     </div>
-
+ 
     <div id="view-assessment" style="display:none;">
       <div class="box" id="assessment-intro">
         <h2 style="margin-top:0; color:var(--primary); font-size:22px;">Active Assessment Module</h2>
@@ -224,13 +267,13 @@
           <button id="start-btn" class="btn" style="display:none; margin-top: 30px; font-size:18px; padding:18px;" onclick="startQuiz()">Start Assessment Now</button>
         </div>
       </div>
-
+ 
       <div id="quiz-wizard" style="display:none;">
-        <div class="timer-bar">
+        <div class="timer-bar" id="timer-bar">
           <span style="font-size:16px; display:flex; align-items:center; gap:8px;">⏳ Time Remaining</span>
           <span id="countdown-timer" style="font-size:28px; font-variant-numeric: tabular-nums;">00:00</span>
         </div>
-        
+ 
         <div class="box" style="padding:40px 30px;">
           <div style="display:flex; justify-content:space-between; font-size:15px; color:var(--text-muted); font-weight:800; margin-bottom:15px; text-transform:uppercase;">
             <span id="q-counter">Question 1 of 10</span><span id="q-percent">0% Done</span>
@@ -240,409 +283,615 @@
         </div>
       </div>
     </div>
-  </div>
 </div>
-
+ 
 <script>
   let userData = { name: "", phone: "" };
   let currentQuestions = [], activeModuleObj = {};
   let quizGlobalState = "LIVE", quizTimeLimit = 10;
-  
-  let currentQIndex = 0, userAnswers = {}, autoSyncTimer, countdownInterval;
+ 
+  let currentQIndex = 0, userAnswers = {}, autoSyncTimer = null, countdownInterval = null;
   let isQuizActive = false, strictModeEnabled = false, tabSwitchCount = 0, maxWarnings = 3, cheatTriggered = false;
-  let loginProgressInterval;
-
+  let loginProgressInterval = null;
+  let isLoggedIn = false, isSubmitting = false, quizDeadline = 0;
+ 
+  /* ---------- Helpers ---------- */
+ 
+  // FIX: prevents question/option text containing < > & " from breaking the rendered HTML.
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return "";
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+ 
+  function safeGet(id) { return document.getElementById(id); }
+ 
+  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) { /* private mode */ } }
+ 
   function parseDate(dateStr) {
-      if(!dateStr) return new Date(9999,11,31);
-      let p = dateStr.split("/");
-      if(p.length !== 3) return new Date(9999,11,31);
-      let m = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-      let month = m[p[1]] !== undefined ? m[p[1]] : 0;
-      let year = parseInt(p[2]);
-      if(year < 2000) year += 2000; 
-      return new Date(year, month, parseInt(p[0]));
+      if (!dateStr) return new Date(9999, 11, 31);
+      let p = String(dateStr).trim().split("/");
+      if (p.length !== 3) return new Date(9999, 11, 31);
+      let m = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+      let key = String(p[1]).trim().toLowerCase().slice(0, 3);
+      let month = (m[key] !== undefined) ? m[key] : (parseInt(p[1], 10) - 1);
+      if (isNaN(month) || month < 0 || month > 11) month = 0;
+      let year = parseInt(p[2], 10);
+      let day = parseInt(p[0], 10);
+      if (isNaN(year) || isNaN(day)) return new Date(9999, 11, 31);
+      if (year < 100) year += 2000;
+      let d = new Date(year, month, day);
+      d.setHours(0, 0, 0, 0);
+      return d;
   }
-
+ 
+  /* ---------- Training announcement ---------- */
+ 
   function renderTraining(res) {
-      if(res && res.trainingPlan && res.trainingPlan.length > 1) {
-          let now = new Date();
-          now.setHours(0,0,0,0);
-          
-          let pendingRows = res.trainingPlan.slice(1).filter(r => r[8] && r[8].toString().toLowerCase() === 'pending');
-          
-          if(pendingRows.length > 0) {
-              let sortedPendings = pendingRows.map(r => ({ row: r, date: parseDate(r[4]) })).sort((a,b) => a.date - b.date);
-              
-              let upcoming = sortedPendings.filter(tr => tr.date >= now);
-              let overdue = sortedPendings.filter(tr => tr.date < now);
-
-              let nextTrain = upcoming.length > 0 ? upcoming[0].row : null;
-              let followingTrain = upcoming.length > 1 ? upcoming[1].row : null;
-
-              if (nextTrain) {
-                  document.getElementById('t-topic').innerText = nextTrain[7] || 'TBA';
-                  document.getElementById('t-presenter').innerText = nextTrain[5] || 'TBA';
-                  document.getElementById('t-date').innerText = nextTrain[4] || 'TBA';
-                  if(followingTrain) {
-                      document.getElementById('t-next').innerHTML = `<b>⏭️ Upcoming Next:</b> ${followingTrain[5] || 'TBA'} (${followingTrain[0]} ${followingTrain[1]})`;
-                  } else {
-                      document.getElementById('t-next').innerHTML = ``;
-                  }
-                  document.getElementById('training-announcement').style.display = 'block';
-              }
-
-              let defaultersHtml = "";
-              for(let i=0; i<overdue.length; i++) {
-                  let tr = overdue[i];
-                  defaultersHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5; margin-bottom: 8px;">
-                      <div><b style="color:#991b1b; display:block; font-size:14px;">${tr.row[5]}</b><span style="font-size:12px; color:#b91c1c;">${tr.row[7]}</span></div>
-                      <div style="font-size:12px; color:#991b1b; font-weight:bold;">${tr.row[4]}</div>
-                    </div>`;
-              }
-              if(defaultersHtml !== "") {
-                  document.getElementById('defaulter-items').innerHTML = defaultersHtml;
-                  document.getElementById('defaulter-list').style.display = 'block';
-              }
-              if(nextTrain || defaultersHtml !== "") {
-                  document.getElementById('trainingModal').style.display = 'flex';
-              }
+      if (!res || !res.trainingPlan || res.trainingPlan.length <= 1) return;
+ 
+      let now = new Date();
+      now.setHours(0, 0, 0, 0);
+ 
+      let pendingRows = res.trainingPlan.slice(1).filter(function (r) {
+          return r && r[8] && r[8].toString().trim().toLowerCase() === 'pending';
+      });
+      if (pendingRows.length === 0) return;
+ 
+      let sortedPendings = pendingRows
+        .map(function (r) { return { row: r, date: parseDate(r[4]) }; })
+        .sort(function (a, b) { return a.date - b.date; });
+ 
+      let upcoming = sortedPendings.filter(function (tr) { return tr.date >= now; });
+      let overdue  = sortedPendings.filter(function (tr) { return tr.date <  now; });
+ 
+      let nextTrain = upcoming.length > 0 ? upcoming[0].row : null;
+      let followingTrain = upcoming.length > 1 ? upcoming[1].row : null;
+ 
+      if (nextTrain) {
+          safeGet('t-topic').innerText = nextTrain[7] || 'TBA';
+          safeGet('t-presenter').innerText = nextTrain[5] || 'TBA';
+          safeGet('t-date').innerText = nextTrain[4] || 'TBA';
+          if (followingTrain) {
+              safeGet('t-next').innerHTML = "<b>⏭️ Upcoming Next:</b> " + escapeHtml(followingTrain[5] || 'TBA') +
+                  " (" + escapeHtml(followingTrain[0] || '') + " " + escapeHtml(followingTrain[1] || '') + ")";
+          } else {
+              safeGet('t-next').innerHTML = "";
           }
+          safeGet('training-announcement').style.display = 'block';
+      }
+ 
+      let defaultersHtml = "";
+      for (let i = 0; i < overdue.length; i++) {
+          let tr = overdue[i];
+          defaultersHtml +=
+            '<div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5; margin-bottom: 8px;">' +
+              '<div><b style="color:#991b1b; display:block; font-size:14px;">' + escapeHtml(tr.row[5]) + '</b>' +
+              '<span style="font-size:12px; color:#b91c1c;">' + escapeHtml(tr.row[7]) + '</span></div>' +
+              '<div style="font-size:12px; color:#991b1b; font-weight:bold;">' + escapeHtml(tr.row[4]) + '</div>' +
+            '</div>';
+      }
+      if (defaultersHtml !== "") {
+          safeGet('defaulter-items').innerHTML = defaultersHtml;
+          safeGet('defaulter-list').style.display = 'block';
+      }
+      if (nextTrain || defaultersHtml !== "") {
+          safeGet('trainingModal').style.display = 'flex';
       }
   }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-      let cachedLogo = localStorage.getItem("wep_logo");
-      let cachedFav = localStorage.getItem("wep_favicon");
-      let cachedTraining = localStorage.getItem("wep_training");
-      
-      if(cachedLogo) {
-          document.getElementById('login-logo-skeleton').style.display = 'none';
-          document.getElementById('login-logo').src = cachedLogo;
-          document.getElementById('login-logo').style.display = 'block';
-          document.getElementById('dash-logo').src = cachedLogo;
-          document.getElementById('dash-logo').style.display = 'block';
+ 
+  /* ---------- Boot ---------- */
+ 
+  document.addEventListener("DOMContentLoaded", async function () {
+      let cachedLogo = lsGet("wep_logo");
+      let cachedFav = lsGet("wep_favicon");
+      let cachedTraining = lsGet("wep_training");
+      let renderedFromCache = false;
+ 
+      if (cachedLogo) {
+          safeGet('login-logo-skeleton').style.display = 'none';
+          safeGet('login-logo').src = cachedLogo;
+          safeGet('login-logo').style.display = 'block';
+          safeGet('dash-logo').src = cachedLogo;
+          safeGet('dash-logo').style.display = 'block';
       }
-      if(cachedFav) document.getElementById('favicon').href = cachedFav;
-      if(cachedTraining) renderTraining(JSON.parse(cachedTraining));
-
+      if (cachedFav) safeGet('favicon').href = cachedFav;
+ 
+      // FIX: a corrupt cache entry used to throw and kill the whole boot sequence.
+      if (cachedTraining) {
+          try { renderTraining(JSON.parse(cachedTraining)); renderedFromCache = true; }
+          catch (e) { try { localStorage.removeItem("wep_training"); } catch (e2) {} }
+      }
+ 
+      // Enter-key submit on the login form.
+      ["uName", "uPhone"].forEach(function (id) {
+          safeGet(id).addEventListener("keydown", function (ev) {
+              if (ev.key === "Enter") { ev.preventDefault(); loginUser(); }
+          });
+      });
+      // Keep the phone box strictly numeric (type=number allowed e/+/- and broke maxlength).
+      safeGet('uPhone').addEventListener("input", function () {
+          this.value = this.value.replace(/[^0-9]/g, "").slice(0, 10);
+      });
+ 
       let res = await apiCall("getPublicData", {});
-      
-      if(res && res.settings) {
-          if(res.settings.favicon) {
-              document.getElementById('favicon').href = res.settings.favicon;
-              localStorage.setItem("wep_favicon", res.settings.favicon);
-          }
-          if(res.settings.logo) {
-              document.getElementById('login-logo-skeleton').style.display = 'none';
-              document.getElementById('login-logo').src = res.settings.logo;
-              document.getElementById('login-logo').style.display = 'block';
-              document.getElementById('dash-logo').src = res.settings.logo;
-              document.getElementById('dash-logo').style.display = 'block';
-              localStorage.setItem("wep_logo", res.settings.logo);
-          }
+      if (!res || res.error) {
+          // Never block the login screen because branding failed to load.
+          safeGet('login-logo-skeleton').style.display = 'none';
+          return;
       }
-      if(res && res.trainingPlan) {
-          localStorage.setItem("wep_training", JSON.stringify(res));
-          if(!cachedTraining) renderTraining(res);
+ 
+      if (res.settings) {
+          if (res.settings.favicon) {
+              safeGet('favicon').href = res.settings.favicon;
+              lsSet("wep_favicon", res.settings.favicon);
+          }
+          if (res.settings.logo) {
+              safeGet('login-logo-skeleton').style.display = 'none';
+              safeGet('login-logo').src = res.settings.logo;
+              safeGet('login-logo').style.display = 'block';
+              safeGet('dash-logo').src = res.settings.logo;
+              safeGet('dash-logo').style.display = 'block';
+              lsSet("wep_logo", res.settings.logo);
+          } else {
+              safeGet('login-logo-skeleton').style.display = 'none';
+          }
+      } else {
+          safeGet('login-logo-skeleton').style.display = 'none';
+      }
+ 
+      if (res.trainingPlan) {
+          lsSet("wep_training", JSON.stringify(res));
+          if (!renderedFromCache) renderTraining(res);
       }
   });
-
+ 
+  /* ---------- Navigation ---------- */
+ 
   function switchView(viewName) {
-    if(document.getElementById("quiz-wizard").style.display === "block") {
+    if (isQuizActive) {
       alert("Warning: You cannot navigate away while an assessment is active.");
       return;
     }
-    document.getElementById("view-results").style.display = "none";
-    document.getElementById("view-assessment").style.display = "none";
-    document.getElementById("tab-results").classList.remove("active");
-    document.getElementById("tab-assessment").classList.remove("active");
-    document.getElementById("view-" + viewName).style.display = "block";
-    document.getElementById("tab-" + viewName).classList.add("active");
+    safeGet("view-results").style.display = "none";
+    safeGet("view-assessment").style.display = "none";
+    safeGet("tab-results").classList.remove("active");
+    safeGet("tab-assessment").classList.remove("active");
+    safeGet("view-" + viewName).style.display = "block";
+    safeGet("tab-" + viewName).classList.add("active");
   }
-
+ 
+  /* ---------- Login progress bar ---------- */
+ 
   function startLoginProgress() {
-      document.getElementById('loginBtn').style.display = "none";
-      let container = document.getElementById('login-progress-container');
-      let fill = document.getElementById('login-progress-fill');
-      let txt = document.getElementById('login-progress-text');
-      
+      safeGet('loginBtn').style.display = "none";
+      let container = safeGet('login-progress-container');
+      let fill = safeGet('login-progress-fill');
+      let txt = safeGet('login-progress-text');
+ 
       container.style.display = "block";
       let w = 0;
-      loginProgressInterval = setInterval(() => {
-          if(w < 90) {
+      clearInterval(loginProgressInterval);
+      loginProgressInterval = setInterval(function () {
+          if (w < 90) {
               w += Math.floor(Math.random() * 15) + 5;
-              if(w > 90) w = 90;
+              if (w > 90) w = 90;
               fill.style.width = w + "%";
               txt.innerText = w + "%";
           }
       }, 300);
   }
-
+ 
   function completeLoginProgress() {
       clearInterval(loginProgressInterval);
-      document.getElementById('login-progress-fill').style.width = "100%";
-      document.getElementById('login-progress-text').innerText = "100%";
+      loginProgressInterval = null;
+      safeGet('login-progress-fill').style.width = "100%";
+      safeGet('login-progress-text').innerText = "100%";
   }
-
+ 
   function resetLoginProgress() {
       clearInterval(loginProgressInterval);
-      document.getElementById('login-progress-container').style.display = "none";
-      document.getElementById('login-progress-fill').style.width = "0%";
-      document.getElementById('login-progress-text').innerText = "0%";
-      document.getElementById('loginBtn').style.display = "block";
+      loginProgressInterval = null;
+      safeGet('login-progress-container').style.display = "none";
+      safeGet('login-progress-fill').style.width = "0%";
+      safeGet('login-progress-text').innerText = "0%";
+      safeGet('loginBtn').style.display = "block";
   }
-
-  async function loginUser(isSilent = false) {
-    if(!isSilent) {
-      userData.name = document.getElementById("uName").value.trim();
-      userData.phone = document.getElementById("uPhone").value.trim();
-      
-      if (!userData.name || !userData.phone) { 
-        alert("Please provide both Name and Mobile Number."); 
-        return; 
+ 
+  /* ---------- Login / dashboard refresh ---------- */
+ 
+  async function loginUser(isSilent) {
+    isSilent = (isSilent === true);
+ 
+    if (!isSilent) {
+      userData.name = safeGet("uName").value.trim().replace(/\s+/g, " ");
+      userData.phone = safeGet("uPhone").value.trim();
+ 
+      if (!userData.name || !userData.phone) {
+        alert("Please provide both Name and Mobile Number.");
+        return;
       }
-      if (!document.getElementById("tnc").checked) { 
-        alert("Please agree to the Terms & Conditions before logging in."); 
-        return; 
+      if (!/^[0-9]{10}$/.test(userData.phone)) {
+        alert("Please enter a valid 10-digit mobile number.");
+        return;
+      }
+      if (!safeGet("tnc").checked) {
+        alert("Please agree to the Terms & Conditions before logging in.");
+        return;
       }
       startLoginProgress();
     }
-
+ 
     let res = await apiCall("fetchUserDashboard", { name: userData.name, phone: userData.phone });
-    
-    if(res.error) {
-       alert(res.error);
-       if(!isSilent) resetLoginProgress();
+ 
+    if (!res || res.error) {
+       // FIX: a background sync no longer spams alert() every 15 seconds.
+       if (!isSilent) {
+         alert((res && res.error) ? res.error : "Unable to load your dashboard. Please try again.");
+         resetLoginProgress();
+       }
        return;
     }
-
-    if(!isSilent) {
+ 
+    if (!isSilent) {
       completeLoginProgress();
-      setTimeout(() => {
-          document.getElementById("login-container").style.display = "none";
-          document.getElementById("main-app").style.display = "block";
-          document.getElementById("syncBtn").style.display = "flex"; 
+      isLoggedIn = true;
+      setTimeout(function () {
+          safeGet("login-container").style.display = "none";
+          safeGet("main-app").style.display = "block";
+          safeGet("syncBtn").style.display = "flex";
       }, 300);
     }
-    
-    document.getElementById("display-name").innerText = userData.name.split(" ")[0];
-    let modName = res.activeMonth + " (" + res.activeWeek + ")";
-    document.getElementById("active-mod-name").innerText = modName;
-    document.getElementById("lb-mod-name").innerText = modName;
-    
+ 
+    safeGet("display-name").innerText = userData.name.split(" ")[0];
+    let modName = (res.activeMonth || "-") + " (" + (res.activeWeek || "-") + ")";
+    safeGet("active-mod-name").innerText = modName;
+    safeGet("lb-mod-name").innerText = modName;
+ 
     activeModuleObj = { month: res.activeMonth, week: res.activeWeek };
-    quizGlobalState = res.quizState;
-    quizTimeLimit = res.timeLimit;
-    strictModeEnabled = (res.strictMode === "ON"); 
-    
-    document.getElementById("display-time-limit").innerText = quizTimeLimit;
-    document.getElementById("display-mod-status").innerText = quizGlobalState;
-    
-    let lbTable = document.getElementById("leaderboard-table");
-    lbTable.innerHTML = "<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>";
-    res.leaderboard.forEach(lb => {
-      let displayScore = lb.isPublished ? `<span class="badge-score">${lb.score}</span>` : `<span class="badge-pending">Evaluating</span>`;
-      let detailsText = lb.isPublished ? `<span style="font-weight:800; color:var(--text-muted);">${lb.correct} / ${lb.total} Right</span>` : `-`;
-      let boldName = lb.isMe ? `<b style="color:var(--accent); font-size:14px;">${lb.name} (You)</b>` : `<span style="font-size:13px;">${lb.name}</span>`;
-      lbTable.innerHTML += `<tr><td>${boldName}</td><td>${displayScore}</td><td>${detailsText}</td></tr>`;
+    quizGlobalState = res.quizState || "LIVE";
+    quizTimeLimit = parseInt(res.timeLimit, 10) || 10;
+    strictModeEnabled = (String(res.strictMode).toUpperCase() === "ON");
+ 
+    safeGet("display-time-limit").innerText = quizTimeLimit;
+    safeGet("display-mod-status").innerText = quizGlobalState;
+ 
+    let leaderboard = res.leaderboard || [];
+    let lbRows = ["<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>"];
+    leaderboard.forEach(function (lb) {
+      let displayScore = lb.isPublished
+        ? '<span class="badge-score">' + escapeHtml(lb.score) + '</span>'
+        : '<span class="badge-pending">Evaluating</span>';
+      let detailsText = lb.isPublished
+        ? '<span style="font-weight:800; color:var(--text-muted);">' + escapeHtml(lb.correct) + ' / ' + escapeHtml(lb.total) + ' Right</span>'
+        : '-';
+      let boldName = lb.isMe
+        ? '<b style="color:var(--accent); font-size:14px;">' + escapeHtml(lb.name) + ' (You)</b>'
+        : '<span style="font-size:13px;">' + escapeHtml(lb.name) + '</span>';
+      lbRows.push('<tr><td>' + boldName + '</td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
     });
-    if(res.leaderboard.length === 0) lbTable.innerHTML += `<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No team data found for the active week.</td></tr>`;
-
-    let hTable = document.getElementById("history-table");
-    hTable.innerHTML = "<tr><th>Assessment Date</th><th>Training Module</th><th>Score %</th><th>Right / Wrong</th></tr>"; 
-    res.history.forEach(h => {
-      let displayScore = h.isPublished ? `<span class="badge-score">${h.score}</span>` : `<span class="badge-pending">Evaluating</span>`;
-      let detailsText = h.isPublished ? `<span style="color:#059669; font-weight:800;">${h.correct} Right</span><br><span style="color:#dc2626; font-weight:800;">${h.wrong} Wrong</span>` : `-`;
-      hTable.innerHTML += `<tr><td style="font-weight:600;">${h.date}</td><td><b style="color:var(--primary); font-size:13px;">${h.month} - ${h.week}</b></td><td>${displayScore}</td><td>${detailsText}</td></tr>`;
-    });
-    if(res.history.length === 0) hTable.innerHTML += `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assessment history found.</td></tr>`;
-
-    if (res.hasAttempted) {
-      document.getElementById("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score will update once the Admin publishes the results.";
-      document.getElementById("start-btn").style.display = "none";
-    } else if (res.questions.length === 0) {
-      document.getElementById("quiz-status-msg").innerHTML = "⏳ Admin has not added questions for this module yet. Please check back later.";
-      document.getElementById("start-btn").style.display = "none";
-    } else if (quizGlobalState === "PAUSED") {
-      document.getElementById("quiz-status-msg").innerHTML = "🛑 The Admin has temporarily paused this assessment. You cannot start the quiz right now.";
-      document.getElementById("start-btn").style.display = "none";
-      document.getElementById("display-mod-status").style.color = "#dc2626";
-    } else {
-      let strictAlert = strictModeEnabled ? `<br><br><span style="color:#dc2626; display:inline-block; background:#fee2e2; padding:10px; border-radius:8px;">🛡️ <b>Strict Mode ON:</b> Tab switching or opening new apps is restricted.</span>` : "";
-      document.getElementById("quiz-status-msg").innerHTML = "🚨 You have a pending assessment. Click below to begin." + strictAlert;
-      document.getElementById("start-btn").style.display = "block";
-      document.getElementById("display-mod-status").style.color = "var(--success)";
-      currentQuestions = res.questions;
+    if (leaderboard.length === 0) {
+      lbRows.push('<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No team data found for the active week.</td></tr>');
     }
-
+    safeGet("leaderboard-table").innerHTML = lbRows.join("");
+ 
+    let history = res.history || [];
+    let hRows = ["<tr><th>Assessment Date</th><th>Training Module</th><th>Score %</th><th>Right / Wrong</th></tr>"];
+    history.forEach(function (h) {
+      let displayScore = h.isPublished
+        ? '<span class="badge-score">' + escapeHtml(h.score) + '</span>'
+        : '<span class="badge-pending">Evaluating</span>';
+      let detailsText = h.isPublished
+        ? '<span style="color:#059669; font-weight:800;">' + escapeHtml(h.correct) + ' Right</span><br><span style="color:#dc2626; font-weight:800;">' + escapeHtml(h.wrong) + ' Wrong</span>'
+        : '-';
+      hRows.push('<tr><td style="font-weight:600;">' + escapeHtml(h.date) + '</td><td><b style="color:var(--primary); font-size:13px;">' +
+        escapeHtml(h.month) + ' - ' + escapeHtml(h.week) + '</b></td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
+    });
+    if (history.length === 0) {
+      hRows.push('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assessment history found.</td></tr>');
+    }
+    safeGet("history-table").innerHTML = hRows.join("");
+ 
+    let serverQuestions = res.questions || [];
+ 
+    if (res.hasAttempted) {
+      safeGet("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score will update once the Admin publishes the results.";
+      safeGet("start-btn").style.display = "none";
+    } else if (serverQuestions.length === 0) {
+      safeGet("quiz-status-msg").innerHTML = "⏳ Admin has not added questions for this module yet. Please check back later.";
+      safeGet("start-btn").style.display = "none";
+    } else if (quizGlobalState === "PAUSED") {
+      safeGet("quiz-status-msg").innerHTML = "🛑 The Admin has temporarily paused this assessment. You cannot start the quiz right now.";
+      safeGet("start-btn").style.display = "none";
+      safeGet("display-mod-status").style.color = "#dc2626";
+    } else {
+      let strictAlert = strictModeEnabled
+        ? '<br><br><span style="color:#dc2626; display:inline-block; background:#fee2e2; padding:10px; border-radius:8px;">🛡️ <b>Strict Mode ON:</b> Tab switching or opening new apps is restricted.</span>'
+        : "";
+      safeGet("quiz-status-msg").innerHTML = "🚨 You have a pending assessment. Click below to begin." + strictAlert;
+      safeGet("start-btn").style.display = "block";
+      safeGet("display-mod-status").style.color = "var(--success)";
+      currentQuestions = serverQuestions;
+    }
+ 
+    // FIX: only one auto-sync timer can ever exist, and it never runs during a live quiz.
     clearInterval(autoSyncTimer);
     autoSyncTimer = setInterval(silentSync, 15000);
   }
-
+ 
   function silentSync() {
-    let btn = document.getElementById('syncBtn');
+    // FIX: the guard now runs BEFORE dimming the button, which used to leave it stuck at 50% opacity.
+    if (isQuizActive || isSubmitting || !isLoggedIn) return;
+    let btn = safeGet('syncBtn');
     btn.style.opacity = '0.5';
-    if(isQuizActive) return; 
-    loginUser(true).then(() => { btn.style.opacity = '1'; });
+    loginUser(true).then(function () { btn.style.opacity = '1'; })
+                   .catch(function () { btn.style.opacity = '1'; });
   }
-
+ 
+  /* ---------- Anti-cheat ---------- */
+ 
+  function closeStrictModal() {
+    safeGet('strictModal').style.display = 'none';
+    // Re-arm only after the modal is dismissed, so one tab switch = one warning.
+    cheatTriggered = false;
+  }
+ 
   function handleCheatEvent() {
-    if (!isQuizActive || !strictModeEnabled) return;
-    if (cheatTriggered) return; 
-    
-    if (document.visibilityState === "hidden" || !document.hasFocus()) {
-      cheatTriggered = true;
-      tabSwitchCount++;
-      if (tabSwitchCount <= maxWarnings) {
-        document.getElementById("strict-count-text").innerText = `Warning ${tabSwitchCount} of ${maxWarnings}`;
-        document.getElementById("strictModal").style.display = "flex";
-        setTimeout(() => { cheatTriggered = false; }, 2000); 
-      } else {
-        document.getElementById("strictModal").style.display = "none";
-        alert("🚨 You have been disqualified for switching tabs/windows multiple times. Auto-submitting your test.");
-        submitQuiz(true, "Disqualified");
-      }
+    if (!isQuizActive || !strictModeEnabled || isSubmitting) return;
+    if (cheatTriggered) return;
+    if (safeGet('strictModal').style.display === 'flex') return;
+ 
+    // FIX: only genuine hide/blur events count. document.hasFocus() alone fired
+    // spuriously on mobile keyboards and on native alert() dialogs.
+    if (document.visibilityState !== "hidden" && document.hasFocus()) return;
+ 
+    cheatTriggered = true;
+    tabSwitchCount++;
+ 
+    if (tabSwitchCount <= maxWarnings) {
+      safeGet("strict-count-text").innerText = "Warning " + tabSwitchCount + " of " + maxWarnings;
+      safeGet("strictModal").style.display = "flex";
+      // Safety re-arm in case the learner never clicks the button.
+      setTimeout(function () { cheatTriggered = false; }, 4000);
+    } else {
+      safeGet("strictModal").style.display = "none";
+      alert("🚨 You have been disqualified for switching tabs/windows multiple times. Auto-submitting your test.");
+      submitQuiz(true, "Disqualified");
     }
   }
-
+ 
   document.addEventListener("visibilitychange", handleCheatEvent);
   window.addEventListener("blur", handleCheatEvent);
-
+ 
+  // Warn before an accidental refresh/close wipes an in-progress attempt.
+  window.addEventListener("beforeunload", function (e) {
+    if (isQuizActive && !isSubmitting) { e.preventDefault(); e.returnValue = ""; return ""; }
+  });
+ 
+  /* ---------- Quiz flow ---------- */
+ 
   function startQuiz() {
-    clearInterval(autoSyncTimer); 
+    if (!currentQuestions || currentQuestions.length === 0) {
+      alert("No questions are available for this module right now.");
+      return;
+    }
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
+ 
     isQuizActive = true;
-    tabSwitchCount = 0; 
+    isSubmitting = false;
+    tabSwitchCount = 0;
     cheatTriggered = false;
-    
-    document.getElementById("syncBtn").style.display = "none";
-    document.getElementById("assessment-intro").style.display = "none";
-    document.getElementById("top-nav").style.display = "none"; 
-    document.getElementById("quiz-wizard").style.display = "block";
-    
+ 
+    safeGet("syncBtn").style.display = "none";
+    safeGet("assessment-intro").style.display = "none";
+    safeGet("top-nav").style.display = "none";
+    safeGet("quiz-wizard").style.display = "block";
+ 
     currentQIndex = 0;
     userAnswers = {};
     renderSingleQuestion();
     startTimer(quizTimeLimit * 60);
+    window.scrollTo(0, 0);
   }
-
+ 
   function startTimer(durationInSeconds) {
-    let timer = durationInSeconds, minutes, seconds;
-    let display = document.getElementById('countdown-timer');
-    
-    countdownInterval = setInterval(function () {
-        minutes = parseInt(timer / 60, 10);
-        seconds = parseInt(timer % 60, 10);
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
-        display.textContent = minutes + ":" + seconds;
-
-        if (--timer < 0) {
-            clearInterval(countdownInterval);
-            alert("🛑 Time Limit Exceeded. Your assessment is being submitted automatically.");
-            submitQuiz(true, "Timeout");
+    clearInterval(countdownInterval);
+    // FIX: deadline-based instead of decrement-based. setInterval is throttled in
+    // background tabs and on mobile, which made the old timer run far too slow.
+    quizDeadline = Date.now() + (durationInSeconds * 1000);
+    let display = safeGet('countdown-timer');
+    let bar = safeGet('timer-bar');
+ 
+    function tick() {
+      let remaining = Math.round((quizDeadline - Date.now()) / 1000);
+      if (remaining < 0) remaining = 0;
+ 
+      let minutes = Math.floor(remaining / 60);
+      let seconds = remaining % 60;
+      display.textContent = (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds < 10 ? "0" + seconds : seconds);
+ 
+      if (remaining <= 60) bar.classList.add("warning"); else bar.classList.remove("warning");
+ 
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        if (!isSubmitting) {
+          isQuizActive = false;
+          alert("🛑 Time Limit Exceeded. Your assessment is being submitted automatically.");
+          submitQuiz(true, "Timeout");
         }
-    }, 1000);
-  }
-
-  function handleRadioClick(elem) {
-     let labels = document.querySelectorAll('.option-label');
-     labels.forEach(l => l.classList.remove('selected'));
-     elem.closest('.option-label').classList.add('selected');
-  }
-
-  function renderSingleQuestion() {
-    let q = currentQuestions[currentQIndex];
-    let total = currentQuestions.length;
-    let progress = Math.round(((currentQIndex) / total) * 100);
-    
-    document.getElementById("q-counter").innerText = `Question ${currentQIndex + 1} of ${total}`;
-    document.getElementById("q-percent").innerText = `${progress}% Complete`;
-    document.getElementById("q-progress").style.width = `${progress}%`;
-
-    let savedAns = userAnswers[q.id] || "";
-    let html = `
-      <p class="q-title">${q.q}</p>
-      <label class="option-label ${savedAns==='A'?'selected':''}"><input type="radio" name="q_current" value="A" onchange="handleRadioClick(this)" ${savedAns === 'A' ? 'checked' : ''}> <span style="flex:1;">${q.opts[0]}</span></label>
-      <label class="option-label ${savedAns==='B'?'selected':''}"><input type="radio" name="q_current" value="B" onchange="handleRadioClick(this)" ${savedAns === 'B' ? 'checked' : ''}> <span style="flex:1;">${q.opts[1]}</span></label>
-      <label class="option-label ${savedAns==='C'?'selected':''}"><input type="radio" name="q_current" value="C" onchange="handleRadioClick(this)" ${savedAns === 'C' ? 'checked' : ''}> <span style="flex:1;">${q.opts[2]}</span></label>
-      <label class="option-label ${savedAns==='D'?'selected':''}"><input type="radio" name="q_current" value="D" onchange="handleRadioClick(this)" ${savedAns === 'D' ? 'checked' : ''}> <span style="flex:1;">${q.opts[3]}</span></label>
-    `;
-
-    let btns = `<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">`;
-    if (currentQIndex > 0) btns += `<button class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>`;
-    else btns += `<div style="flex:1;"></div>`; 
-
-    if (currentQIndex < total - 1) btns += `<button class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>`;
-    else btns += `<button class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>`;
-    btns += `</div>`;
-
-    document.getElementById("questions-container").innerHTML = html + btns;
-  }
-
-  function saveCurrentSelection() {
-    let q = currentQuestions[currentQIndex];
-    let selected = document.querySelector(`input[name="q_current"]:checked`);
-    if (selected) userAnswers[q.id] = selected.value;
-  }
-  function nextQuestion() { saveCurrentSelection(); currentQIndex++; renderSingleQuestion(); }
-  function prevQuestion() { saveCurrentSelection(); currentQIndex--; renderSingleQuestion(); }
-
-  async function submitQuiz(isAutoSubmit = false, forceReason = "") {
-    saveCurrentSelection(); 
-    
-    if(!isAutoSubmit) {
-      let missedCount = 0;
-      currentQuestions.forEach(q => { if(!userAnswers[q.id]) missedCount++; });
-      if(missedCount > 0) {
-         let conf = confirm(`You have left ${missedCount} question(s) unattempted. Are you sure you want to submit?`);
-         if(!conf) return;
       }
     }
-
-    isQuizActive = false; 
+ 
+    tick();                                  // FIX: render immediately (used to show 00:00 for a full second)
+    countdownInterval = setInterval(tick, 500);
+  }
+ 
+  function handleRadioClick(elem) {
+     let labels = document.querySelectorAll('#questions-container .option-label');
+     labels.forEach(function (l) { l.classList.remove('selected'); });
+     let parent = elem.closest('.option-label');
+     if (parent) parent.classList.add('selected');
+  }
+ 
+  function renderSingleQuestion() {
+    let q = currentQuestions[currentQIndex];
+    if (!q) return;
+    let total = currentQuestions.length;
+    let progress = Math.round((currentQIndex / total) * 100);
+ 
+    safeGet("q-counter").innerText = "Question " + (currentQIndex + 1) + " of " + total;
+    safeGet("q-percent").innerText = progress + "% Complete";
+    safeGet("q-progress").style.width = progress + "%";
+ 
+    // FIX: answers are keyed by position, so duplicate/blank question IDs in the
+    // sheet can no longer overwrite each other's saved answers.
+    let savedAns = userAnswers[currentQIndex] || "";
+    let opts = q.opts || [];
+    let letters = ["A", "B", "C", "D"];
+ 
+    let html = '<p class="q-title">' + escapeHtml(q.q) + '</p>';
+    for (let i = 0; i < 4; i++) {
+      let optText = (opts[i] === undefined || opts[i] === null || String(opts[i]).trim() === "") ? "" : String(opts[i]);
+      if (optText === "") continue;   // FIX: blank options are skipped instead of rendering "undefined"
+      let L = letters[i];
+      html += '<label class="option-label ' + (savedAns === L ? 'selected' : '') + '">' +
+                '<input type="radio" name="q_current" value="' + L + '" onchange="handleRadioClick(this)" ' +
+                (savedAns === L ? 'checked' : '') + '> <span style="flex:1;">' + escapeHtml(optText) + '</span>' +
+              '</label>';
+    }
+ 
+    let btns = '<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">';
+    if (currentQIndex > 0) btns += '<button type="button" class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>';
+    else btns += '<div style="flex:1;"></div>';
+ 
+    if (currentQIndex < total - 1) btns += '<button type="button" class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>';
+    else btns += '<button type="button" class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>';
+    btns += '</div>';
+ 
+    safeGet("questions-container").innerHTML = html + btns;
+  }
+ 
+  function saveCurrentSelection() {
+    let selected = document.querySelector('input[name="q_current"]:checked');
+    if (selected) userAnswers[currentQIndex] = selected.value;
+  }
+ 
+  function nextQuestion() {
+    saveCurrentSelection();
+    if (currentQIndex < currentQuestions.length - 1) currentQIndex++;
+    renderSingleQuestion();
+    window.scrollTo(0, 0);
+  }
+ 
+  function prevQuestion() {
+    saveCurrentSelection();
+    if (currentQIndex > 0) currentQIndex--;
+    renderSingleQuestion();
+    window.scrollTo(0, 0);
+  }
+ 
+  async function submitQuiz(isAutoSubmit, forceReason) {
+    isAutoSubmit = (isAutoSubmit === true);
+    forceReason = forceReason || "";
+ 
+    if (isSubmitting) return;        // FIX: prevents a double submission (double-click / timeout racing a manual submit)
+    saveCurrentSelection();
+ 
+    if (!isAutoSubmit) {
+      let missedCount = 0;
+      for (let i = 0; i < currentQuestions.length; i++) { if (!userAnswers[i]) missedCount++; }
+      if (missedCount > 0) {
+         let conf = confirm("You have left " + missedCount + " question(s) unattempted. Are you sure you want to submit?");
+         if (!conf) return;
+      }
+    }
+ 
+    isSubmitting = true;
+    isQuizActive = false;
     clearInterval(countdownInterval);
-    
+    countdownInterval = null;
+ 
     let spinnerIcon = forceReason === "Disqualified" ? "🚨" : "⚙️";
     let spinnerText = forceReason === "Disqualified" ? "Disqualified. Submitting..." : "Saving Assessment Data...";
     let spinnerColor = forceReason === "Disqualified" ? "#dc2626" : "var(--primary)";
-    
-    document.getElementById("quiz-wizard").innerHTML = `
-      <div style='text-align:center; padding:50px 0;'>
-        <div style="font-size:45px; margin-bottom:20px; animation: spin 2s linear infinite;">${spinnerIcon}</div>
-        <h2 style='color:${spinnerColor}; margin:0; font-size:22px;'>${spinnerText}</h2>
-        <p style='color:var(--text-muted); font-size:14px; margin-top:15px; line-height:1.6;'>Please wait while your answers are submitted to the WeP server.</p>
-        <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
-      </div>`;
-    
+ 
+    safeGet("quiz-wizard").innerHTML =
+      "<div style='text-align:center; padding:50px 0;'>" +
+        '<div style="font-size:45px; margin-bottom:20px; animation: spin 2s linear infinite;">' + spinnerIcon + '</div>' +
+        "<h2 style='color:" + spinnerColor + "; margin:0; font-size:22px;'>" + spinnerText + "</h2>" +
+        "<p style='color:var(--text-muted); font-size:14px; margin-top:15px; line-height:1.6;'>Please wait while your answers are submitted to the WeP server.</p>" +
+        "<style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>" +
+      "</div>";
+ 
     let correct = 0, detailedLogs = {};
-    if(forceReason === "Disqualified") {
+    if (forceReason === "Disqualified") {
         detailedLogs["Status"] = "Disqualified - Cheating detected via Strict Mode";
     }
-
-    currentQuestions.forEach((q) => {
-      let uAnsLetter = userAnswers[q.id] || "Skipped";
-      let uAnsText = "Skipped", cAnsText = "";
-      
-      if(uAnsLetter === 'A') uAnsText = q.opts[0]; if(uAnsLetter === 'B') uAnsText = q.opts[1];
-      if(uAnsLetter === 'C') uAnsText = q.opts[2]; if(uAnsLetter === 'D') uAnsText = q.opts[3];
-
-      if(q.ans === 'A') cAnsText = q.opts[0]; if(q.ans === 'B') cAnsText = q.opts[1];
-      if(q.ans === 'C') cAnsText = q.opts[2]; if(q.ans === 'D') cAnsText = q.opts[3];
-
-      if (uAnsLetter === q.ans) correct++;
-      detailedLogs["Q" + q.id] = { question: q.q, userAnswerLetter: uAnsLetter, userAnswerText: uAnsText, correctAnswerLetter: q.ans, correctAnswerText: cAnsText, isRight: (uAnsLetter === q.ans) };
+ 
+    currentQuestions.forEach(function (q, idx) {
+      let opts = q.opts || [];
+      let letterIndex = { A: 0, B: 1, C: 2, D: 3 };
+      let uAnsLetter = userAnswers[idx] || "Skipped";
+      let cAnsLetter = q.ans ? String(q.ans).toUpperCase().trim() : "";
+ 
+      let uAnsText = (letterIndex[uAnsLetter] !== undefined) ? (opts[letterIndex[uAnsLetter]] || "") : "Skipped";
+      let cAnsText = (letterIndex[cAnsLetter] !== undefined) ? (opts[letterIndex[cAnsLetter]] || "") : "";
+ 
+      let isRight = (uAnsLetter !== "Skipped" && uAnsLetter === cAnsLetter);
+      if (isRight) correct++;
+ 
+      let logKey = "Q" + ((q.id === undefined || q.id === null || q.id === "") ? (idx + 1) : q.id);
+      detailedLogs[logKey] = {
+        question: q.q,
+        userAnswerLetter: uAnsLetter,
+        userAnswerText: uAnsText,
+        correctAnswerLetter: cAnsLetter,
+        correctAnswerText: cAnsText,
+        isRight: isRight
+      };
     });
-    
+ 
     let resultPayload = { total: currentQuestions.length, correct: correct, detailedLogs: detailedLogs };
-    
-    await apiCall("submitWeeklyQuiz", { name: userData.name, phone: userData.phone, month: activeModuleObj.month, week: activeModuleObj.week, results: resultPayload });
-    
-    if(forceReason === "Disqualified") alert("You were disqualified. Your test has been submitted.");
+ 
+    let submitRes = await apiCall("submitWeeklyQuiz", {
+      name: userData.name, phone: userData.phone,
+      month: activeModuleObj.month, week: activeModuleObj.week,
+      results: resultPayload
+    });
+ 
+    // FIX: a failed submission used to be silently discarded. Now the learner can retry.
+    if (!submitRes || submitRes.error) {
+      let msg = (submitRes && submitRes.error) ? submitRes.error : "Submission failed.";
+      safeGet("quiz-wizard").innerHTML =
+        "<div style='text-align:center; padding:50px 20px;'>" +
+          '<div style="font-size:45px; margin-bottom:20px;">⚠️</div>' +
+          "<h2 style='color:#dc2626; margin:0; font-size:22px;'>Submission Failed</h2>" +
+          "<p style='color:var(--text-muted); font-size:14px; margin:15px 0 25px 0;'>" + escapeHtml(msg) +
+          "<br>Your answers are still saved in this browser. Please do not close this page.</p>" +
+          '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="retrySubmit(' + (isAutoSubmit ? 'true' : 'false') + ',&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>' +
+        "</div>";
+      isSubmitting = false;
+      return;
+    }
+ 
+    if (forceReason === "Disqualified") alert("You were disqualified. Your test has been submitted.");
     else alert("Assessment Submitted Successfully!");
-    
-    location.reload(); 
+ 
+    location.reload();
+  }
+ 
+  function retrySubmit(isAutoSubmit, forceReason) {
+    isSubmitting = false;
+    submitQuiz(true, forceReason);
   }
 </script>
 </body>
 </html>
+ 
