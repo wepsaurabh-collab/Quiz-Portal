@@ -12,7 +12,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbyTjVMCuVx9KzH1StvSRIGR41QKOsTUM6zyoinkmOC8fANFlbDqRPJJPYmDGCq7kwPl/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwrQyG-WEbXdcH-ImEokNI01J4SFbB4VnKq1DhTlTH6kC3ErAygOl8G7kqjdWQRii32/exec";
     // ==========================================
 
     async function apiCall(actionName, payloadData) {
@@ -88,6 +88,10 @@
     .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
     .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
+    /* EDIT MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
+    .modal-box { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
+
     @media (max-width: 768px) {
       body { overflow-y: auto; }
       .layout-wrapper { flex-direction: column; height: auto; }
@@ -108,6 +112,34 @@
 
 <div id="toast-container"></div>
 
+<!-- EDIT QUESTION MODAL -->
+<div class="modal-overlay" id="editQModal">
+  <div class="modal-box">
+    <h3 style="margin-top:0; color:var(--primary); font-size:22px; border-bottom:1px solid var(--border); padding-bottom:10px;">✏️ Edit Question</h3>
+    <div class="flex-row" style="margin-top:20px;">
+      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Month</label><input type="text" id="eq-month" style="padding:10px;"></div>
+      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Week</label><input type="text" id="eq-week" style="padding:10px;"></div>
+    </div>
+    <label style="font-weight:600; font-size:14px;">Question Statement</label>
+    <textarea id="eq-q" rows="2" style="resize:vertical; padding:10px;"></textarea>
+    <div class="flex-row">
+      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option A</label><input type="text" id="eq-a" style="padding:10px;"></div>
+      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option B</label><input type="text" id="eq-b" style="padding:10px;"></div>
+    </div>
+    <div class="flex-row">
+      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option C</label><input type="text" id="eq-c" style="padding:10px;"></div>
+      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option D</label><input type="text" id="eq-d" style="padding:10px;"></div>
+    </div>
+    <label style="font-weight:600; font-size:14px; color:var(--success);">Correct Answer (A/B/C/D)</label>
+    <select id="eq-ans" style="font-weight:bold; color:var(--success); font-size:15px; padding:10px;"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+    
+    <div style="display:flex; justify-content:space-between; gap:15px; margin-top:20px;">
+      <button onclick="document.getElementById('editQModal').style.display='none'" style="background:#64748b; padding:12px; width:50%;">Cancel</button>
+      <button onclick="saveEditQ()" style="padding: 12px; width:50%;">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0; padding:20px;">
   <div class="box" style="width: 100%; max-width: 420px; text-align:center; padding: 45px 30px; margin:0;">
     
@@ -120,7 +152,6 @@
     <input type="password" id="pin" placeholder="Enter Secure Passcode" style="text-align:center; letter-spacing: 2px; font-size:16px;">
     <button id="authBtn" onclick="login()" style="padding: 16px; font-size: 17px; margin-top:10px; width:100%;">Authenticate Access</button>
 
-    <!-- 0-100% LOADING ANIMATION BAR -->
     <div id="login-progress-container" class="load-container">
        <div id="login-progress-fill" class="load-fill"></div>
        <div id="login-progress-text" class="load-text">0%</div>
@@ -228,10 +259,51 @@
     <!-- TAB 6: SUMMARY -->
     <div id="view-summary" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Operations Summary</h3><button class="btn-export" onclick="downloadCSV('summary-table', 'Summary.csv')">Export CSV</button></div><label>Filter Month:</label><select id="sum-month-filter" onchange="renderSummaryPivot()" style="width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option></select><div style="overflow-x: auto;"><table id="summary-table"></table></div></div></div>
 
-    <!-- TAB 7: QUESTION BANK -->
+    <!-- TAB 7: QUESTION BANK WITH BULK UPLOAD & EDIT -->
     <div id="view-qbank" class="tab-content" style="display:none;">
-      <div class="box"><h3 style="margin-top:0;">Question Repository</h3><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="qb-month" onchange="renderQuestionBank()"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="qb-week" onchange="renderQuestionBank()"><option>All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><div style="overflow-x: auto; margin-bottom: 20px; max-height:300px;"><table id="qb-table"></table></div></div>
-      <div class="box" style="background:#f8fafc;"><h3 style="margin-top:0; color:var(--primary);">➕ Upload New Question</h3><div class="flex-row"><div style="flex:1;"><label>Target Month</label><select id="nq-month"><option>August</option><option selected>September</option><option>October</option></select></div><div style="flex:1;"><label>Target Week</label><select id="nq-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><label>Question Statement</label><textarea id="nq-q" rows="2" style="resize:vertical;"></textarea><div class="flex-row"><div style="flex:1;"><label>Option A</label><input type="text" id="nq-a"></div><div style="flex:1;"><label>Option B</label><input type="text" id="nq-b"></div></div><div class="flex-row"><div style="flex:1;"><label>Option C</label><input type="text" id="nq-c"></div><div style="flex:1;"><label>Option D</label><input type="text" id="nq-d"></div></div><label>Correct Answer (A/B/C/D)</label><select id="nq-ans" style="font-weight:bold; color:var(--success);"><option>A</option><option>B</option><option>C</option><option>D</option></select><button onclick="addQ()" style="padding: 12px; margin-top:10px;">Upload to Repository</button></div>
+      
+      <!-- NEW BULK UPLOAD SECTION -->
+      <div class="box" style="background:#f0fdf4; border-color:#bbf7d0; margin-bottom: 20px;">
+        <h3 style="margin-top:0; color:var(--success);">📥 Bulk Upload Questions (CSV)</h3>
+        <p style="font-size:13px; color:var(--text-muted);">Download the template, fill it with your questions, and upload it back here.</p>
+        <div class="flex-row" style="align-items:center; gap: 10px;">
+          <button onclick="downloadCSVTemplate()" style="width:auto; padding:10px 15px; background:#166534; margin:0;">1. Download Template</button>
+          <input type="file" id="csv-upload-file" accept=".csv" style="width:auto; margin:0; padding:8px; background:white;">
+          <button onclick="uploadCSV()" style="width:auto; padding:10px 15px; background:#059669; margin:0;">2. Upload CSV</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3 style="margin-top:0;">Question Repository</h3>
+        <div class="flex-row">
+          <div style="flex:1;"><label>Filter Month</label><select id="qb-month" onchange="renderQuestionBank()"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option></select></div>
+          <div style="flex:1;"><label>Filter Week</label><select id="qb-week" onchange="renderQuestionBank()"><option>All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div>
+        </div>
+        <div style="overflow-x: auto; margin-bottom: 20px; max-height:400px; border:1px solid var(--border); border-radius:8px;">
+           <table id="qb-table"></table>
+        </div>
+      </div>
+      
+      <div class="box" style="background:#f8fafc;">
+        <h3 style="margin-top:0; color:var(--primary);">➕ Upload New Question (Single)</h3>
+        <div class="flex-row">
+          <div style="flex:1;"><label>Target Month</label><select id="nq-month"><option>August</option><option selected>September</option><option>October</option></select></div>
+          <div style="flex:1;"><label>Target Week</label><select id="nq-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div>
+        </div>
+        <label>Question Statement</label>
+        <textarea id="nq-q" rows="2" style="resize:vertical;"></textarea>
+        <div class="flex-row">
+          <div style="flex:1;"><label>Option A</label><input type="text" id="nq-a"></div>
+          <div style="flex:1;"><label>Option B</label><input type="text" id="nq-b"></div>
+        </div>
+        <div class="flex-row">
+          <div style="flex:1;"><label>Option C</label><input type="text" id="nq-c"></div>
+          <div style="flex:1;"><label>Option D</label><input type="text" id="nq-d"></div>
+        </div>
+        <label>Correct Answer (A/B/C/D)</label>
+        <select id="nq-ans" style="font-weight:bold; color:var(--success);"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        <button onclick="addQ()" style="padding: 12px; margin-top:10px;">Upload to Repository</button>
+      </div>
     </div>
 
   </div>
@@ -604,21 +676,132 @@
     }
   }
 
+  // --- UPDATED Q-BANK RENDERER (EDIT/DELETE ADDED) ---
   function renderQuestionBank() {
     let fMonth = document.getElementById('qb-month').value, fWeek = document.getElementById('qb-week').value;
     let table = document.getElementById('qb-table');
-    table.innerHTML = "<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th></tr>";
+    table.innerHTML = "<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th><th style='text-align:center;'>Actions</th></tr>";
     let count = 0;
     for(let i=1; i<adminData.questions.length; i++) {
       let q = adminData.questions[i];
       if((fMonth === "All Months" || q[1] === fMonth) && (fWeek === "All Weeks" || q[2] === fWeek)) {
         let ansLetter = q[8], realAnsText = "";
         if(ansLetter==='A') realAnsText=q[4]; if(ansLetter==='B') realAnsText=q[5]; if(ansLetter==='C') realAnsText=q[6]; if(ansLetter==='D') realAnsText=q[7];
-        table.innerHTML += `<tr><td>${q[0]}</td><td><span style="font-size:11px; font-weight:600; color:#64748b;">${q[1]} - ${q[2]}</span></td><td>${q[3]}</td><td><b>${ansLetter})</b> ${realAnsText}</td></tr>`;
+        
+        let qJson = JSON.stringify(q).replace(/'/g, "&apos;");
+
+        table.innerHTML += `<tr>
+            <td>${q[0]}</td>
+            <td><span style="font-size:11px; font-weight:600; color:#64748b;">${q[1]} - ${q[2]}</span></td>
+            <td>${q[3]}</td>
+            <td><b>${ansLetter})</b> ${realAnsText}</td>
+            <td style='text-align:center; min-width:80px;'>
+               <button onclick='openEditQ(${qJson})' style='background:#f59e0b; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:4px; margin-bottom:5px; width:100%; cursor:pointer;'>✏️ Edit</button>
+               <button onclick='deleteQ(${q[0]})' style='background:#dc2626; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:4px; width:100%; cursor:pointer;'>🗑️ Delete</button>
+            </td>
+        </tr>`;
         count++;
       }
     }
-    if(count===0) table.innerHTML += `<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">No questions found.</td></tr>`;
+    if(count===0) table.innerHTML += `<tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">No questions found.</td></tr>`;
+  }
+
+  // --- NEW Q-BANK ACTIONS (DOWNLOAD, UPLOAD, EDIT, DELETE) ---
+  function downloadCSVTemplate() {
+    let csvContent = "Month,Week,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nSeptember,Week 1,What is WeP?,Company,Brand,Fruit,Animal,A\n";
+    let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "WeP_Questions_Template.csv";
+    link.click();
+    showToast("Template Downloaded!");
+  }
+
+  function uploadCSV() {
+    let fileInput = document.getElementById('csv-upload-file');
+    let file = fileInput.files[0];
+    if(!file) { showToast("Please select a CSV file first", "error"); return; }
+    
+    let reader = new FileReader();
+    reader.onload = async function(e) {
+      let text = e.target.result;
+      let lines = text.split('\n');
+      let dataArr = [];
+      
+      for(let i=1; i<lines.length; i++) {
+        let line = lines[i].trim();
+        if(!line) continue;
+        
+        let parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        if(parts.length >= 8) {
+          dataArr.push({
+            month: parts[0].replace(/"/g,'').trim(),
+            week: parts[1].replace(/"/g,'').trim(),
+            q: parts[2].replace(/"/g,'').trim(),
+            a: parts[3].replace(/"/g,'').trim(),
+            b: parts[4].replace(/"/g,'').trim(),
+            c: parts[5].replace(/"/g,'').trim(),
+            d: parts[6].replace(/"/g,'').trim(),
+            ans: parts[7].replace(/"/g,'').trim().toUpperCase()
+          });
+        }
+      }
+      if(dataArr.length === 0) { showToast("No valid data found in CSV", "error"); return; }
+      
+      document.getElementById('refBtn').style.opacity = '0.5';
+      showToast("Uploading " + dataArr.length + " questions... Please wait.");
+      let res = await apiCall("bulkUploadQuestions", { questionsData: dataArr });
+      forceRefresh();
+      showToast(res);
+      fileInput.value = "";
+    };
+    reader.readAsText(file);
+  }
+
+  let editingQId = null;
+  function openEditQ(qData) {
+    editingQId = qData[0];
+    document.getElementById('eq-month').value = qData[1];
+    document.getElementById('eq-week').value = qData[2];
+    document.getElementById('eq-q').value = qData[3];
+    document.getElementById('eq-a').value = qData[4];
+    document.getElementById('eq-b').value = qData[5];
+    document.getElementById('eq-c').value = qData[6];
+    document.getElementById('eq-d').value = qData[7];
+    document.getElementById('eq-ans').value = qData[8];
+    document.getElementById('editQModal').style.display = 'flex';
+  }
+
+  async function saveEditQ() {
+    let data = { 
+      month: document.getElementById('eq-month').value, 
+      week: document.getElementById('eq-week').value, 
+      q: document.getElementById('eq-q').value, 
+      a: document.getElementById('eq-a').value, 
+      b: document.getElementById('eq-b').value, 
+      c: document.getElementById('eq-c').value, 
+      d: document.getElementById('eq-d').value, 
+      ans: document.getElementById('eq-ans').value 
+    };
+    if(!data.q || !data.a) { showToast("Error: Missing Data", "error"); return; }
+    
+    document.getElementById('editQModal').style.display = 'none';
+    document.getElementById('refBtn').style.opacity = '0.5';
+    showToast("Updating Question...");
+    
+    let res = await apiCall("editQuestion", { id: editingQId, questionData: data });
+    forceRefresh();
+    showToast("Question Updated Successfully!");
+  }
+
+  async function deleteQ(id) {
+    if(!confirm("Are you sure you want to delete Question ID: " + id + "?")) return;
+    document.getElementById('refBtn').style.opacity = '0.5';
+    showToast("Deleting Question...");
+    
+    let res = await apiCall("deleteQuestion", { id: id });
+    forceRefresh();
+    showToast("Question Deleted!");
   }
 
   function renderCharts() {
