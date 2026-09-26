@@ -10,7 +10,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbwYkA9KDQO5CEMSqONXp5Ts_S9qlRPfcPzD1hL_JHGQLxw8MchCE-Xucu4TE2YORCTO/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbw0HdBVZSbo4FXzzZjuytBJMnSleCTueUKmZvAgcw5_8uh_uqE6BcBoLMpq_ZGUuLOK/exec";
     // ==========================================
  
     const API_TIMEOUT_MS = 45000;
@@ -184,7 +184,7 @@
   <video id="cam-video" autoplay playsinline muted></video>
   <div id="cam-status"><span class="dot"></span><span id="cam-status-text">Proctoring Active</span></div>
 </div>
-<canvas id="cam-canvas" width="480" height="360" style="display:none;"></canvas>
+<canvas id="cam-canvas" width="320" height="240" style="display:none;"></canvas>
  
 <div class="modal-overlay" id="strictModal" style="display:none;">
   <div class="modal-box" style="border-top: 8px solid #dc2626;">
@@ -520,29 +520,31 @@
   }
  
   function logCameraEvent(eventName) {
-    apiCall("uploadSnapshot", {
-      name: userData.name, phone: userData.phone,
-      month: activeModuleObj.month || "", week: activeModuleObj.week || "",
-      event: eventName, image: ""
-    });
+    // No image - just records the status against this user's single row.
+    apiCall("saveLoginPhoto", { name: userData.name, phone: userData.phone, event: eventName, image: "" });
   }
  
+  /**
+   * Captures one frame and OVERWRITES this user's single row on the server.
+   * Nothing is stored in Google Drive and the sheet never grows: one row per
+   * user, always holding their most recent frame.
+   */
   function captureSnapshot(eventName) {
     if (!camReady || !camStream) return;
     try {
       let video = safeGet('cam-video');
       if (!video.videoWidth) return;
       let canvas = safeGet('cam-canvas');
-      let ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      // 0.55 quality keeps each frame around 20-30 KB so uploads stay quick.
-      let dataUrl = canvas.toDataURL('image/jpeg', 0.55);
-      apiCall("uploadSnapshot", {
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      // 320x240 @ 0.5 quality keeps a frame around 8-12 KB, well inside the
+      // 50,000-character limit of a single spreadsheet cell.
+      let dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+      if (dataUrl.length > 47000) dataUrl = canvas.toDataURL('image/jpeg', 0.35);
+      apiCall("saveLoginPhoto", {
         name: userData.name, phone: userData.phone,
-        month: activeModuleObj.month || "", week: activeModuleObj.week || "",
         event: eventName || "Snapshot", image: dataUrl
       });
-    } catch (e) { /* never let proctoring break the quiz */ }
+    } catch (e) { /* never let the camera break the quiz */ }
   }
  
   function updateCameraNotice() {
@@ -658,8 +660,9 @@
       });
  
       // Wake the Apps Script container while the user is still typing.
-      apiCall("ping", {});
- 
+      // SPEED: getPublicData doubles as the warm-up call. A separate "ping" was
+      // removed on purpose — Apps Script queues concurrent executions for the
+      // same owner, so an extra request could make the login wait behind it.
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { safeGet('login-logo-skeleton').style.display = 'none'; return; }
  
@@ -1011,9 +1014,11 @@
     startTimer(quizTimeLimit * 60);
  
     // Proctoring: one frame at start, then every 45 seconds.
+    // Each capture replaces the previous one, so the admin's view stays current
+    // without the sheet ever growing.
     captureSnapshot("Quiz Start");
     clearInterval(camSnapTimer);
-    camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, 45000);
+    camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, 90000);
  
     window.scrollTo(0, 0);
   }
@@ -1157,7 +1162,12 @@
       };
     });
  
-    let resultPayload = { total: currentQuestions.length, correct: correct, detailedLogs: detailedLogs };
+    // "flag" goes into its own light column so the admin dashboard can show a
+    // Disqualified badge without loading the heavy detailed-log column.
+    let resultPayload = {
+      total: currentQuestions.length, correct: correct, detailedLogs: detailedLogs,
+      flag: (forceReason === "Disqualified") ? "Disqualified" : (forceReason === "Timeout" ? "Timeout" : "")
+    };
  
     let submitRes = await apiCall("submitWeeklyQuiz", {
       name: userData.name, phone: userData.phone,
