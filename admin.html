@@ -12,7 +12,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbxXWR54cBRZxcaJvRV0SQjqKY6SUoJixoDCD1MUNU0wASW4t7ZNP2eAe4jU4XOmCBZ-/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzg5t0OCZRkcjENApX2KZ0ylCCwRgIXDRVMKWuQgxRECEP6hmIVlq9PrQyviWuuxOns/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 55000;
@@ -700,6 +700,14 @@
           if (ev.key === "Enter") { ev.preventDefault(); login(); }
       });
 
+      // SPEED: wake a cold Apps Script container while the passcode is typed.
+      let warmed = false;
+      document.getElementById('pin').addEventListener("focus", function () {
+          if (warmed) return;
+          warmed = true;
+          apiCall("ping", {});
+      });
+
       // SPEED: getPublicData doubles as the warm-up call. A separate "ping" was
       // removed on purpose - Apps Script queues concurrent executions for the
       // same owner, so an extra request could make authentication wait behind it.
@@ -807,45 +815,94 @@
      LOGIN + LIVE AUTO-REFRESH
      ========================================================== */
 
+  /** Local, non-secret fingerprint so a saved core is only reused for the same passcode. */
+  function pinFingerprint(pin) {
+    let h = 5381;
+    for (let i = 0; i < pin.length; i++) h = ((h * 33) ^ pin.charCodeAt(i)) >>> 0;
+    return "wep_admin_core_" + h;
+  }
+
+  function mountDashboard(res) {
+    adminData = res;
+    document.getElementById('login-screen').style.display = "none";
+    document.getElementById('dashboard').style.display = "flex";
+    document.body.style.overflow = "";
+    document.getElementById('role-display').innerText = "Logged in as: " + String(res.role).replace("_", " ");
+  }
+
   async function login() {
     let pin = document.getElementById('pin').value;
     if (!pin) { await wepAlert("Please enter your secure passcode.", "Passcode Required", "warn", "🔑"); return; }
 
-    startGlobalLoader("Authenticating...");
+    // INSTANT LOAD: if this passcode opened the dashboard on this device before,
+    // paint it from the saved core immediately and verify in the background.
+    let key = pinFingerprint(pin);
+    let cached = null;
+    try { let raw = localStorage.getItem(key); if (raw) cached = JSON.parse(raw); } catch (e) {}
+
+    if (cached && cached.role) {
+      sessionPin = pin;
+      mountDashboard(cached);
+      applyCounts(cached.counts);
+      initDashboard();
+      tabBusy(true, "Verifying passcode…");
+      if (cached.role === "UPLOADER") {
+        document.querySelectorAll('.admin-only').forEach(function (el) { el.style.display = 'none'; });
+        document.getElementById('live-pill').style.display = 'none';
+        switchTab('qbank', document.getElementById('nav-qbank'));
+      } else {
+        switchTab('analytics', document.querySelector('.nav-item.admin-only'));
+      }
+    } else {
+      startGlobalLoader("Authenticating...");
+    }
+
     let res = await apiCall("getAdminDashboard", { pin: pin });
 
     if (!res || res.error) {
-        failGlobalLoader();
+        tabBusy(false);
+        if (cached) {
+          // Saved core is no longer valid - back to the passcode screen.
+          try { localStorage.removeItem(key); } catch (e) {}
+          document.getElementById('dashboard').style.display = "none";
+          document.getElementById('login-screen').style.display = "flex";
+          adminData = null; sessionPin = "";
+        } else {
+          failGlobalLoader();
+        }
         await wepAlert((res && res.error) ? res.error : "Authentication failed.", "Access Denied", "danger", "🔒");
         return;
     }
 
     sessionPin = pin;
-    adminData = res;
+    let wasCached = !!cached;
+    mountDashboard(res);
     applyCounts(res.counts);
-
-    document.getElementById('login-screen').style.display = "none";
-    document.getElementById('dashboard').style.display = "flex";
-    document.body.style.overflow = "";
-    document.getElementById('role-display').innerText = "Logged in as: " + String(res.role).replace("_", " ");
-
     initDashboard();
-    completeGlobalLoader();          // dashboard is usable immediately
-    showToast("Access Granted");
 
-    if (res.role === "UPLOADER") {
+    try { localStorage.setItem(key, JSON.stringify(res)); } catch (e) {}
+
+    if (!wasCached) {
+      completeGlobalLoader();
+      if (res.role === "UPLOADER") {
         document.querySelectorAll('.admin-only').forEach(function (el) { el.style.display = 'none'; });
         document.getElementById('live-pill').style.display = 'none';
         switchTab('qbank', document.getElementById('nav-qbank'));
-    } else {
+      } else {
         switchTab('analytics', document.querySelector('.nav-item.admin-only'));
-        startLive();
+      }
+    } else {
+      tabBusy(false);
+      await refreshActiveTab();
     }
+
+    if (res.role !== "UPLOADER") startLive();
+    showToast("Access Granted");
 
     if (backendIsOutdated() || typeof res.counts === "undefined") {
       await wepAlert("This dashboard expects WeP server v" + EXPECTED_API +
         (SERVER_API ? " but the deployed script is v" + SERVER_API : " but the deployed script is older") +
-        ".\n\nPaste the latest Code.gs, run setupSheets once, then publish a NEW deployment version.",
+        ".\n\nPaste the latest Code.gs, run setupSheets and installWarmupTrigger once, then publish a NEW deployment version.",
         "Server Version Mismatch", "warn", "🔧");
     }
   }
