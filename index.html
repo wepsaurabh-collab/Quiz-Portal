@@ -9,14 +9,17 @@
 
   <script>
     // ==========================================
-    // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycby4mEdbdF8z4a8wi9ww63T5e_04KZ6nh-WuYnIBEZk2LYPi217cTfz4SRl3LF6KCGjC/exec";
+    // YOUR DEPLOYED WEB APP URL:
+    const API_URL = "https://script.google.com/macros/s/AKfycbyTjVMCuVx9KzH1StvSRIGR41QKOsTUM6zyoinkmOC8fANFlbDqRPJJPYmDGCq7kwPl/exec";
     // ==========================================
 
     async function apiCall(actionName, payloadData) {
       try {
         let response = await fetch(API_URL, {
           method: 'POST',
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
           body: JSON.stringify({ action: actionName, data: payloadData })
         });
         return await response.json();
@@ -74,7 +77,7 @@
     .progress-bar-bg { width: 100%; background: var(--border); height: 8px; border-radius: 4px; margin-bottom: 25px; overflow: hidden;}
     .progress-bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
     .modal-box { background: white; padding: 35px 30px; border-radius: 16px; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -87,7 +90,12 @@
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-    .app-container { max-width: 900px; }
+    /* LOADING PROGRESS BAR */
+    .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 22px; overflow: hidden; position: relative; margin-top: 15px; display: none; }
+    .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
+    .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+    .app-container { max-width: 700px; padding: 15px; }
 
     @media (max-width: 600px) {
       .top-nav { flex-direction: column; gap: 8px; }
@@ -99,7 +107,8 @@
 </head>
 <body>
 
-<div class="modal-overlay" id="strictModal">
+<!-- STRICT CHEAT MODAL -->
+<div class="modal-overlay" id="strictModal" style="display:none;">
   <div class="modal-box" style="border-top: 8px solid #dc2626;">
     <div style="font-size: 45px; margin-bottom: 15px;">⚠️</div>
     <h2 style="color: #dc2626; margin-top: 0; font-size:24px;">Security Violation</h2>
@@ -112,18 +121,12 @@
   </div>
 </div>
 
-<div id="pre-login-container" style="display:flex; flex-wrap:wrap; gap:25px; justify-content:center; max-width:900px; margin: 5vh auto; padding: 0 15px;">
-  
-  <!-- LEFT SIDE: TRAINING TICKET & DEFAULTERS -->
-  <div style="flex: 1; min-width: 320px; max-width: 440px; display:flex; flex-direction:column; gap:15px;">
+<!-- WELCOME TRAINING POPUP MODAL -->
+<div class="modal-overlay" id="trainingModal" style="display:none; align-items:center; padding: 15px; z-index: 9000; overflow-y:auto;">
+  <div style="width: 100%; max-width: 420px; margin: auto;">
       
-      <!-- SKELETON TICKET (While loading) -->
-      <div id="ticket-skeleton" class="skeleton" style="height: 220px; border-radius: 16px; width:100%; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:600; font-size:16px;">
-          ⏳ Fetching Training Schedule...
-      </div>
-
       <!-- MAIN TICKET -->
-      <div id="training-announcement" style="display:none; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px -5px rgba(37,99,235,0.4); text-align: left; position: relative; overflow: hidden;">
+      <div id="training-announcement" style="display:none; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; position: relative; overflow: hidden; margin-bottom:15px;">
          <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
          <div style="position:absolute; bottom:-30px; right:40px; width:80px; height:80px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
 
@@ -140,15 +143,18 @@
       </div>
 
       <!-- PENDING DEFAULTERS LIST -->
-      <div id="defaulter-list" class="box" style="display:none; padding: 20px; border-left: 5px solid var(--danger); margin:0;">
+      <div id="defaulter-list" class="box" style="display:none; padding: 20px; border-left: 5px solid var(--danger); margin-bottom:15px;">
           <h3 style="margin:0 0 10px 0; color:var(--danger); font-size:16px; display:flex; align-items:center; gap:6px;">⚠️ Overdue / Pending Presentations</h3>
           <p style="margin:0 0 15px 0; font-size:13px; color:var(--text-muted);">The following trainers have missed their scheduled presentation date.</p>
           <div id="defaulter-items" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
-  </div>
 
-  <!-- RIGHT SIDE: LOGIN SECTION -->
-  <div id="login-section" class="box" style="flex: 1; min-width: 320px; max-width: 440px; margin: 0; padding-top: 45px; padding-bottom: 45px;">
+      <button onclick="document.getElementById('trainingModal').style.display='none'" class="btn" style="background: white; color: var(--primary); font-weight: 800; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); padding:16px;">Proceed to Login ➡️</button>
+  </div>
+</div>
+
+<div class="app-container" id="login-container">
+  <div id="login-section" class="box" style="padding-top: 45px; padding-bottom: 45px; margin-top: 5vh;">
     
     <div id="login-logo-skeleton" class="skeleton" style="height: 50px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
@@ -173,6 +179,12 @@
     </div>
 
     <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:18px;">Access Platform</button>
+    
+    <!-- 0-100% LOADING ANIMATION BAR -->
+    <div id="login-progress-container" class="load-container">
+       <div id="login-progress-fill" class="load-fill"></div>
+       <div id="login-progress-text" class="load-text">0%</div>
+    </div>
   </div>
 </div>
 
@@ -255,6 +267,7 @@
   
   let currentQIndex = 0, userAnswers = {}, autoSyncTimer, countdownInterval;
   let isQuizActive = false, strictModeEnabled = false, tabSwitchCount = 0, maxWarnings = 3, cheatTriggered = false;
+  let loginProgressInterval;
 
   function parseDate(dateStr) {
       if(!dateStr) return new Date(9999,11,31);
@@ -284,7 +297,6 @@
               let followingTrain = upcoming.length > 1 ? upcoming[1].row : null;
 
               if (nextTrain) {
-                  document.getElementById('ticket-skeleton').style.display = 'none';
                   document.getElementById('t-topic').innerText = nextTrain[7] || 'TBA';
                   document.getElementById('t-presenter').innerText = nextTrain[5] || 'TBA';
                   document.getElementById('t-date').innerText = nextTrain[4] || 'TBA';
@@ -295,10 +307,6 @@
                       document.getElementById('t-next').innerHTML = ``;
                   }
                   document.getElementById('training-announcement').style.display = 'block';
-              } else {
-                  document.getElementById('ticket-skeleton').style.display = 'flex';
-                  document.getElementById('ticket-skeleton').innerText = "⚠️ All Pending Trainings are Overdue!";
-                  document.getElementById('training-announcement').style.display = 'none';
               }
 
               let defaultersHtml = "";
@@ -313,20 +321,14 @@
               if(defaultersHtml !== "") {
                   document.getElementById('defaulter-items').innerHTML = defaultersHtml;
                   document.getElementById('defaulter-list').style.display = 'block';
-              } else {
-                  document.getElementById('defaulter-list').style.display = 'none';
               }
-          } else {
-              document.getElementById('ticket-skeleton').style.display = 'flex';
-              document.getElementById('ticket-skeleton').innerText = "✅ No Pending Trainings Scheduled";
-              document.getElementById('defaulter-list').style.display = 'none';
-              document.getElementById('training-announcement').style.display = 'none';
+              
+              // ONLY SHOW POPUP IF THERE IS EITHER UPCOMING OR OVERDUE
+              if(nextTrain || defaultersHtml !== "") {
+                  document.getElementById('trainingModal').style.display = 'flex';
+              }
+
           }
-      } else {
-          document.getElementById('ticket-skeleton').style.display = 'flex';
-          document.getElementById('ticket-skeleton').innerText = "✅ No Pending Trainings Scheduled";
-          document.getElementById('defaulter-list').style.display = 'none';
-          document.getElementById('training-announcement').style.display = 'none';
       }
   }
 
@@ -344,6 +346,8 @@
           document.getElementById('dash-logo').style.display = 'block';
       }
       if(cachedFav) document.getElementById('favicon').href = cachedFav;
+      
+      // If we don't have cached training, wait for API. If we do, show it instantly.
       if(cachedTraining) renderTraining(JSON.parse(cachedTraining));
 
       let res = await apiCall("getPublicData", {});
@@ -364,7 +368,8 @@
       }
       if(res && res.trainingPlan) {
           localStorage.setItem("wep_training", JSON.stringify(res));
-          renderTraining(res);
+          // Re-render if it wasn't cached or to update changes
+          if(!cachedTraining) renderTraining(res);
       }
   });
 
@@ -382,8 +387,39 @@
     document.getElementById("tab-" + viewName).classList.add("active");
   }
 
+  function startLoginProgress() {
+      document.getElementById('loginBtn').style.display = "none";
+      let container = document.getElementById('login-progress-container');
+      let fill = document.getElementById('login-progress-fill');
+      let txt = document.getElementById('login-progress-text');
+      
+      container.style.display = "block";
+      let w = 0;
+      loginProgressInterval = setInterval(() => {
+          if(w < 90) {
+              w += Math.floor(Math.random() * 15) + 5;
+              if(w > 90) w = 90;
+              fill.style.width = w + "%";
+              txt.innerText = w + "%";
+          }
+      }, 300);
+  }
+
+  function completeLoginProgress() {
+      clearInterval(loginProgressInterval);
+      document.getElementById('login-progress-fill').style.width = "100%";
+      document.getElementById('login-progress-text').innerText = "100%";
+  }
+
+  function resetLoginProgress() {
+      clearInterval(loginProgressInterval);
+      document.getElementById('login-progress-container').style.display = "none";
+      document.getElementById('login-progress-fill').style.width = "0%";
+      document.getElementById('login-progress-text').innerText = "0%";
+      document.getElementById('loginBtn').style.display = "block";
+  }
+
   async function loginUser(isSilent = false) {
-    let btn = document.getElementById("loginBtn");
     if(!isSilent) {
       userData.name = document.getElementById("uName").value.trim();
       userData.phone = document.getElementById("uPhone").value.trim();
@@ -397,27 +433,25 @@
         return; 
       }
       
-      btn.innerText = "⏳ Verifying...";
-      btn.style.opacity = "0.7";
-      btn.disabled = true;
+      // Start 0-100% Animation
+      startLoginProgress();
     }
 
     let res = await apiCall("fetchUserDashboard", { name: userData.name, phone: userData.phone });
     
     if(res.error) {
        alert(res.error);
-       if(!isSilent){
-           btn.innerText = "Access Platform";
-           btn.style.opacity = "1";
-           btn.disabled = false;
-       }
+       if(!isSilent) resetLoginProgress();
        return;
     }
 
     if(!isSilent) {
-      document.getElementById("pre-login-container").style.display = "none";
-      document.getElementById("main-app").style.display = "block";
-      document.getElementById("syncBtn").style.display = "flex"; 
+      completeLoginProgress();
+      setTimeout(() => {
+          document.getElementById("login-container").style.display = "none";
+          document.getElementById("main-app").style.display = "block";
+          document.getElementById("syncBtn").style.display = "flex"; 
+      }, 300);
     }
     
     document.getElementById("display-name").innerText = userData.name.split(" ")[0];
@@ -564,11 +598,11 @@
     `;
 
     let btns = `<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">`;
-    if (currentQIndex > 0) btns += `<button class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Prev</button>`;
+    if (currentQIndex > 0) btns += `<button class="btn btn-secondary" style="flex:1; padding:14px;" onclick="prevQuestion()">⬅️ Prev</button>`;
     else btns += `<div style="flex:1;"></div>`; 
 
-    if (currentQIndex < total - 1) btns += `<button class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>`;
-    else btns += `<button class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit ✅</button>`;
+    if (currentQIndex < total - 1) btns += `<button class="btn" style="flex:1; padding:14px;" onclick="nextQuestion()">Next ➡️</button>`;
+    else btns += `<button class="btn btn-success" style="flex:1; padding:14px;" onclick="submitQuiz()">Submit ✅</button>`;
     btns += `</div>`;
 
     document.getElementById("questions-container").innerHTML = html + btns;
