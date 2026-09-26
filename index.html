@@ -10,20 +10,11 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbzEdGkPyAsTl_lXJLlnOurql4blh-qRlQ2yEmGf96z9tJ6Yzk78WX2WaH-WH0t8Ab7t/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwYkA9KDQO5CEMSqONXp5Ts_S9qlRPfcPzD1hL_JHGQLxw8MchCE-Xucu4TE2YORCTO/exec";
     // ==========================================
  
     const API_TIMEOUT_MS = 45000;
  
-    /**
-     * Safe API wrapper for Google Apps Script.
-     * - "text/plain" content-type keeps the request a CORS "simple request"
-     *   so the browser never fires a preflight OPTIONS (Apps Script cannot answer OPTIONS).
-     * - redirect:'follow' is required because /exec 302-redirects to googleusercontent.com.
-     * - AbortController prevents the UI from hanging forever on a dead network.
-     * - Responses are read as text first, so a Google HTML error page never throws
-     *   an unreadable "Unexpected token <" JSON exception.
-     */
     async function apiCall(actionName, payloadData, attempt) {
       attempt = attempt || 1;
       let controller = new AbortController();
@@ -46,14 +37,10 @@
         }
  
         let raw = await response.text();
-        try {
-          return JSON.parse(raw);
-        } catch (parseErr) {
-          return { error: "Invalid server response. Please verify the deployed Web App URL." };
-        }
+        try { return JSON.parse(raw); }
+        catch (parseErr) { return { error: "Invalid server response. Please verify the deployed Web App URL." }; }
       } catch (error) {
         clearTimeout(timeoutId);
-        // One silent retry for transient network blips / cold starts.
         if (attempt < 2 && error && error.name !== 'AbortError') {
           return await apiCall(actionName, payloadData, attempt + 1);
         }
@@ -68,7 +55,6 @@
   <style>
     :root { --primary: #0f172a; --secondary: #1e3a8a; --accent: #2563eb; --accent-hover: #1d4ed8; --success: #059669; --danger: #dc2626; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
  
-    /* FIX: min-height instead of a locked 100vh height, so long pages scroll correctly on mobile */
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; color: var(--text); font-size: 15px; line-height: 1.6; -webkit-text-size-adjust: 100%; }
  
     .wep-logo { height: 50px !important; width: auto !important; max-width: 100% !important; object-fit: contain; background: white; padding: 8px 15px; border-radius: 8px; margin: 0 auto 15px auto; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
@@ -83,13 +69,16 @@
  
     .form-group { margin-bottom: 22px; text-align: left;}
     .form-group label { display: block; margin-bottom: 10px; font-weight: 700; color: var(--primary); font-size: 15px;}
-    .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="tel"] { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; transition: 0.3s; background: #f8fafc;}
-    .form-group input[type="text"]:focus, .form-group input[type="number"]:focus, .form-group input[type="tel"]:focus { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="tel"], .form-group input[type="email"] { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; transition: 0.3s; background: #f8fafc;}
+    .form-group input:focus { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
  
     .btn { background: var(--accent); color: white; border: none; padding: 16px 20px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 700; width: 100%; transition: 0.3s; display:inline-block; text-align:center; letter-spacing: 0.5px;}
     .btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37,99,235,0.25);}
     .btn-secondary { background: #64748b; box-shadow:none; } .btn-secondary:hover { background: #475569; }
     .btn-success { background: var(--success); } .btn-success:hover { background: #047857; }
+ 
+    .link-btn { background:none; border:none; color:var(--accent); font-weight:700; font-size:14px; cursor:pointer; text-decoration:underline; padding:0; width:auto; }
+    .link-btn:hover { color: var(--accent-hover); }
  
     .top-nav { display: flex; background: #e2e8f0; border-radius: 12px; margin-bottom: 30px; padding: 6px; }
     .nav-item { flex: 1; text-align: center; color: var(--text-muted); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; padding: 14px; border-radius: 8px; }
@@ -106,7 +95,6 @@
     .timer-bar.warning { background:#fee2e2; border-color:#f87171; animation: pulse 1.2s infinite; }
     .status-bar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background: white; padding: 16px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 14px; color: var(--text-muted); font-weight: 700; }
  
-    /* IMPROVED QUESTION SIZING */
     .q-title { font-size: 20px; font-weight: 700; color: var(--primary); line-height: 1.5; margin-bottom: 25px; padding-bottom:15px; border-bottom: 1px solid var(--border);}
     .option-label { display: flex; align-items:center; padding: 20px 18px; border: 1px solid var(--border); margin-bottom: 15px; border-radius: 10px; cursor: pointer; background: #f8fafc; transition: all 0.2s; font-size: 17px; font-weight: 600; color:var(--text); word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4;}
     .option-label:hover { border-color: var(--accent); background: #eff6ff; }
@@ -121,6 +109,31 @@
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
  
+    /* ===== BRANDED DIALOG (replaces every native alert / confirm) ===== */
+    #wepDialog { position: fixed; inset: 0; background: rgba(15,23,42,0.88); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box; animation: fadeIn 0.18s ease-out; }
+    #wepDialog .dlg { background: #fff; border-radius: 18px; width: 100%; max-width: 430px; box-shadow: 0 25px 55px rgba(0,0,0,0.35); animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow: hidden; }
+    #wepDialog .dlg-head { padding: 28px 28px 0 28px; text-align: center; }
+    #wepDialog .dlg-icon { font-size: 44px; line-height: 1; margin-bottom: 14px; display: block; }
+    #wepDialog .dlg-title { margin: 0; font-size: 21px; font-weight: 800; color: var(--primary); }
+    #wepDialog .dlg-msg { padding: 14px 28px 26px 28px; text-align: center; font-size: 15px; color: var(--text); line-height: 1.65; }
+    #wepDialog .dlg-actions { display: flex; gap: 12px; padding: 0 28px 28px 28px; }
+    #wepDialog .dlg-actions button { flex: 1; padding: 15px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
+    #wepDialog .dlg-cancel { background: #e2e8f0; color: #475569; } #wepDialog .dlg-cancel:hover { background: #cbd5e1; }
+    #wepDialog .dlg-ok { background: var(--accent); color: #fff; } #wepDialog .dlg-ok:hover { background: var(--accent-hover); }
+    #wepDialog.danger .dlg-ok { background: var(--danger); } #wepDialog.danger .dlg-ok:hover { background: #b91c1c; }
+    #wepDialog.success .dlg-ok { background: var(--success); } #wepDialog.success .dlg-ok:hover { background: #047857; }
+    #wepDialog .dlg-bar { height: 7px; width: 100%; background: var(--accent); }
+    #wepDialog.danger .dlg-bar { background: var(--danger); }
+    #wepDialog.success .dlg-bar { background: var(--success); }
+    #wepDialog.warn .dlg-bar { background: #f59e0b; } #wepDialog.warn .dlg-ok { background: #f59e0b; }
+ 
+    /* ===== CAMERA PROCTORING WIDGET ===== */
+    #cam-box { position: fixed; right: 16px; bottom: 16px; width: 150px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 2px solid var(--success); background: #000; z-index: 9500; display: none; }
+    #cam-box video { width: 100%; height: auto; display: block; transform: scaleX(-1); }
+    #cam-status { font-size: 10px; font-weight: 800; color: #fff; background: var(--success); padding: 4px 6px; text-align: center; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    #cam-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: pulse 1.2s infinite; }
+    #cam-box.denied { border-color: var(--danger); } #cam-box.denied #cam-status { background: var(--danger); }
+ 
     .tnc-box { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
     .tnc-box input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;}
     .tnc-box label { font-size: 13px; color: var(--text-muted); line-height: 1.6; font-weight: 500; text-transform: none; margin:0;}
@@ -132,7 +145,6 @@
     .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
     .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
  
-    /* INCREASED APP CONTAINER WIDTH FOR BETTER DESKTOP VIEW */
     .app-container { max-width: 850px; padding: 20px; margin: 0 auto; width: 100%; box-sizing: border-box; }
  
     @media (max-width: 600px) {
@@ -145,10 +157,34 @@
       .q-title { font-size: 18px; }
       .option-label { font-size: 16px; padding: 16px 14px; }
       .app-container { padding: 12px; }
+      #cam-box { width: 108px; right: 10px; bottom: 10px; }
     }
   </style>
 </head>
 <body>
+ 
+<!-- ===== BRANDED DIALOG ===== -->
+<div id="wepDialog" role="dialog" aria-modal="true">
+  <div class="dlg">
+    <div class="dlg-bar"></div>
+    <div class="dlg-head">
+      <span class="dlg-icon" id="dlg-icon">❓</span>
+      <h3 class="dlg-title" id="dlg-title">Please Confirm</h3>
+    </div>
+    <div class="dlg-msg" id="dlg-msg"></div>
+    <div class="dlg-actions">
+      <button type="button" class="dlg-cancel" id="dlg-cancel">Cancel</button>
+      <button type="button" class="dlg-ok" id="dlg-ok">OK</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- ===== CAMERA WIDGET ===== -->
+<div id="cam-box">
+  <video id="cam-video" autoplay playsinline muted></video>
+  <div id="cam-status"><span class="dot"></span><span id="cam-status-text">Proctoring Active</span></div>
+</div>
+<canvas id="cam-canvas" width="480" height="360" style="display:none;"></canvas>
  
 <div class="modal-overlay" id="strictModal" style="display:none;">
   <div class="modal-box" style="border-top: 8px solid #dc2626;">
@@ -168,7 +204,6 @@
       <div id="training-announcement" style="display:none; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; position: relative; overflow: hidden; margin-bottom:15px;">
          <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
          <div style="position:absolute; bottom:-30px; right:40px; width:80px; height:80px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
- 
          <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; position:relative; z-index:1;">
             <span style="background: #f8fafc; color: #1e3a8a; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">📢 Next Training</span>
          </div>
@@ -189,6 +224,8 @@
 </div>
  
 <div id="login-container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; width: 100%; box-sizing: border-box;">
+ 
+  <!-- ===== LOGIN CARD ===== -->
   <div id="login-section" class="box" style="width: 100%; max-width: 420px; padding: 45px 30px; margin: 0;">
     <div id="login-logo-skeleton" class="skeleton" style="height: 50px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
@@ -204,7 +241,7 @@
     </div>
     <div class="tnc-box">
       <input type="checkbox" id="tnc">
-      <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms &amp; Conditions</b>. I understand that my assessment is monitored. Strict action or auto-submission will be taken against tab-switching, minimizing, or any malpractices.</label>
+      <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms &amp; Conditions</b>. I understand that my assessment is monitored, including <b style="color:var(--primary);">camera proctoring</b>. Strict action or auto-submission will be taken against tab-switching, minimizing, or any malpractices.</label>
     </div>
     <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:18px;">Access Platform</button>
     <div id="login-progress-container" class="load-container">
@@ -212,6 +249,45 @@
        <div id="login-progress-text" class="load-text">0%</div>
     </div>
     <p id="login-stage-text" style="display:none; text-align:center; font-size:12px; color:var(--text-muted); margin:10px 0 0 0; font-weight:600;"></p>
+ 
+    <div style="text-align:center; margin-top:28px; padding-top:22px; border-top:1px dashed var(--border);">
+      <p style="font-size:14px; color:var(--text-muted); margin:0 0 10px 0;">Don't have access yet?</p>
+      <button type="button" class="link-btn" onclick="showRegister()">🆕 New User Registration</button>
+    </div>
+  </div>
+ 
+  <!-- ===== REGISTRATION CARD ===== -->
+  <div id="register-section" class="box" style="display:none; width: 100%; max-width: 420px; padding: 40px 30px; margin: 0;">
+    <img id="reg-logo" src="" alt="WeP Logo" style="display:none; height: 50px; width: auto; max-width: 200px; margin: 0 auto 18px auto; border-radius:8px; padding: 6px 16px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
+    <h2 style="margin-top:0; color:var(--primary); text-align:center; font-size:24px;">New User Registration</h2>
+    <p style="text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:28px; line-height:1.6;">Submit your details. You can login once the WeP Admin approves your request.</p>
+ 
+    <div class="form-group">
+      <label for="rName">Full Name <span style="color:var(--danger);">*</span></label>
+      <input type="text" id="rName" autocomplete="name" placeholder="e.g. Saurabh Gupta">
+    </div>
+    <div class="form-group">
+      <label for="rPhone">Mobile Number <span style="color:var(--danger);">*</span></label>
+      <input type="tel" id="rPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-Digit Mobile No.">
+    </div>
+    <div class="form-group">
+      <label for="rEmail">Official Email</label>
+      <input type="email" id="rEmail" autocomplete="email" placeholder="name@wepsol.com">
+    </div>
+    <div class="form-group">
+      <label for="rDept">Department / Branch</label>
+      <input type="text" id="rDept" placeholder="e.g. Sales - Baddi">
+    </div>
+ 
+    <button class="btn btn-success" id="registerBtn" onclick="submitRegistration()" style="font-size:16px; padding:17px;">Submit Registration</button>
+    <div id="reg-progress-container" class="load-container">
+       <div id="reg-progress-fill" class="load-fill"></div>
+       <div id="reg-progress-text" class="load-text">0%</div>
+    </div>
+ 
+    <div style="text-align:center; margin-top:24px; padding-top:20px; border-top:1px dashed var(--border);">
+      <button type="button" class="link-btn" onclick="showLogin()">⬅️ Back to Login</button>
+    </div>
   </div>
 </div>
  
@@ -241,7 +317,7 @@
            </a>
         </div>
         <div class="section-title" style="margin-top:30px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">🏆 WeP Team Leaderboard <span id="lb-mod-name" style="font-size:13px; background:#e2e8f0; padding:4px 10px; border-radius:6px; color:#475569;"></span></div>
-        <p style="font-size:14px; color:var(--text-muted); margin-top:-10px; margin-bottom:20px;">Results will be visible here once published by the Admin.</p>
+        <p style="font-size:14px; color:var(--text-muted); margin-top:-10px; margin-bottom:20px;">Results will be visible here once published by the Admin. <span id="last-sync-label" style="font-weight:700;"></span></p>
         <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;">
           <table id="leaderboard-table"></table>
         </div>
@@ -265,6 +341,7 @@
             <span style="display:flex; align-items:center; gap:8px;">⏱️ Timer limit: <span id="display-time-limit" style="color:var(--primary);"></span> Mins</span>
             <span style="display:flex; align-items:center; gap:8px;">📋 Status: <span id="display-mod-status" style="color:var(--success);"></span></span>
           </div>
+          <div id="camera-warning" style="display:none; margin-top:20px; background:#fef3c7; border:1px solid #fcd34d; color:#92400e; padding:14px 16px; border-radius:10px; font-size:14px; font-weight:600; line-height:1.6;"></div>
           <button id="start-btn" class="btn" style="display:none; margin-top: 30px; font-size:18px; padding:18px;" onclick="startQuiz()">Start Assessment Now</button>
         </div>
       </div>
@@ -293,26 +370,86 @@
  
   let currentQIndex = 0, userAnswers = {}, autoSyncTimer = null, countdownInterval = null;
   let isQuizActive = false, strictModeEnabled = false, tabSwitchCount = 0, maxWarnings = 3, cheatTriggered = false;
-  let loginProgressInterval = null;
+  let loginProgressInterval = null, regProgressInterval = null;
   let isLoggedIn = false, isSubmitting = false, quizDeadline = 0;
+ 
+  // Camera proctoring state
+  let camStream = null, camReady = false, camMode = "OPTIONAL", camSnapTimer = null, camAsked = false;
+ 
+  /* ==========================================================
+     BRANDED DIALOG - replaces every native alert() / confirm()
+     ========================================================== */
+  let _dlgResolve = null;
+ 
+  function wepDialog(opts) {
+    opts = opts || {};
+    let box   = document.getElementById('wepDialog');
+    let okBtn = document.getElementById('dlg-ok');
+    let cnBtn = document.getElementById('dlg-cancel');
+ 
+    document.getElementById('dlg-icon').innerText  = opts.icon  || "❓";
+    document.getElementById('dlg-title').innerText = opts.title || "Please Confirm";
+    document.getElementById('dlg-msg').innerHTML   = opts.html ? opts.message : escapeHtml(opts.message || "").replace(/\n/g, "<br>");
+ 
+    okBtn.innerText = opts.okText || "OK";
+    if (opts.cancelText === null) { cnBtn.style.display = "none"; }
+    else { cnBtn.style.display = "block"; cnBtn.innerText = opts.cancelText || "Cancel"; }
+ 
+    box.className = "";
+    if (opts.tone) box.classList.add(opts.tone);   // danger | success | warn
+    box.style.display = "flex";
+    setTimeout(function () { okBtn.focus(); }, 60);
+ 
+    return new Promise(function (resolve) { _dlgResolve = resolve; });
+  }
+ 
+  function closeWepDialog(result) {
+    document.getElementById('wepDialog').style.display = "none";
+    if (_dlgResolve) { let r = _dlgResolve; _dlgResolve = null; r(result); }
+  }
+ 
+  function wepAlert(message, title, tone, icon) {
+    return wepDialog({
+      message: message,
+      title: title || "Notice",
+      icon: icon || (tone === "danger" ? "⚠️" : tone === "success" ? "✅" : "ℹ️"),
+      tone: tone || "",
+      okText: "Got it",
+      cancelText: null
+    });
+  }
+ 
+  function wepConfirm(message, title, tone, okText) {
+    return wepDialog({
+      message: message,
+      title: title || "Please Confirm",
+      icon: tone === "danger" ? "🚨" : "❓",
+      tone: tone || "",
+      okText: okText || "Yes, Continue",
+      cancelText: "Cancel"
+    });
+  }
+ 
+  document.getElementById('dlg-ok').addEventListener('click', function () { closeWepDialog(true); });
+  document.getElementById('dlg-cancel').addEventListener('click', function () { closeWepDialog(false); });
+  document.addEventListener('keydown', function (e) {
+    if (document.getElementById('wepDialog').style.display !== "flex") return;
+    if (e.key === "Escape") { e.preventDefault(); closeWepDialog(false); }
+    if (e.key === "Enter")  { e.preventDefault(); closeWepDialog(true); }
+  });
  
   /* ---------- Helpers ---------- */
  
-  // FIX: prevents question/option text containing < > & " from breaking the rendered HTML.
   function escapeHtml(value) {
     if (value === null || value === undefined) return "";
     return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
  
   function safeGet(id) { return document.getElementById(id); }
- 
   function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-  function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) { /* private mode */ } }
+  function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
  
   function parseDate(dateStr) {
       if (!dateStr) return new Date(9999, 11, 31);
@@ -322,8 +459,7 @@
       let key = String(p[1]).trim().toLowerCase().slice(0, 3);
       let month = (m[key] !== undefined) ? m[key] : (parseInt(p[1], 10) - 1);
       if (isNaN(month) || month < 0 || month > 11) month = 0;
-      let year = parseInt(p[2], 10);
-      let day = parseInt(p[0], 10);
+      let year = parseInt(p[2], 10), day = parseInt(p[0], 10);
       if (isNaN(year) || isNaN(day)) return new Date(9999, 11, 31);
       if (year < 100) year += 2000;
       let d = new Date(year, month, day);
@@ -331,13 +467,114 @@
       return d;
   }
  
-  /* ---------- Training announcement ---------- */
+  /* ==========================================================
+     CAMERA PROCTORING
+     ========================================================== */
+ 
+  async function initCamera() {
+    if (camMode === "OFF" || camAsked) return;
+    camAsked = true;
+ 
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      camReady = false;
+      logCameraEvent("Camera Unsupported");
+      updateCameraNotice();
+      return;
+    }
+ 
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+        audio: false
+      });
+      let vid = safeGet('cam-video');
+      vid.srcObject = camStream;
+      safeGet('cam-box').style.display = "block";
+      safeGet('cam-box').classList.remove('denied');
+      safeGet('cam-status-text').innerText = "Proctoring Active";
+      camReady = true;
+      // Give the sensor a moment to expose before the first frame.
+      setTimeout(function () { captureSnapshot("Login"); }, 1800);
+    } catch (err) {
+      camReady = false;
+      safeGet('cam-box').style.display = "block";
+      safeGet('cam-box').classList.add('denied');
+      safeGet('cam-status-text').innerText = "Camera Blocked";
+      logCameraEvent("Camera Denied");
+      if (camMode === "REQUIRED") {
+        wepAlert("Camera access is mandatory for this assessment.\n\nPlease click the 🔒 lock icon in your browser's address bar, set Camera to 'Allow', and reload this page.",
+                 "Camera Permission Required", "danger", "📷");
+      }
+    }
+    updateCameraNotice();
+  }
+ 
+  function stopCamera() {
+    clearInterval(camSnapTimer); camSnapTimer = null;
+    if (camStream) {
+      try { camStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+      camStream = null;
+    }
+    camReady = false;
+    safeGet('cam-box').style.display = "none";
+  }
+ 
+  function logCameraEvent(eventName) {
+    apiCall("uploadSnapshot", {
+      name: userData.name, phone: userData.phone,
+      month: activeModuleObj.month || "", week: activeModuleObj.week || "",
+      event: eventName, image: ""
+    });
+  }
+ 
+  function captureSnapshot(eventName) {
+    if (!camReady || !camStream) return;
+    try {
+      let video = safeGet('cam-video');
+      if (!video.videoWidth) return;
+      let canvas = safeGet('cam-canvas');
+      let ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // 0.55 quality keeps each frame around 20-30 KB so uploads stay quick.
+      let dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+      apiCall("uploadSnapshot", {
+        name: userData.name, phone: userData.phone,
+        month: activeModuleObj.month || "", week: activeModuleObj.week || "",
+        event: eventName || "Snapshot", image: dataUrl
+      });
+    } catch (e) { /* never let proctoring break the quiz */ }
+  }
+ 
+  function updateCameraNotice() {
+    let el = safeGet('camera-warning');
+    if (camMode === "OFF") { el.style.display = "none"; return; }
+ 
+    if (camReady) {
+      el.style.display = "block";
+      el.style.background = "#ecfdf5"; el.style.borderColor = "#6ee7b7"; el.style.color = "#065f46";
+      el.innerHTML = "📷 <b>Camera proctoring is active.</b> Your photo will be captured at the start and periodically during the assessment.";
+    } else if (camMode === "REQUIRED") {
+      el.style.display = "block";
+      el.style.background = "#fee2e2"; el.style.borderColor = "#fca5a5"; el.style.color = "#991b1b";
+      el.innerHTML = "🚫 <b>Camera is blocked.</b> This assessment cannot be started without camera access. Allow the camera from your browser's address bar and reload. " +
+                     '<button type="button" class="link-btn" style="color:#991b1b;" onclick="retryCamera()">Retry camera</button>';
+    } else {
+      el.style.display = "block";
+      el.style.background = "#fef3c7"; el.style.borderColor = "#fcd34d"; el.style.color = "#92400e";
+      el.innerHTML = "⚠️ <b>Camera is not available.</b> You may continue, but this has been recorded in your proctoring log. " +
+                     '<button type="button" class="link-btn" style="color:#92400e;" onclick="retryCamera()">Retry camera</button>';
+    }
+  }
+ 
+  function retryCamera() { camAsked = false; initCamera(); }
+ 
+  /* ==========================================================
+     TRAINING ANNOUNCEMENT
+     ========================================================== */
  
   function renderTraining(res) {
       if (!res || !res.trainingPlan || res.trainingPlan.length <= 1) return;
- 
-      let now = new Date();
-      now.setHours(0, 0, 0, 0);
+      let now = new Date(); now.setHours(0, 0, 0, 0);
  
       let pendingRows = res.trainingPlan.slice(1).filter(function (r) {
           return r && r[8] && r[8].toString().trim().toLowerCase() === 'pending';
@@ -358,12 +595,9 @@
           safeGet('t-topic').innerText = nextTrain[7] || 'TBA';
           safeGet('t-presenter').innerText = nextTrain[5] || 'TBA';
           safeGet('t-date').innerText = nextTrain[4] || 'TBA';
-          if (followingTrain) {
-              safeGet('t-next').innerHTML = "<b>⏭️ Upcoming Next:</b> " + escapeHtml(followingTrain[5] || 'TBA') +
-                  " (" + escapeHtml(followingTrain[0] || '') + " " + escapeHtml(followingTrain[1] || '') + ")";
-          } else {
-              safeGet('t-next').innerHTML = "";
-          }
+          safeGet('t-next').innerHTML = followingTrain
+            ? "<b>⏭️ Upcoming Next:</b> " + escapeHtml(followingTrain[5] || 'TBA') + " (" + escapeHtml(followingTrain[0] || '') + " " + escapeHtml(followingTrain[1] || '') + ")"
+            : "";
           safeGet('training-announcement').style.display = 'block';
       }
  
@@ -381,12 +615,12 @@
           safeGet('defaulter-items').innerHTML = defaultersHtml;
           safeGet('defaulter-list').style.display = 'block';
       }
-      if (nextTrain || defaultersHtml !== "") {
-          safeGet('trainingModal').style.display = 'flex';
-      }
+      if (nextTrain || defaultersHtml !== "") safeGet('trainingModal').style.display = 'flex';
   }
  
-  /* ---------- Boot ---------- */
+  /* ==========================================================
+     BOOT
+     ========================================================== */
  
   document.addEventListener("DOMContentLoaded", async function () {
       let cachedLogo = lsGet("wep_logo");
@@ -396,60 +630,49 @@
  
       if (cachedLogo) {
           safeGet('login-logo-skeleton').style.display = 'none';
-          safeGet('login-logo').src = cachedLogo;
-          safeGet('login-logo').style.display = 'block';
-          safeGet('dash-logo').src = cachedLogo;
-          safeGet('dash-logo').style.display = 'block';
+          safeGet('login-logo').src = cachedLogo; safeGet('login-logo').style.display = 'block';
+          safeGet('reg-logo').src = cachedLogo;   safeGet('reg-logo').style.display = 'block';
+          safeGet('dash-logo').src = cachedLogo;  safeGet('dash-logo').style.display = 'block';
       }
       if (cachedFav) safeGet('favicon').href = cachedFav;
  
-      // FIX: a corrupt cache entry used to throw and kill the whole boot sequence.
       if (cachedTraining) {
           try { renderTraining(JSON.parse(cachedTraining)); renderedFromCache = true; }
           catch (e) { try { localStorage.removeItem("wep_training"); } catch (e2) {} }
       }
  
-      // Enter-key submit on the login form.
       ["uName", "uPhone"].forEach(function (id) {
           safeGet(id).addEventListener("keydown", function (ev) {
               if (ev.key === "Enter") { ev.preventDefault(); loginUser(); }
           });
       });
-      // Keep the phone box strictly numeric (type=number allowed e/+/- and broke maxlength).
-      safeGet('uPhone').addEventListener("input", function () {
-          this.value = this.value.replace(/[^0-9]/g, "").slice(0, 10);
+      ["rName", "rPhone", "rEmail", "rDept"].forEach(function (id) {
+          safeGet(id).addEventListener("keydown", function (ev) {
+              if (ev.key === "Enter") { ev.preventDefault(); submitRegistration(); }
+          });
+      });
+      ["uPhone", "rPhone"].forEach(function (id) {
+          safeGet(id).addEventListener("input", function () {
+              this.value = this.value.replace(/[^0-9]/g, "").slice(0, 10);
+          });
       });
  
-      // SPEED: wake the Apps Script container the moment the page opens, while the
-      // user is still typing. A cold Apps Script instance costs 3-6 seconds on the
-      // FIRST request only - paying that here makes the actual login feel instant.
+      // Wake the Apps Script container while the user is still typing.
       apiCall("ping", {});
  
       let res = await apiCall("getPublicData", {});
-      if (!res || res.error) {
-          // Never block the login screen because branding failed to load.
-          safeGet('login-logo-skeleton').style.display = 'none';
-          return;
-      }
+      if (!res || res.error) { safeGet('login-logo-skeleton').style.display = 'none'; return; }
  
       if (res.settings) {
-          if (res.settings.favicon) {
-              safeGet('favicon').href = res.settings.favicon;
-              lsSet("wep_favicon", res.settings.favicon);
-          }
+          if (res.settings.favicon) { safeGet('favicon').href = res.settings.favicon; lsSet("wep_favicon", res.settings.favicon); }
           if (res.settings.logo) {
               safeGet('login-logo-skeleton').style.display = 'none';
-              safeGet('login-logo').src = res.settings.logo;
-              safeGet('login-logo').style.display = 'block';
-              safeGet('dash-logo').src = res.settings.logo;
-              safeGet('dash-logo').style.display = 'block';
+              safeGet('login-logo').src = res.settings.logo; safeGet('login-logo').style.display = 'block';
+              safeGet('reg-logo').src = res.settings.logo;   safeGet('reg-logo').style.display = 'block';
+              safeGet('dash-logo').src = res.settings.logo;  safeGet('dash-logo').style.display = 'block';
               lsSet("wep_logo", res.settings.logo);
-          } else {
-              safeGet('login-logo-skeleton').style.display = 'none';
-          }
-      } else {
-          safeGet('login-logo-skeleton').style.display = 'none';
-      }
+          } else { safeGet('login-logo-skeleton').style.display = 'none'; }
+      } else { safeGet('login-logo-skeleton').style.display = 'none'; }
  
       if (res.trainingPlan) {
           lsSet("wep_training", JSON.stringify(res));
@@ -457,11 +680,83 @@
       }
   });
  
-  /* ---------- Navigation ---------- */
+  /* ==========================================================
+     REGISTRATION
+     ========================================================== */
+ 
+  function showRegister(prefillName, prefillPhone) {
+    safeGet('login-section').style.display = "none";
+    safeGet('register-section').style.display = "block";
+    if (prefillName)  safeGet('rName').value = prefillName;
+    if (prefillPhone) safeGet('rPhone').value = prefillPhone;
+    window.scrollTo(0, 0);
+    setTimeout(function () { safeGet('rName').focus(); }, 80);
+  }
+ 
+  function showLogin() {
+    safeGet('register-section').style.display = "none";
+    safeGet('login-section').style.display = "block";
+    window.scrollTo(0, 0);
+  }
+ 
+  function startBar(fillId, textId, containerId, btnId, stateRef) {
+    safeGet(btnId).style.display = "none";
+    safeGet(containerId).style.display = "block";
+    let fill = safeGet(fillId), txt = safeGet(textId), w = 0;
+    return setInterval(function () {
+      if (w < 97) {
+        w += Math.max(1, Math.round((97 - w) * 0.12));
+        fill.style.width = w + "%"; txt.innerText = w + "%";
+      }
+    }, 250);
+  }
+ 
+  function stopBar(intervalId, fillId, textId, containerId, btnId) {
+    clearInterval(intervalId);
+    safeGet(containerId).style.display = "none";
+    safeGet(fillId).style.width = "0%";
+    safeGet(textId).innerText = "0%";
+    safeGet(btnId).style.display = "block";
+  }
+ 
+  async function submitRegistration() {
+    let name  = safeGet('rName').value.trim().replace(/\s+/g, " ");
+    let phone = safeGet('rPhone').value.trim();
+    let email = safeGet('rEmail').value.trim();
+    let dept  = safeGet('rDept').value.trim();
+ 
+    if (!name || name.length < 3) { await wepAlert("Please enter your full name (at least 3 characters).", "Name Required", "warn", "✏️"); return; }
+    if (!/^[0-9]{10}$/.test(phone)) { await wepAlert("Please enter a valid 10-digit mobile number.", "Invalid Number", "warn", "📱"); return; }
+    if (email && email.indexOf("@") === -1) { await wepAlert("Please enter a valid email address, or leave the field blank.", "Invalid Email", "warn", "✉️"); return; }
+ 
+    regProgressInterval = startBar('reg-progress-fill', 'reg-progress-text', 'reg-progress-container', 'registerBtn');
+ 
+    let res = await apiCall("registerUser", { name: name, phone: phone, email: email, dept: dept });
+    stopBar(regProgressInterval, 'reg-progress-fill', 'reg-progress-text', 'reg-progress-container', 'registerBtn');
+ 
+    if (!res || res.error) {
+      await wepAlert((res && res.error) ? res.error : "Registration could not be submitted. Please try again.", "Registration Failed", "danger", "🚫");
+      return;
+    }
+ 
+    await wepAlert(
+      (res.message || "Registration submitted successfully.") +
+      "\n\nOnce approved, login with the same Name and Mobile Number.",
+      "Registration Submitted", "success", "🎉");
+ 
+    ['rName','rPhone','rEmail','rDept'].forEach(function (id) { safeGet(id).value = ""; });
+    safeGet('uName').value = name;
+    safeGet('uPhone').value = phone;
+    showLogin();
+  }
+ 
+  /* ==========================================================
+     NAVIGATION
+     ========================================================== */
  
   function switchView(viewName) {
     if (isQuizActive) {
-      alert("Warning: You cannot navigate away while an assessment is active.");
+      wepAlert("You cannot navigate away while an assessment is in progress.", "Assessment In Progress", "warn", "🔒");
       return;
     }
     safeGet("view-results").style.display = "none";
@@ -472,7 +767,9 @@
     safeGet("tab-" + viewName).classList.add("active");
   }
  
-  /* ---------- Login progress bar ---------- */
+  /* ==========================================================
+     LOGIN PROGRESS
+     ========================================================== */
  
   function startLoginProgress() {
       safeGet('loginBtn').style.display = "none";
@@ -485,18 +782,13 @@
       stage.style.display = "block";
       stage.innerText = "Connecting to WeP server...";
  
-      // FIX: the old bar jumped to 90% in ~2 seconds and then froze there, which
-      // made a normal 4-second login look like a hang. It now eases towards 97%
-      // over the realistic response window and reports what it is doing.
       let w = 0, ticks = 0;
       clearInterval(loginProgressInterval);
       loginProgressInterval = setInterval(function () {
           ticks++;
           if (w < 97) {
               w += Math.max(1, Math.round((97 - w) * 0.12));
-              if (w > 97) w = 97;
-              fill.style.width = w + "%";
-              txt.innerText = w + "%";
+              fill.style.width = w + "%"; txt.innerText = w + "%";
           }
           if (ticks === 8)  stage.innerText = "Verifying your registration...";
           if (ticks === 16) stage.innerText = "Loading leaderboard & history...";
@@ -505,15 +797,14 @@
   }
  
   function completeLoginProgress() {
-      clearInterval(loginProgressInterval);
-      loginProgressInterval = null;
+      clearInterval(loginProgressInterval); loginProgressInterval = null;
       safeGet('login-progress-fill').style.width = "100%";
       safeGet('login-progress-text').innerText = "100%";
+      safeGet('login-stage-text').innerText = "Done!";
   }
  
   function resetLoginProgress() {
-      clearInterval(loginProgressInterval);
-      loginProgressInterval = null;
+      clearInterval(loginProgressInterval); loginProgressInterval = null;
       safeGet('login-stage-text').style.display = "none";
       safeGet('login-progress-container').style.display = "none";
       safeGet('login-progress-fill').style.width = "0%";
@@ -521,7 +812,9 @@
       safeGet('loginBtn').style.display = "block";
   }
  
-  /* ---------- Login / dashboard refresh ---------- */
+  /* ==========================================================
+     LOGIN / LIVE REFRESH
+     ========================================================== */
  
   async function loginUser(isSilent) {
     isSilent = (isSilent === true);
@@ -530,28 +823,27 @@
       userData.name = safeGet("uName").value.trim().replace(/\s+/g, " ");
       userData.phone = safeGet("uPhone").value.trim();
  
-      if (!userData.name || !userData.phone) {
-        alert("Please provide both Name and Mobile Number.");
-        return;
-      }
-      if (!/^[0-9]{10}$/.test(userData.phone)) {
-        alert("Please enter a valid 10-digit mobile number.");
-        return;
-      }
-      if (!safeGet("tnc").checked) {
-        alert("Please agree to the Terms & Conditions before logging in.");
-        return;
-      }
+      if (!userData.name || !userData.phone) { await wepAlert("Please provide both your Name and Mobile Number.", "Details Required", "warn", "✏️"); return; }
+      if (!/^[0-9]{10}$/.test(userData.phone)) { await wepAlert("Please enter a valid 10-digit mobile number.", "Invalid Number", "warn", "📱"); return; }
+      if (!safeGet("tnc").checked) { await wepAlert("Please read and accept the Terms & Conditions before logging in.", "Terms Not Accepted", "warn", "📜"); return; }
       startLoginProgress();
     }
  
     let res = await apiCall("fetchUserDashboard", { name: userData.name, phone: userData.phone });
  
     if (!res || res.error) {
-       // FIX: a background sync no longer spams alert() every 15 seconds.
        if (!isSilent) {
-         alert((res && res.error) ? res.error : "Unable to load your dashboard. Please try again.");
          resetLoginProgress();
+         if (res && res.needRegister) {
+           let go = await wepConfirm(
+             res.error + "\n\nWould you like to open the registration form now?",
+             "Not Registered", "warn", "Register Now");
+           if (go) showRegister(userData.name, userData.phone);
+         } else if (res && res.pendingApproval) {
+           await wepAlert(res.error, "Approval Pending", "warn", "⏳");
+         } else {
+           await wepAlert((res && res.error) ? res.error : "Unable to load your dashboard. Please try again.", "Login Failed", "danger", "🚫");
+         }
        }
        return;
     }
@@ -575,44 +867,37 @@
     quizGlobalState = res.quizState || "LIVE";
     quizTimeLimit = parseInt(res.timeLimit, 10) || 10;
     strictModeEnabled = (String(res.strictMode).toUpperCase() === "ON");
+    camMode = (res.cameraMode || "OPTIONAL").toUpperCase();
  
     safeGet("display-time-limit").innerText = quizTimeLimit;
     safeGet("display-mod-status").innerText = quizGlobalState;
  
+    let now = new Date();
+    safeGet("last-sync-label").innerText = "Last updated: " +
+      ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2) + ":" + ("0" + now.getSeconds()).slice(-2);
+ 
     let leaderboard = res.leaderboard || [];
     let lbRows = ["<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>"];
     leaderboard.forEach(function (lb) {
-      let displayScore = lb.isPublished
-        ? '<span class="badge-score">' + escapeHtml(lb.score) + '</span>'
-        : '<span class="badge-pending">Evaluating</span>';
-      let detailsText = lb.isPublished
-        ? '<span style="font-weight:800; color:var(--text-muted);">' + escapeHtml(lb.correct) + ' / ' + escapeHtml(lb.total) + ' Right</span>'
-        : '-';
-      let boldName = lb.isMe
-        ? '<b style="color:var(--accent); font-size:14px;">' + escapeHtml(lb.name) + ' (You)</b>'
-        : '<span style="font-size:13px;">' + escapeHtml(lb.name) + '</span>';
+      let displayScore = lb.isPublished ? '<span class="badge-score">' + escapeHtml(lb.score) + '</span>' : '<span class="badge-pending">Evaluating</span>';
+      let detailsText = lb.isPublished ? '<span style="font-weight:800; color:var(--text-muted);">' + escapeHtml(lb.correct) + ' / ' + escapeHtml(lb.total) + ' Right</span>' : '-';
+      let boldName = lb.isMe ? '<b style="color:var(--accent); font-size:14px;">' + escapeHtml(lb.name) + ' (You)</b>' : '<span style="font-size:13px;">' + escapeHtml(lb.name) + '</span>';
       lbRows.push('<tr><td>' + boldName + '</td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
     });
-    if (leaderboard.length === 0) {
-      lbRows.push('<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No team data found for the active week.</td></tr>');
-    }
+    if (leaderboard.length === 0) lbRows.push('<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No team data found for the active week.</td></tr>');
     safeGet("leaderboard-table").innerHTML = lbRows.join("");
  
     let history = res.history || [];
     let hRows = ["<tr><th>Assessment Date</th><th>Training Module</th><th>Score %</th><th>Right / Wrong</th></tr>"];
     history.forEach(function (h) {
-      let displayScore = h.isPublished
-        ? '<span class="badge-score">' + escapeHtml(h.score) + '</span>'
-        : '<span class="badge-pending">Evaluating</span>';
+      let displayScore = h.isPublished ? '<span class="badge-score">' + escapeHtml(h.score) + '</span>' : '<span class="badge-pending">Evaluating</span>';
       let detailsText = h.isPublished
         ? '<span style="color:#059669; font-weight:800;">' + escapeHtml(h.correct) + ' Right</span><br><span style="color:#dc2626; font-weight:800;">' + escapeHtml(h.wrong) + ' Wrong</span>'
         : '-';
       hRows.push('<tr><td style="font-weight:600;">' + escapeHtml(h.date) + '</td><td><b style="color:var(--primary); font-size:13px;">' +
         escapeHtml(h.month) + ' - ' + escapeHtml(h.week) + '</b></td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
     });
-    if (history.length === 0) {
-      hRows.push('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assessment history found.</td></tr>');
-    }
+    if (history.length === 0) hRows.push('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assessment history found.</td></tr>');
     safeGet("history-table").innerHTML = hRows.join("");
  
     let serverQuestions = res.questions || [];
@@ -637,28 +922,32 @@
       currentQuestions = serverQuestions;
     }
  
-    // FIX: only one auto-sync timer can ever exist, and it never runs during a live quiz.
-    // SPEED: 15s was hammering the backend (4 full dashboard reads every minute for
-    // every logged-in user), which slowed the server down for everybody. 90s is plenty.
+    if (!isSilent) {
+      // Camera permission popup appears here, right after a successful login.
+      initCamera();
+    } else {
+      updateCameraNotice();
+    }
+ 
     clearInterval(autoSyncTimer);
     autoSyncTimer = setInterval(silentSync, 90000);
   }
  
   function silentSync() {
-    // FIX: the guard now runs BEFORE dimming the button, which used to leave it stuck at 50% opacity.
     if (isQuizActive || isSubmitting || !isLoggedIn) return;
-    if (document.hidden) return;      // SPEED: no pointless polling in a background tab
+    if (document.hidden) return;
     let btn = safeGet('syncBtn');
     btn.style.opacity = '0.5';
     loginUser(true).then(function () { btn.style.opacity = '1'; })
                    .catch(function () { btn.style.opacity = '1'; });
   }
  
-  /* ---------- Anti-cheat ---------- */
+  /* ==========================================================
+     ANTI-CHEAT
+     ========================================================== */
  
   function closeStrictModal() {
     safeGet('strictModal').style.display = 'none';
-    // Re-arm only after the modal is dismissed, so one tab switch = one warning.
     cheatTriggered = false;
   }
  
@@ -666,22 +955,21 @@
     if (!isQuizActive || !strictModeEnabled || isSubmitting) return;
     if (cheatTriggered) return;
     if (safeGet('strictModal').style.display === 'flex') return;
- 
-    // FIX: only genuine hide/blur events count. document.hasFocus() alone fired
-    // spuriously on mobile keyboards and on native alert() dialogs.
+    if (document.getElementById('wepDialog').style.display === 'flex') return;
     if (document.visibilityState !== "hidden" && document.hasFocus()) return;
  
     cheatTriggered = true;
     tabSwitchCount++;
+    captureSnapshot("Violation " + tabSwitchCount);
  
     if (tabSwitchCount <= maxWarnings) {
       safeGet("strict-count-text").innerText = "Warning " + tabSwitchCount + " of " + maxWarnings;
       safeGet("strictModal").style.display = "flex";
-      // Safety re-arm in case the learner never clicks the button.
       setTimeout(function () { cheatTriggered = false; }, 4000);
     } else {
       safeGet("strictModal").style.display = "none";
-      alert("🚨 You have been disqualified for switching tabs/windows multiple times. Auto-submitting your test.");
+      wepAlert("You have been disqualified for switching tabs or windows multiple times. Your test is being submitted automatically.",
+               "Disqualified", "danger", "🚨");
       submitQuiz(true, "Disqualified");
     }
   }
@@ -689,42 +977,49 @@
   document.addEventListener("visibilitychange", handleCheatEvent);
   window.addEventListener("blur", handleCheatEvent);
  
-  // Warn before an accidental refresh/close wipes an in-progress attempt.
   window.addEventListener("beforeunload", function (e) {
     if (isQuizActive && !isSubmitting) { e.preventDefault(); e.returnValue = ""; return ""; }
   });
  
-  /* ---------- Quiz flow ---------- */
+  /* ==========================================================
+     QUIZ FLOW
+     ========================================================== */
  
-  function startQuiz() {
+  async function startQuiz() {
     if (!currentQuestions || currentQuestions.length === 0) {
-      alert("No questions are available for this module right now.");
+      await wepAlert("No questions are available for this module right now.", "Nothing to Attempt", "warn", "📭");
       return;
     }
-    clearInterval(autoSyncTimer);
-    autoSyncTimer = null;
+    if (camMode === "REQUIRED" && !camReady) {
+      await wepAlert("Camera access is mandatory for this assessment.\n\nAllow the camera from your browser's address bar, then click 'Retry camera'.",
+                     "Camera Required", "danger", "📷");
+      return;
+    }
  
-    isQuizActive = true;
-    isSubmitting = false;
-    tabSwitchCount = 0;
-    cheatTriggered = false;
+    clearInterval(autoSyncTimer); autoSyncTimer = null;
+ 
+    isQuizActive = true; isSubmitting = false;
+    tabSwitchCount = 0; cheatTriggered = false;
  
     safeGet("syncBtn").style.display = "none";
     safeGet("assessment-intro").style.display = "none";
     safeGet("top-nav").style.display = "none";
     safeGet("quiz-wizard").style.display = "block";
  
-    currentQIndex = 0;
-    userAnswers = {};
+    currentQIndex = 0; userAnswers = {};
     renderSingleQuestion();
     startTimer(quizTimeLimit * 60);
+ 
+    // Proctoring: one frame at start, then every 45 seconds.
+    captureSnapshot("Quiz Start");
+    clearInterval(camSnapTimer);
+    camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, 45000);
+ 
     window.scrollTo(0, 0);
   }
  
   function startTimer(durationInSeconds) {
     clearInterval(countdownInterval);
-    // FIX: deadline-based instead of decrement-based. setInterval is throttled in
-    // background tabs and on mobile, which made the old timer run far too slow.
     quizDeadline = Date.now() + (durationInSeconds * 1000);
     let display = safeGet('countdown-timer');
     let bar = safeGet('timer-bar');
@@ -732,31 +1027,25 @@
     function tick() {
       let remaining = Math.round((quizDeadline - Date.now()) / 1000);
       if (remaining < 0) remaining = 0;
- 
-      let minutes = Math.floor(remaining / 60);
-      let seconds = remaining % 60;
+      let minutes = Math.floor(remaining / 60), seconds = remaining % 60;
       display.textContent = (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds < 10 ? "0" + seconds : seconds);
- 
       if (remaining <= 60) bar.classList.add("warning"); else bar.classList.remove("warning");
  
       if (remaining <= 0) {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
+        clearInterval(countdownInterval); countdownInterval = null;
         if (!isSubmitting) {
           isQuizActive = false;
-          alert("🛑 Time Limit Exceeded. Your assessment is being submitted automatically.");
+          wepAlert("Time limit exceeded. Your assessment is being submitted automatically.", "Time's Up", "danger", "⏰");
           submitQuiz(true, "Timeout");
         }
       }
     }
- 
-    tick();                                  // FIX: render immediately (used to show 00:00 for a full second)
+    tick();
     countdownInterval = setInterval(tick, 500);
   }
  
   function handleRadioClick(elem) {
-     let labels = document.querySelectorAll('#questions-container .option-label');
-     labels.forEach(function (l) { l.classList.remove('selected'); });
+     document.querySelectorAll('#questions-container .option-label').forEach(function (l) { l.classList.remove('selected'); });
      let parent = elem.closest('.option-label');
      if (parent) parent.classList.add('selected');
   }
@@ -771,16 +1060,13 @@
     safeGet("q-percent").innerText = progress + "% Complete";
     safeGet("q-progress").style.width = progress + "%";
  
-    // FIX: answers are keyed by position, so duplicate/blank question IDs in the
-    // sheet can no longer overwrite each other's saved answers.
     let savedAns = userAnswers[currentQIndex] || "";
-    let opts = q.opts || [];
-    let letters = ["A", "B", "C", "D"];
+    let opts = q.opts || [], letters = ["A", "B", "C", "D"];
  
     let html = '<p class="q-title">' + escapeHtml(q.q) + '</p>';
     for (let i = 0; i < 4; i++) {
       let optText = (opts[i] === undefined || opts[i] === null || String(opts[i]).trim() === "") ? "" : String(opts[i]);
-      if (optText === "") continue;   // FIX: blank options are skipped instead of rendering "undefined"
+      if (optText === "") continue;
       let L = letters[i];
       html += '<label class="option-label ' + (savedAns === L ? 'selected' : '') + '">' +
                 '<input type="radio" name="q_current" value="' + L + '" onchange="handleRadioClick(this)" ' +
@@ -789,11 +1075,12 @@
     }
  
     let btns = '<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">';
-    if (currentQIndex > 0) btns += '<button type="button" class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>';
-    else btns += '<div style="flex:1;"></div>';
- 
-    if (currentQIndex < total - 1) btns += '<button type="button" class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>';
-    else btns += '<button type="button" class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>';
+    btns += (currentQIndex > 0)
+      ? '<button type="button" class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>'
+      : '<div style="flex:1;"></div>';
+    btns += (currentQIndex < total - 1)
+      ? '<button type="button" class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>'
+      : '<button type="button" class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>';
     btns += '</div>';
  
     safeGet("questions-container").innerHTML = html + btns;
@@ -807,37 +1094,37 @@
   function nextQuestion() {
     saveCurrentSelection();
     if (currentQIndex < currentQuestions.length - 1) currentQIndex++;
-    renderSingleQuestion();
-    window.scrollTo(0, 0);
+    renderSingleQuestion(); window.scrollTo(0, 0);
   }
  
   function prevQuestion() {
     saveCurrentSelection();
     if (currentQIndex > 0) currentQIndex--;
-    renderSingleQuestion();
-    window.scrollTo(0, 0);
+    renderSingleQuestion(); window.scrollTo(0, 0);
   }
  
   async function submitQuiz(isAutoSubmit, forceReason) {
     isAutoSubmit = (isAutoSubmit === true);
     forceReason = forceReason || "";
- 
-    if (isSubmitting) return;        // FIX: prevents a double submission (double-click / timeout racing a manual submit)
+    if (isSubmitting) return;
     saveCurrentSelection();
  
     if (!isAutoSubmit) {
       let missedCount = 0;
       for (let i = 0; i < currentQuestions.length; i++) { if (!userAnswers[i]) missedCount++; }
-      if (missedCount > 0) {
-         let conf = confirm("You have left " + missedCount + " question(s) unattempted. Are you sure you want to submit?");
-         if (!conf) return;
-      }
+      let msg = missedCount > 0
+        ? "You have left " + missedCount + " question(s) unattempted.\n\nOnce submitted, you cannot re-attempt this assessment."
+        : "All questions attempted.\n\nOnce submitted, you cannot re-attempt this assessment.";
+      let conf = await wepConfirm(msg, "Submit Assessment?", missedCount > 0 ? "warn" : "", "Yes, Submit");
+      if (!conf) return;
     }
  
     isSubmitting = true;
     isQuizActive = false;
-    clearInterval(countdownInterval);
-    countdownInterval = null;
+    clearInterval(countdownInterval); countdownInterval = null;
+ 
+    captureSnapshot(forceReason === "Disqualified" ? "Disqualified" : "Quiz Submit");
+    clearInterval(camSnapTimer); camSnapTimer = null;
  
     let spinnerIcon = forceReason === "Disqualified" ? "🚨" : "⚙️";
     let spinnerText = forceReason === "Disqualified" ? "Disqualified. Submitting..." : "Saving Assessment Data...";
@@ -852,30 +1139,21 @@
       "</div>";
  
     let correct = 0, detailedLogs = {};
-    if (forceReason === "Disqualified") {
-        detailedLogs["Status"] = "Disqualified - Cheating detected via Strict Mode";
-    }
+    if (forceReason === "Disqualified") detailedLogs["Status"] = "Disqualified - Cheating detected via Strict Mode";
  
     currentQuestions.forEach(function (q, idx) {
-      let opts = q.opts || [];
-      let letterIndex = { A: 0, B: 1, C: 2, D: 3 };
+      let opts = q.opts || [], letterIndex = { A: 0, B: 1, C: 2, D: 3 };
       let uAnsLetter = userAnswers[idx] || "Skipped";
       let cAnsLetter = q.ans ? String(q.ans).toUpperCase().trim() : "";
- 
       let uAnsText = (letterIndex[uAnsLetter] !== undefined) ? (opts[letterIndex[uAnsLetter]] || "") : "Skipped";
       let cAnsText = (letterIndex[cAnsLetter] !== undefined) ? (opts[letterIndex[cAnsLetter]] || "") : "";
- 
       let isRight = (uAnsLetter !== "Skipped" && uAnsLetter === cAnsLetter);
       if (isRight) correct++;
  
       let logKey = "Q" + ((q.id === undefined || q.id === null || q.id === "") ? (idx + 1) : q.id);
       detailedLogs[logKey] = {
-        question: q.q,
-        userAnswerLetter: uAnsLetter,
-        userAnswerText: uAnsText,
-        correctAnswerLetter: cAnsLetter,
-        correctAnswerText: cAnsText,
-        isRight: isRight
+        question: q.q, userAnswerLetter: uAnsLetter, userAnswerText: uAnsText,
+        correctAnswerLetter: cAnsLetter, correctAnswerText: cAnsText, isRight: isRight
       };
     });
  
@@ -887,7 +1165,6 @@
       results: resultPayload
     });
  
-    // FIX: a failed submission used to be silently discarded. Now the learner can retry.
     if (!submitRes || submitRes.error) {
       let msg = (submitRes && submitRes.error) ? submitRes.error : "Submission failed.";
       safeGet("quiz-wizard").innerHTML =
@@ -896,19 +1173,24 @@
           "<h2 style='color:#dc2626; margin:0; font-size:22px;'>Submission Failed</h2>" +
           "<p style='color:var(--text-muted); font-size:14px; margin:15px 0 25px 0;'>" + escapeHtml(msg) +
           "<br>Your answers are still saved in this browser. Please do not close this page.</p>" +
-          '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="retrySubmit(' + (isAutoSubmit ? 'true' : 'false') + ',&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>' +
+          '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="retrySubmit(&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>' +
         "</div>";
       isSubmitting = false;
       return;
     }
  
-    if (forceReason === "Disqualified") alert("You were disqualified. Your test has been submitted.");
-    else alert("Assessment Submitted Successfully!");
+    stopCamera();
  
+    if (forceReason === "Disqualified") {
+      await wepAlert("You were disqualified and your test has been submitted.", "Test Submitted", "danger", "🚨");
+    } else {
+      await wepAlert("Your assessment has been submitted successfully. Results will appear once the Admin publishes them.",
+                     "Submitted Successfully", "success", "🎉");
+    }
     location.reload();
   }
  
-  function retrySubmit(isAutoSubmit, forceReason) {
+  function retrySubmit(forceReason) {
     isSubmitting = false;
     submitQuiz(true, forceReason);
   }
