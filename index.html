@@ -10,7 +10,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbxXWR54cBRZxcaJvRV0SQjqKY6SUoJixoDCD1MUNU0wASW4t7ZNP2eAe4jU4XOmCBZ-/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzg5t0OCZRkcjENApX2KZ0ylCCwRgIXDRVMKWuQgxRECEP6hmIVlq9PrQyviWuuxOns/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 40000;
@@ -328,6 +328,10 @@
 </div>
 
 <div id="main-app" class="app-container" style="display:none;">
+    <div id="sync-strip" style="display:none; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; margin-bottom:16px;">
+      <span style="width:9px; height:9px; border-radius:50%; background:#2563eb; animation:pulse 1s infinite; display:inline-block; flex-shrink:0;"></span>
+      <span id="sync-strip-text">Fetching the latest data…</span>
+    </div>
     <div class="header">
       <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="margin-bottom: 15px; display:none;">
       <h1>WeP Solutions Assessment</h1>
@@ -713,10 +717,30 @@
           });
       });
 
-      // Wake the Apps Script container while the user is still typing.
-      // SPEED: getPublicData doubles as the warm-up call. A separate "ping" was
-      // removed on purpose — Apps Script queues concurrent executions for the
-      // same owner, so an extra request could make the login wait behind it.
+      // SPEED: the moment the user touches the form, send a no-op request that
+      // reads nothing. It wakes a cold Apps Script container while they are
+      // still typing, so the real login lands on a warm instance. Fired once.
+      let warmed = false;
+      ["uName", "uPhone", "tnc"].forEach(function (id) {
+          safeGet(id).addEventListener("focus", function () {
+              if (warmed) return;
+              warmed = true;
+              apiCall("ping", {});
+          });
+      });
+
+      // SPEED: when the logo and the training banner are already cached, the
+      // branding request is DEFERRED until after login. Nothing then sits in
+      // front of the login request in the queue - that alone removes a whole
+      // round-trip from the critical path.
+      if (cachedLogo && cachedTraining) {
+        safeGet('login-logo-skeleton').style.display = 'none';
+        return;
+      }
+      await refreshPublicData(renderedFromCache);
+  });
+
+  async function refreshPublicData(alreadyRendered) {
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { safeGet('login-logo-skeleton').style.display = 'none'; return; }
 
@@ -733,9 +757,9 @@
 
       if (res.trainingPlan) {
           lsSet("wep_training", JSON.stringify(res));
-          if (!renderedFromCache) renderTraining(res);
+          if (!alreadyRendered && !isLoggedIn) renderTraining(res);
       }
-  });
+  }
 
   /* ==========================================================
      REGISTRATION
@@ -873,48 +897,20 @@
      LOGIN / LIVE REFRESH
      ========================================================== */
 
-  async function loginUser(isSilent) {
-    isSilent = (isSilent === true);
+  function showAppShell() {
+    safeGet("login-container").style.display = "none";
+    safeGet("main-app").style.display = "block";
+    safeGet("syncBtn").style.display = "flex";
+  }
 
-    if (!isSilent) {
-      userData.name = safeGet("uName").value.trim().replace(/\s+/g, " ");
-      userData.phone = safeGet("uPhone").value.trim();
+  function setSyncStrip(on, text) {
+    let el = safeGet('sync-strip');
+    el.style.display = on ? "flex" : "none";
+    if (on) safeGet('sync-strip-text').innerText = text || "Fetching the latest data…";
+  }
 
-      if (!userData.name || !userData.phone) { await wepAlert("Please provide both your Name and Mobile Number.", "Details Required", "warn", "✏️"); return; }
-      if (!/^[0-9]{10}$/.test(userData.phone)) { await wepAlert("Please enter a valid 10-digit mobile number.", "Invalid Number", "warn", "📱"); return; }
-      if (!safeGet("tnc").checked) { await wepAlert("Please read and accept the Terms & Conditions before logging in.", "Terms Not Accepted", "warn", "📜"); return; }
-      startLoginProgress();
-    }
-
-    let res = await apiCall("fetchUserDashboard", { name: userData.name, phone: userData.phone });
-
-    if (!res || res.error) {
-       if (!isSilent) {
-         resetLoginProgress();
-         if (res && res.needRegister) {
-           let go = await wepConfirm(
-             res.error + "\n\nWould you like to open the registration form now?",
-             "Not Registered", "warn", "Register Now");
-           if (go) showRegister(userData.name, userData.phone);
-         } else if (res && res.pendingApproval) {
-           await wepAlert(res.error, "Approval Pending", "warn", "⏳");
-         } else {
-           await wepAlert((res && res.error) ? res.error : "Unable to load your dashboard. Please try again.", "Login Failed", "danger", "🚫");
-         }
-       }
-       return;
-    }
-
-    if (!isSilent) {
-      completeLoginProgress();
-      isLoggedIn = true;
-      setTimeout(function () {
-          safeGet("login-container").style.display = "none";
-          safeGet("main-app").style.display = "block";
-          safeGet("syncBtn").style.display = "flex";
-      }, 300);
-    }
-
+  /** Paints the whole dashboard from a payload (server reply OR local cache). */
+  function applyDashboard(res, fromCache) {
     safeGet("display-name").innerText = userData.name.split(" ")[0];
     let modName = (res.activeMonth || "-") + " (" + (res.activeWeek || "-") + ")";
     safeGet("active-mod-name").innerText = modName;
@@ -931,7 +927,7 @@
     safeGet("display-mod-status").innerText = quizGlobalState;
 
     let now = new Date();
-    safeGet("last-sync-label").innerText = "Last updated: " +
+    safeGet("last-sync-label").innerText = fromCache ? "Showing saved copy…" : "Last updated: " +
       ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2) + ":" + ("0" + now.getSeconds()).slice(-2);
 
     let leaderboard = res.leaderboard || [];
@@ -958,8 +954,15 @@
     if (history.length === 0) hRows.push('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assessment history found.</td></tr>');
     safeGet("history-table").innerHTML = hRows.join("");
 
-    let serverQuestions = res.questions || [];
+    // SAFETY: a cached payload never unlocks the quiz. The Start button and the
+    // question set only ever come from a live server reply.
+    if (fromCache) {
+      safeGet("quiz-status-msg").innerHTML = "⏳ Checking the latest assessment status with the WeP server…";
+      safeGet("start-btn").style.display = "none";
+      return;
+    }
 
+    let serverQuestions = res.questions || [];
     if (res.hasAttempted) {
       safeGet("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score will update once the Admin publishes the results.";
       safeGet("start-btn").style.display = "none";
@@ -979,17 +982,99 @@
       safeGet("display-mod-status").style.color = "var(--success)";
       currentQuestions = serverQuestions;
     }
+  }
+
+  async function loginUser(isSilent) {
+    isSilent = (isSilent === true);
+    let usedCache = false;
 
     if (!isSilent) {
-      // Loud, actionable warning instead of a mysterious slow/blank portal.
+      userData.name = safeGet("uName").value.trim().replace(/\s+/g, " ");
+      userData.phone = safeGet("uPhone").value.trim();
+
+      if (!userData.name || !userData.phone) { await wepAlert("Please provide both your Name and Mobile Number.", "Details Required", "warn", "✏️"); return; }
+      if (!/^[0-9]{10}$/.test(userData.phone)) { await wepAlert("Please enter a valid 10-digit mobile number.", "Invalid Number", "warn", "📱"); return; }
+      if (!safeGet("tnc").checked) { await wepAlert("Please read and accept the Terms & Conditions before logging in.", "Terms Not Accepted", "warn", "📜"); return; }
+
+      // INSTANT LOGIN: if this same person logged in successfully on this device
+      // before, paint their dashboard from the saved copy right away and refresh
+      // it in the background. Nothing sensitive is unlocked from cache - the quiz
+      // itself still waits for the live reply.
+      let saved = null;
+      try {
+        let raw = lsGet("wep_dash_" + userData.phone);
+        if (raw) {
+          let o = JSON.parse(raw);
+          if (o && o.name && o.name.toLowerCase() === userData.name.toLowerCase() && o.data) saved = o.data;
+        }
+      } catch (e) {}
+
+      if (saved) {
+        usedCache = true;
+        isLoggedIn = true;
+        showAppShell();
+        applyDashboard(saved, true);
+        setSyncStrip(true, "Verifying your login and fetching the latest results…");
+      } else {
+        startLoginProgress();
+      }
+    }
+
+    let res = await apiCall("fetchUserDashboard", { name: userData.name, phone: userData.phone });
+
+    if (!res || res.error) {
+       if (!isSilent) {
+         if (usedCache) {
+           // The saved copy was not good enough - fall back to the login screen.
+           setSyncStrip(false);
+           isLoggedIn = false;
+           safeGet("main-app").style.display = "none";
+           safeGet("login-container").style.display = "flex";
+           try { localStorage.removeItem("wep_dash_" + userData.phone); } catch (e) {}
+         } else {
+           resetLoginProgress();
+         }
+
+         if (res && res.needRegister) {
+           let go = await wepConfirm(res.error + "\n\nWould you like to open the registration form now?", "Not Registered", "warn", "Register Now");
+           if (go) showRegister(userData.name, userData.phone);
+         } else if (res && res.pendingApproval) {
+           await wepAlert(res.error, "Approval Pending", "warn", "⏳");
+         } else {
+           await wepAlert((res && res.error) ? res.error : "Unable to load your dashboard. Please try again.", "Login Failed", "danger", "🚫");
+         }
+       }
+       return;
+    }
+
+    if (!isSilent && !usedCache) {
+      completeLoginProgress();
+      isLoggedIn = true;
+      setTimeout(showAppShell, 250);
+    }
+
+    applyDashboard(res, false);
+    setSyncStrip(false);
+
+    // Save a copy for the next instant login on this device.
+    if (!isSilent) {
+      try {
+        let slim = JSON.parse(JSON.stringify(res));
+        delete slim.questions;                       // never cache the paper
+        lsSet("wep_dash_" + userData.phone, JSON.stringify({ name: userData.name, data: slim, at: Date.now() }));
+      } catch (e) {}
+    }
+
+    if (!isSilent) {
       if (backendIsOutdated()) {
         wepAlert("This page expects WeP server v" + EXPECTED_API + " but the deployed script is v" + SERVER_API +
-                 ".\n\nOpen the Apps Script project, paste the latest Code.gs, then publish a NEW deployment version. " +
-                 "Camera capture and the faster login will not work until you do.",
+                 ".\n\nOpen the Apps Script project, paste the latest Code.gs, then publish a NEW deployment version.",
                  "Server Version Mismatch", "warn", "🔧");
       }
-      // Camera permission popup appears here, right after a successful login.
       initCamera();
+      // Branding / training banner is refreshed only AFTER login now, so it can
+      // never sit in front of the login request.
+      refreshPublicData();
     } else {
       updateCameraNotice();
     }
