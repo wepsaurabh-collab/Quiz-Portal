@@ -12,18 +12,11 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbzEdGkPyAsTl_lXJLlnOurql4blh-qRlQ2yEmGf96z9tJ6Yzk78WX2WaH-WH0t8Ab7t/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwYkA9KDQO5CEMSqONXp5Ts_S9qlRPfcPzD1hL_JHGQLxw8MchCE-Xucu4TE2YORCTO/exec";
     // ==========================================
  
     const API_TIMEOUT_MS = 60000;
  
-    /**
-     * Safe API wrapper for Google Apps Script.
-     * - "text/plain" keeps the POST a CORS simple request (no preflight, which Apps Script cannot answer).
-     * - redirect:'follow' is required: /exec 302-redirects to googleusercontent.com.
-     * - AbortController stops the loader from hanging forever.
-     * - The body is read as text first so an HTML error page cannot throw an opaque JSON error.
-     */
     async function apiCall(actionName, payloadData, attempt) {
       attempt = attempt || 1;
       let controller = new AbortController();
@@ -31,39 +24,29 @@
  
       try {
         let response = await fetch(API_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          cache: 'no-cache',
+          method: 'POST', mode: 'cors', redirect: 'follow', cache: 'no-cache',
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: actionName, data: payloadData }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
  
-        if (!response.ok) {
-          return { error: "Server responded with status " + response.status + ". Re-deploy the Web App with access 'Anyone'." };
-        }
+        if (!response.ok) return { error: "Server responded with status " + response.status + ". Re-deploy the Web App with access 'Anyone'." };
  
         let raw = await response.text();
         try { return JSON.parse(raw); }
         catch (parseErr) { return { error: "Invalid server response. Verify the deployed Web App URL." }; }
       } catch (error) {
         clearTimeout(timeoutId);
-        if (attempt < 2 && error && error.name !== 'AbortError') {
-          return await apiCall(actionName, payloadData, attempt + 1);
-        }
-        if (error && error.name === 'AbortError') {
-          return { error: "Request timed out. Please check your connection and retry." };
-        }
+        if (attempt < 2 && error && error.name !== 'AbortError') return await apiCall(actionName, payloadData, attempt + 1);
+        if (error && error.name === 'AbortError') return { error: "Request timed out. Please check your connection and retry." };
         return { error: "Server connection failed. Please check internet or API URL." };
       }
     }
   </script>
  
   <style>
-    /* FIX: --text-muted was referenced throughout the markup but never declared. */
-    :root { --primary: #0f172a; --secondary: #1e293b; --accent: #2563eb; --success: #059669; --danger: #dc2626; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
+    :root { --primary: #0f172a; --secondary: #1e293b; --accent: #2563eb; --success: #059669; --danger: #dc2626; --warn: #f59e0b; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); overflow: hidden; font-size: 15px;}
  
     .layout-wrapper { display: flex; height: 100vh; width: 100%; }
@@ -76,12 +59,18 @@
     .nav-item { padding: 16px 20px; cursor: pointer; transition: 0.2s; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; border-left: 4px solid transparent;}
     .nav-item:hover { background: var(--secondary); color: white;}
     .nav-item.active { background: var(--secondary); color: white; border-left-color: var(--accent); }
+    .nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 20px; display: none; }
     .role-badge { margin: auto 20px 20px 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600;}
  
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 15px; flex-wrap: wrap;}
     .page-header h1 { margin: 0; font-size: 26px; color: var(--primary); font-weight: 800;}
-    .refresh-btn { background: white; color: var(--text); border: 1px solid var(--border); font-size: 15px; cursor: pointer; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 8px; width: auto;}
+    .header-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .refresh-btn { background: white; color: var(--text); border: 1px solid var(--border); font-size: 15px; cursor: pointer; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 8px; width: auto; margin:0;}
     .refresh-btn:hover { background: #f1f5f9; transform: translateY(-1px);}
+    .live-pill { display:flex; align-items:center; gap:8px; background:#ecfdf5; border:1px solid #6ee7b7; color:#065f46; padding:8px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; user-select:none;}
+    .live-pill .dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation: pulse 1.4s infinite;}
+    .live-pill.off { background:#f1f5f9; border-color:var(--border); color:var(--text-muted);}
+    .live-pill.off .dot { background:#94a3b8; animation:none;}
  
     .box { background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid var(--border); }
     input, select, textarea, button { padding: 12px 16px; margin: 6px 0 16px 0; border-radius: 8px; border: 1px solid var(--border); outline:none; font-size: 15px; width: 100%; box-sizing: border-box; font-family:inherit; transition: 0.2s;}
@@ -92,10 +81,17 @@
     .btn-export { background: #0f766e; width: auto; padding: 10px 18px; font-size: 14px; margin:0;}
     .btn-export-sm { background: #0f766e; color: white; border: none; padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 600; width: auto; margin: 0;}
     .btn-export-sm:hover { background: #115e59; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-mini { width:auto; margin:0; padding:6px 12px; font-size:12px; border-radius:6px; font-weight:700; }
+    .btn-cam { background:#7c3aed; } .btn-cam:hover { background:#6d28d9; }
  
     table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
     th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); text-align: left; }
     th { background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: 0.5px;}
+ 
+    .pill { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px;}
+    .pill-pending { background:#fef08a; color:#854d0e; }
+    .pill-approved { background:#dcfce7; color:#166534; }
+    .pill-rejected { background:#fee2e2; color:#991b1b; }
  
     .flex-row { display: flex; gap: 18px; margin-bottom: 10px; align-items:flex-start; flex-wrap: wrap;}
     .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 25px;}
@@ -112,18 +108,44 @@
     .training-input { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 0; }
     .training-select { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; margin:0;}
  
-    /* Skeleton & Global Loader CSS */
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
     .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 24px; overflow: hidden; position: relative; margin-top: 15px; }
     .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.2s linear; }
     .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 24px; font-size: 13px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
  
-    /* EDIT & GLOBAL MODAL */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 99999; animation: fadeIn 0.2s ease-out; overflow-y: auto; padding: 20px; box-sizing: border-box;}
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     .modal-box { background: white; padding: 35px 30px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); margin: auto;}
+ 
+    /* ===== BRANDED DIALOG (replaces every native alert / confirm) ===== */
+    #wepDialog { position: fixed; inset: 0; background: rgba(15,23,42,0.88); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box; animation: fadeIn 0.18s ease-out; }
+    #wepDialog .dlg { background: #fff; border-radius: 18px; width: 100%; max-width: 430px; box-shadow: 0 25px 55px rgba(0,0,0,0.35); animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow: hidden; }
+    #wepDialog .dlg-head { padding: 28px 28px 0 28px; text-align: center; }
+    #wepDialog .dlg-icon { font-size: 44px; line-height: 1; margin-bottom: 14px; display: block; }
+    #wepDialog .dlg-title { margin: 0; font-size: 21px; font-weight: 800; color: var(--primary); }
+    #wepDialog .dlg-msg { padding: 14px 28px 26px 28px; text-align: center; font-size: 15px; color: var(--text); line-height: 1.65; }
+    #wepDialog .dlg-actions { display: flex; gap: 12px; padding: 0 28px 28px 28px; }
+    #wepDialog .dlg-actions button { flex: 1; padding: 15px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; margin: 0; width: auto;}
+    #wepDialog .dlg-cancel { background: #e2e8f0; color: #475569; } #wepDialog .dlg-cancel:hover { background: #cbd5e1; }
+    #wepDialog .dlg-ok { background: var(--accent); color: #fff; } #wepDialog .dlg-ok:hover { background: #1d4ed8; }
+    #wepDialog.danger .dlg-ok { background: var(--danger); } #wepDialog.danger .dlg-ok:hover { background: #b91c1c; }
+    #wepDialog.success .dlg-ok { background: var(--success); } #wepDialog.success .dlg-ok:hover { background: #047857; }
+    #wepDialog.warn .dlg-ok { background: var(--warn); } #wepDialog.warn .dlg-ok:hover { background: #d97706; }
+    #wepDialog .dlg-bar { height: 7px; width: 100%; background: var(--accent); }
+    #wepDialog.danger .dlg-bar { background: var(--danger); }
+    #wepDialog.success .dlg-bar { background: var(--success); }
+    #wepDialog.warn .dlg-bar { background: var(--warn); }
+ 
+    /* ===== SNAPSHOT GALLERY ===== */
+    .snap-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:14px; margin-top:18px; }
+    .snap-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#f8fafc; text-decoration:none; display:block; transition:0.2s; }
+    .snap-card:hover { transform: translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,0.12); border-color:var(--accent); }
+    .snap-card img { width:100%; height:112px; object-fit:cover; display:block; background:#0f172a; }
+    .snap-meta { padding:8px 10px; font-size:11px; color:var(--text-muted); font-weight:700; line-height:1.4; }
+    .snap-meta b { display:block; color:var(--primary); font-size:11px; }
+    .snap-noimg { height:112px; display:flex; align-items:center; justify-content:center; background:#1e293b; color:#fca5a5; font-size:11px; font-weight:800; text-align:center; padding:8px; }
  
     @media (max-width: 768px) {
       body { overflow-y: auto; }
@@ -133,6 +155,7 @@
       .brand img { height: 35px !important; }
       .nav-item { border-left: none; border-bottom: 4px solid transparent; padding: 10px 15px; font-size: 14px; flex-shrink: 0; }
       .nav-item.active { border-bottom-color: var(--accent); }
+      .nav-badge { margin-left: 8px; }
       .role-badge { display: none; }
       .main-content { padding: 20px; overflow-y: visible;}
       .page-header h1 { font-size: 20px; }
@@ -147,6 +170,22 @@
  
 <div id="toast-container"></div>
  
+<!-- ===== BRANDED DIALOG ===== -->
+<div id="wepDialog" role="dialog" aria-modal="true">
+  <div class="dlg">
+    <div class="dlg-bar"></div>
+    <div class="dlg-head">
+      <span class="dlg-icon" id="dlg-icon">❓</span>
+      <h3 class="dlg-title" id="dlg-title">Please Confirm</h3>
+    </div>
+    <div class="dlg-msg" id="dlg-msg"></div>
+    <div class="dlg-actions">
+      <button type="button" class="dlg-cancel" id="dlg-cancel">Cancel</button>
+      <button type="button" class="dlg-ok" id="dlg-ok">OK</button>
+    </div>
+  </div>
+</div>
+ 
 <!-- GLOBAL 0-100% LOADER MODAL -->
 <div class="modal-overlay" id="globalLoaderModal">
   <div class="modal-box" style="max-width:400px; text-align:center;">
@@ -158,6 +197,18 @@
        <div id="global-progress-text" class="load-text">0%</div>
     </div>
     <p id="loader-stage" style="font-size:12px; color:var(--text-muted); margin:12px 0 0 0; font-weight:600;"></p>
+  </div>
+</div>
+ 
+<!-- SNAPSHOT GALLERY MODAL -->
+<div class="modal-overlay" id="snapModal">
+  <div class="modal-box" style="max-width: 900px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px; gap:12px; flex-wrap:wrap;">
+      <h3 style="margin:0; color:var(--primary); font-size:20px;">📷 Proctoring Snapshots — <span id="snap-user" style="color:var(--accent);"></span></h3>
+      <button onclick="document.getElementById('snapModal').style.display='none'" class="btn-mini" style="background:#64748b;">Close</button>
+    </div>
+    <p style="font-size:13px; color:var(--text-muted); margin:14px 0 0 0;">Images are stored in your Google Drive folder <b>WeP Proctoring Snapshots</b>. Click any frame to open the full-size image.</p>
+    <div id="snap-grid" class="snap-grid"></div>
   </div>
 </div>
  
@@ -191,13 +242,10 @@
  
 <div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0; padding:20px; box-sizing:border-box;">
   <div class="box" style="width: 100%; max-width: 420px; text-align:center; padding: 45px 30px; margin:0;">
- 
     <div id="login-logo-skeleton" class="skeleton" style="height: 55px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
- 
     <h2 style="color: var(--primary); margin-top:0; font-size: 26px;">WeP Solutions</h2>
     <p style="color: #64748b; font-size: 15px; margin-bottom: 35px; line-height:1.5;">Evaluation &amp; Training Command Center</p>
- 
     <input type="password" id="pin" placeholder="Enter Secure Passcode" autocomplete="current-password" style="text-align:center; letter-spacing: 2px; font-size:16px;">
     <button id="authBtn" onclick="login()" style="padding: 16px; font-size: 17px; margin-top:10px; width:100%;">Authenticate Access</button>
   </div>
@@ -211,7 +259,9 @@
       WeP Admin
     </div>
     <div class="nav-item active admin-only" onclick="switchTab('analytics', this)">📈 Dashboard Hub</div>
+    <div class="nav-item admin-only" id="nav-approvals" onclick="switchTab('approvals', this)">🧑‍💼 User Approvals <span class="nav-badge" id="approval-badge">0</span></div>
     <div class="nav-item admin-only" onclick="switchTab('controls', this)">⚙️ Quiz Config &amp; Security</div>
+    <div class="nav-item admin-only" onclick="switchTab('proctoring', this)">📷 Camera Proctoring</div>
     <div class="nav-item admin-only" onclick="switchTab('training', this)">📅 Planned Training</div>
     <div class="nav-item admin-only" onclick="switchTab('current', this)">📊 Live Batch Status</div>
     <div class="nav-item admin-only" onclick="switchTab('attendance', this)">🗓️ Attendance Matrix</div>
@@ -226,7 +276,12 @@
   <div class="main-content">
     <div class="page-header">
       <h1 id="page-title">Dashboard Hub</h1>
-      <button class="refresh-btn" id="refBtn" onclick="forceRefresh()">🔄 Sync Data</button>
+      <div class="header-tools">
+        <div class="live-pill" id="live-pill" onclick="toggleLive()" title="Auto-refresh every 60 seconds">
+          <span class="dot"></span><span id="live-label">LIVE · syncing</span>
+        </div>
+        <button class="refresh-btn" id="refBtn" onclick="forceRefresh()">🔄 Sync Data</button>
+      </div>
     </div>
  
     <!-- TAB 0: ANALYTICS -->
@@ -257,12 +312,72 @@
       </div>
     </div>
  
+    <!-- TAB: USER APPROVALS -->
+    <div id="view-approvals" class="tab-content" style="display:none;">
+      <div class="box" style="background:#faf5ff; border-color:#e9d5ff;">
+        <h3 style="margin-top:0; color:#6b21a8;">🧑‍💼 New User Registrations</h3>
+        <p style="font-size:14px; color:var(--text-muted); margin-top:0;">Users who register on the quiz portal appear here. They can only login after you approve them.</p>
+        <div class="flex-row" style="align-items:flex-end;">
+          <div style="flex:1;"><label>Filter Status</label>
+            <select id="appr-filter" onchange="renderApprovals()"><option>Pending</option><option>Approved</option><option>Rejected</option><option>All</option></select>
+          </div>
+          <div style="flex:1;"><label>Search Name / Number</label><input type="text" id="appr-search" oninput="renderApprovals()" placeholder="Type to filter..."></div>
+          <div style="flex:1;"><label>Registration Requirement</label>
+            <select id="ctrl-approval"><option value="ON">🔒 ON (approval needed)</option><option value="OFF">🔓 OFF (anyone can login)</option></select>
+          </div>
+          <div style="flex:0.6; padding-bottom:16px;"><button onclick="updateApprovalMode()" style="margin:0; background:#6b21a8;">Apply</button></div>
+        </div>
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin-top:10px;">
+          <table id="approvals-table"></table>
+        </div>
+      </div>
+    </div>
+ 
     <!-- TAB 1: MASTER CONTROLS -->
     <div id="view-controls" class="tab-content" style="display:none;">
       <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 1: Evaluation Module Activation</h3><div class="flex-row"><div style="flex:1;"><label>Target Month</label><select id="ctrl-month"><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Target Week</label><select id="ctrl-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><button onclick="setLiveStatus()" style="width:auto; padding:12px 24px;">Deploy Active Module</button><p style="font-size:14px; color:#64748b; margin-top:15px; background: #f8fafc; padding:10px; border-radius:8px;">Currently Active Infrastructure: <b id="disp-live-status" style="color:var(--primary);"></b></p></div>
-      <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 2: Security &amp; Accessibility</h3><div class="flex-row" style="gap:25px;"><div style="flex:1;"><label>Portal Access</label><select id="ctrl-status"><option value="LIVE">🟢 LIVE (Open)</option><option value="PAUSED">🛑 PAUSED (Closed)</option></select><button onclick="updateState()" class="btn-green">Apply Access</button></div><div style="flex:1;"><label>Timer (Mins)</label><input type="number" id="ctrl-timer" min="1" max="180" placeholder="10"><button onclick="updateTimer()" style="background:#475569;">Apply Timer</button></div><div style="flex:1;"><label style="color:var(--danger);">Strict Anti-Cheat</label><select id="ctrl-strict"><option value="ON">🛡️ ENABLED</option><option value="OFF">⚪ DISABLED</option></select><button onclick="updateStrict()" style="background:var(--danger);">Apply Security</button></div></div></div>
+ 
+      <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 2: Security &amp; Accessibility</h3>
+        <div class="flex-row" style="gap:25px;">
+          <div style="flex:1;"><label>Portal Access</label><select id="ctrl-status"><option value="LIVE">🟢 LIVE (Open)</option><option value="PAUSED">🛑 PAUSED (Closed)</option></select><button onclick="updateState()" class="btn-green">Apply Access</button></div>
+          <div style="flex:1;"><label>Timer (Mins)</label><input type="number" id="ctrl-timer" min="1" max="180" placeholder="10"><button onclick="updateTimer()" style="background:#475569;">Apply Timer</button></div>
+          <div style="flex:1;"><label style="color:var(--danger);">Strict Anti-Cheat</label><select id="ctrl-strict"><option value="ON">🛡️ ENABLED</option><option value="OFF">⚪ DISABLED</option></select><button onclick="updateStrict()" style="background:var(--danger);">Apply Security</button></div>
+          <div style="flex:1;"><label style="color:#7c3aed;">Camera Proctoring</label>
+            <select id="ctrl-camera">
+              <option value="OFF">⚪ OFF (no camera)</option>
+              <option value="OPTIONAL">📷 OPTIONAL (ask, don't block)</option>
+              <option value="REQUIRED">🔒 REQUIRED (must allow)</option>
+            </select>
+            <button onclick="updateCamera()" style="background:#7c3aed;">Apply Camera</button>
+          </div>
+        </div>
+        <p style="font-size:13px; color:var(--text-muted); margin:0; background:#f8fafc; padding:10px 12px; border-radius:8px;">
+          <b>OPTIONAL</b> shows the browser camera prompt to every user and captures snapshots if allowed — a denial is logged but the user can still continue.
+          <b>REQUIRED</b> blocks the Start button until the camera is allowed.
+        </p>
+      </div>
+ 
       <div class="box" style="background: #eff6ff; border-color:#bfdbfe;"><h3 style="color:#1d4ed8; margin-top:0;">Step 3: Result Publication</h3><p style="font-size: 14px; color:#475569; margin-top:0; margin-bottom:15px;">End users see "Evaluating" until you declassify the results.</p><button onclick="publishResults()" style="width:auto; padding:12px 24px; background:#1d4ed8; font-size:15px;">✅ Publish Results to Trainees</button></div>
       <div class="box" style="background: #fff1f2; border-color:#fecdd3;"><h3 style="color:#be123c; margin-top:0;">Step 4: Trainer/Uploader Security</h3><div class="flex-row" style="align-items: flex-end;"><div style="flex:1;"><label style="color:#be123c;">New Trainer Passcode</label><input type="text" id="ctrl-uploader-pass" placeholder="e.g. 9999" style="margin:0; border-color:#fda4af;"></div><button onclick="changeTrainerPass()" style="width:auto; margin:0; background:#be123c;">Update Trainer Passcode</button></div></div>
+    </div>
+ 
+    <!-- TAB: CAMERA PROCTORING -->
+    <div id="view-proctoring" class="tab-content" style="display:none;">
+      <div class="box">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <h3 style="margin:0; color:var(--primary); font-size:20px;">📷 Proctoring Feed</h3>
+          <button class="btn-export" onclick="downloadCSV('proctor-table', 'Proctoring_Log.csv')">Export Log CSV</button>
+        </div>
+        <p style="font-size:14px; color:var(--text-muted);">Latest camera captures from all users. Images live in your Google Drive folder <b>WeP Proctoring Snapshots</b>; only the link is stored in the sheet.</p>
+        <div class="flex-row">
+          <div style="flex:1;"><label>Filter User</label><select id="proctor-user" onchange="renderProctoring()"><option value="All">All Users</option></select></div>
+          <div style="flex:1;"><label>Filter Event</label><select id="proctor-event" onchange="renderProctoring()"><option value="All">All Events</option><option>Login</option><option>Quiz Start</option><option>In-Quiz</option><option>Violation</option><option>Quiz Submit</option><option>Camera Denied</option></select></div>
+        </div>
+        <div id="proctor-grid" class="snap-grid"></div>
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin-top:25px; max-height:340px;">
+          <table id="proctor-table"></table>
+        </div>
+      </div>
     </div>
  
     <!-- TAB: PLANNED TRAINING -->
@@ -275,7 +390,7 @@
               <button onclick="saveTrainingPlan()" class="btn-green" style="width:auto; padding:10px 15px; margin:0;">💾 Save Plan</button>
           </div>
         </div>
-        <p style="font-size:14px; color:var(--text-muted);">Manage upcoming presentations. This data reflects directly on the user login screen. Use the date format <b>DD/Mon/YYYY</b> (e.g. 26/Sep/2026).</p>
+        <p style="font-size:14px; color:var(--text-muted);">Manage upcoming presentations. This data reflects directly on the user login screen. Date format <b>DD/Mon/YYYY</b> (e.g. 26/Sep/2026).</p>
         <div style="overflow-x: auto; border:1px solid var(--border); border-radius:8px; margin-top:15px;">
           <table id="training-table" style="min-width: 1300px;">
             <thead>
@@ -294,7 +409,7 @@
     <div id="view-attendance" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Attendance Matrix</h3><button class="btn-export" onclick="downloadCSV('attendance-table', 'Attendance.csv')">Export CSV</button></div><label style="font-weight:600;">Filter by Cycle:</label><select id="att-month-filter" onchange="renderAttendancePivot()" style="max-width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto; margin-top:10px;"><table id="attendance-table"></table></div></div></div>
  
     <!-- TAB 4: DETAILED ANSWER LOGS -->
-    <div id="view-userlogs" class="tab-content" style="display:none;"><div class="box"><h3 style="margin-top:0; color:var(--primary); font-size:20px;">Micro-Telemetry Audit Engine</h3><div class="flex-row"><div style="flex:1;"><label>Select User</label><select id="log-user-select" onchange="populateLogModules()"><option value="">-- Select Identity --</option></select></div><div style="flex:1;"><label>Select Assessment</label><select id="log-module-select" onchange="renderDetailedLogs()"><option value="">Select User First</option></select></div></div><div style="overflow-x: auto;"><table id="detailed-log-table"><tr><th>Q. ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr></table></div></div></div>
+    <div id="view-userlogs" class="tab-content" style="display:none;"><div class="box"><h3 style="margin-top:0; color:var(--primary); font-size:20px;">Micro-Telemetry Audit Engine</h3><div class="flex-row"><div style="flex:1;"><label>Select User</label><select id="log-user-select" onchange="populateLogModules()"><option value="">-- Select Identity --</option></select></div><div style="flex:1;"><label>Select Assessment</label><select id="log-module-select" onchange="renderDetailedLogs()"><option value="">Select User First</option></select></div><div style="flex:0.6; padding-top:20px;"><button class="btn-cam" onclick="openSnapshotsForSelectedLog()" style="margin:0;">📷 View Camera</button></div></div><div style="overflow-x: auto;"><table id="detailed-log-table"><tr><th>Q. ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr></table></div></div></div>
  
     <!-- TAB 5: BULK DATA EXPORT -->
     <div id="view-bulkexport" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Bulk Data Extraction</h3><button class="btn-export" onclick="downloadCSV('bulk-export-table', 'Bulk_Dump.csv')">Download Dataset</button></div><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="export-month"><option value="All">All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="export-week"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div><div style="flex:0.5; padding-top:20px;"><button class="btn-green" onclick="renderBulkExport()" style="margin:0;">Load Data</button></div></div><div style="overflow-x: auto; max-height: 400px; border:1px solid var(--border); border-radius:6px;"><table id="bulk-export-table"></table></div></div></div>
@@ -302,10 +417,8 @@
     <!-- TAB 6: SUMMARY -->
     <div id="view-summary" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Operations Summary</h3><button class="btn-export" onclick="downloadCSV('summary-table', 'Summary.csv')">Export CSV</button></div><label>Filter Month:</label><select id="sum-month-filter" onchange="renderSummaryPivot()" style="max-width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto;"><table id="summary-table"></table></div></div></div>
  
-    <!-- TAB 7: QUESTION BANK WITH BULK UPLOAD & EDIT -->
+    <!-- TAB 7: QUESTION BANK -->
     <div id="view-qbank" class="tab-content" style="display:none;">
- 
-      <!-- BULK UPLOAD SECTION -->
       <div class="box" style="background:#f0fdf4; border-color:#bbf7d0; margin-bottom: 20px;">
         <h3 style="margin-top:0; color:var(--success);">📥 Bulk Upload Questions (CSV)</h3>
         <p style="font-size:13px; color:var(--text-muted);">Download the template, fill it with your questions, and upload it back here.</p>
@@ -337,7 +450,6 @@
         <textarea id="nq-q" rows="2" style="resize:vertical;"></textarea>
         <div class="flex-row">
           <div style="flex:1;"><label>Option A</label><input type="text" id="nq-a"></div>
-          <!-- FIX: this field used to carry id="eq-b" (a duplicate of the edit modal), which broke addQ() -->
           <div style="flex:1;"><label>Option B</label><input type="text" id="nq-b"></div>
         </div>
         <div class="flex-row">
@@ -356,31 +468,88 @@
 <script>
   let adminData = null;
   let chart1 = null, chart2 = null, chart3 = null, chart4 = null, chart5 = null, chart6 = null, chartUserWise = null;
-  let sessionPin = "";                 // FIX: PIN kept in memory instead of re-reading a hidden input every call
-  const monthOrder = { "January":1, "February":2, "March":3, "April":4, "May":5, "June":6, "July":7, "August":8, "September":9, "October":10, "November":11, "December":12 };
+  let sessionPin = "";
+  let liveTimer = null, liveEnabled = true, liveBusy = false;
+  const LIVE_INTERVAL_MS = 60000;
+  const monthOrder = { "January":1,"February":2,"March":3,"April":4,"May":5,"June":6,"July":7,"August":8,"September":9,"October":10,"November":11,"December":12 };
  
-  // FIX: guard the Chart.js plugin registration. If the CDN is blocked, the whole
-  // admin script used to die at parse time and the page stayed completely dead.
   const CHARTS_AVAILABLE = (typeof Chart !== "undefined");
   if (CHARTS_AVAILABLE) {
     try {
       if (typeof ChartDataLabels !== "undefined") Chart.register(ChartDataLabels);
       Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
-    } catch (e) { /* datalabels plugin unavailable - charts still render */ }
+    } catch (e) {}
   }
+ 
+  /* ==========================================================
+     BRANDED DIALOG
+     ========================================================== */
+  let _dlgResolve = null;
+ 
+  function wepDialog(opts) {
+    opts = opts || {};
+    let box = document.getElementById('wepDialog');
+    let okBtn = document.getElementById('dlg-ok');
+    let cnBtn = document.getElementById('dlg-cancel');
+ 
+    document.getElementById('dlg-icon').innerText  = opts.icon  || "❓";
+    document.getElementById('dlg-title').innerText = opts.title || "Please Confirm";
+    document.getElementById('dlg-msg').innerHTML   = opts.html ? opts.message : escapeHtml(opts.message || "").replace(/\n/g, "<br>");
+ 
+    okBtn.innerText = opts.okText || "OK";
+    if (opts.cancelText === null) cnBtn.style.display = "none";
+    else { cnBtn.style.display = "block"; cnBtn.innerText = opts.cancelText || "Cancel"; }
+ 
+    box.className = "";
+    if (opts.tone) box.classList.add(opts.tone);
+    box.style.display = "flex";
+    setTimeout(function () { okBtn.focus(); }, 60);
+ 
+    return new Promise(function (resolve) { _dlgResolve = resolve; });
+  }
+ 
+  function closeWepDialog(result) {
+    document.getElementById('wepDialog').style.display = "none";
+    if (_dlgResolve) { let r = _dlgResolve; _dlgResolve = null; r(result); }
+  }
+ 
+  function wepAlert(message, title, tone, icon) {
+    return wepDialog({ message: message, title: title || "Notice",
+      icon: icon || (tone === "danger" ? "⚠️" : tone === "success" ? "✅" : "ℹ️"),
+      tone: tone || "", okText: "Got it", cancelText: null });
+  }
+ 
+  function wepConfirm(message, title, tone, okText) {
+    return wepDialog({ message: message, title: title || "Please Confirm",
+      icon: tone === "danger" ? "🚨" : "❓", tone: tone || "",
+      okText: okText || "Yes, Continue", cancelText: "Cancel" });
+  }
+ 
+  document.getElementById('dlg-ok').addEventListener('click', function () { closeWepDialog(true); });
+  document.getElementById('dlg-cancel').addEventListener('click', function () { closeWepDialog(false); });
+  document.addEventListener('keydown', function (e) {
+    if (document.getElementById('wepDialog').style.display !== "flex") return;
+    if (e.key === "Escape") { e.preventDefault(); closeWepDialog(false); }
+    if (e.key === "Enter")  { e.preventDefault(); closeWepDialog(true); }
+  });
+ 
+  /* ---------- helpers ---------- */
  
   function escapeHtml(value) {
     if (value === null || value === undefined) return "";
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function cell(row, i) { return (row && row[i] !== undefined && row[i] !== null) ? String(row[i]) : ""; }
+  function digits(v) { return String(v === null || v === undefined ? "" : v).replace(/[^0-9]/g, ""); }
+  function anyModalOpen() {
+    return document.getElementById('wepDialog').style.display === 'flex'
+        || document.getElementById('editQModal').style.display === 'flex'
+        || document.getElementById('snapModal').style.display === 'flex'
+        || document.getElementById('globalLoaderModal').style.display === 'flex';
+  }
  
-  /* --- GLOBAL PROGRESS LOADER --- */
+  /* ---------- global loader ---------- */
   let globalProgressInterval = null;
   function startGlobalLoader(titleText) {
       document.getElementById('loader-title').innerText = titleText || "Processing...";
@@ -388,38 +557,27 @@
       let fill = document.getElementById('global-progress-fill');
       let txt = document.getElementById('global-progress-text');
       let stage = document.getElementById('loader-stage');
-      fill.style.width = "0%";
-      txt.innerText = "0%";
+      fill.style.width = "0%"; txt.innerText = "0%";
       stage.innerText = "Connecting to WeP server...";
  
-      // FIX: the bar used to hit 90% in under two seconds and then sit frozen,
-      // which made a normal request look like a hang. It now eases to 97%
-      // and narrates what is actually happening.
       let w = 0, ticks = 0;
       clearInterval(globalProgressInterval);
       globalProgressInterval = setInterval(function () {
           ticks++;
-          if (w < 97) {
-              w += Math.max(1, Math.round((97 - w) * 0.12));
-              if (w > 97) w = 97;
-              fill.style.width = w + "%";
-              txt.innerText = w + "%";
-          }
+          if (w < 97) { w += Math.max(1, Math.round((97 - w) * 0.12)); fill.style.width = w + "%"; txt.innerText = w + "%"; }
           if (ticks === 10) stage.innerText = "Reading the response database...";
           if (ticks === 24) stage.innerText = "Building analytics...";
           if (ticks === 44) stage.innerText = "Server is waking up, almost there...";
       }, 250);
   }
   function completeGlobalLoader() {
-      clearInterval(globalProgressInterval);
-      globalProgressInterval = null;
+      clearInterval(globalProgressInterval); globalProgressInterval = null;
       document.getElementById('global-progress-fill').style.width = "100%";
       document.getElementById('global-progress-text').innerText = "100%";
       setTimeout(function () { document.getElementById('globalLoaderModal').style.display = "none"; }, 400);
   }
   function failGlobalLoader() {
-      clearInterval(globalProgressInterval);
-      globalProgressInterval = null;
+      clearInterval(globalProgressInterval); globalProgressInterval = null;
       document.getElementById('globalLoaderModal').style.display = "none";
   }
  
@@ -427,25 +585,24 @@
       startGlobalLoader(loadText);
       let actionRes = await apiCall(actionName, payload);
       if (!actionRes || actionRes.error) {
-        showToast((actionRes && actionRes.error) ? actionRes.error : "Action failed.", "error");
         failGlobalLoader();
-        return;
+        await wepAlert((actionRes && actionRes.error) ? actionRes.error : "Action failed.", "Action Failed", "danger", "🚫");
+        return false;
       }
- 
       let refreshRes = await apiCall("getAdminDashboard", { pin: sessionPin });
       if (!refreshRes || refreshRes.error) {
-        showToast((refreshRes && refreshRes.error) ? refreshRes.error : "Refresh failed.", "error");
         failGlobalLoader();
-        return;
+        await wepAlert((refreshRes && refreshRes.error) ? refreshRes.error : "Refresh failed.", "Sync Failed", "danger", "🚫");
+        return false;
       }
- 
       adminData = refreshRes;
       initDashboard(true);
       completeGlobalLoader();
       if (successToast) showToast(successToast, "success");
+      return true;
   }
  
-  // INSTANT LOAD LOGO FROM CACHE
+  /* ---------- boot ---------- */
   document.addEventListener("DOMContentLoaded", async function () {
       let cachedLogo = null, cachedFav = null;
       try { cachedLogo = localStorage.getItem("wep_logo"); cachedFav = localStorage.getItem("wep_favicon"); } catch (e) {}
@@ -459,15 +616,11 @@
       }
       if (cachedFav) document.getElementById('favicon').href = cachedFav;
  
-      // Enter-key authentication.
       document.getElementById('pin').addEventListener("keydown", function (ev) {
           if (ev.key === "Enter") { ev.preventDefault(); login(); }
       });
  
-      // SPEED: wake the Apps Script container while the admin is still typing the
-      // passcode. A cold instance costs 3-6 seconds on the FIRST request only,
-      // so paying it here makes the actual authentication feel instant.
-      apiCall("ping", {});
+      apiCall("ping", {});   // warm the Apps Script container
  
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { document.getElementById('login-logo-skeleton').style.display = 'none'; return; }
@@ -484,12 +637,8 @@
               document.getElementById('sidebar-logo').src = res.settings.logo;
               document.getElementById('sidebar-logo').style.display = 'block';
               try { localStorage.setItem("wep_logo", res.settings.logo); } catch (e) {}
-          } else {
-              document.getElementById('login-logo-skeleton').style.display = 'none';
-          }
-      } else {
-          document.getElementById('login-logo-skeleton').style.display = 'none';
-      }
+          } else { document.getElementById('login-logo-skeleton').style.display = 'none'; }
+      } else { document.getElementById('login-logo-skeleton').style.display = 'none'; }
   });
  
   function showToast(message, type) {
@@ -509,22 +658,27 @@
     if (elem) {
       document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
       elem.classList.add('active');
-      document.getElementById('page-title').innerText = elem.innerText.replace(/[^\x00-\x7F]/g, "").trim();
+      let label = elem.cloneNode(true);
+      let badge = label.querySelector('.nav-badge'); if (badge) badge.remove();
+      document.getElementById('page-title').innerText = label.innerText.replace(/[^\x00-\x7F]/g, "").trim();
     }
-    // Charts measure 0x0 while hidden; re-render once the tab is actually visible.
     if (tabId === 'analytics' && adminData && adminData.role === "MASTER_ADMIN") renderCharts();
   }
  
+  /* ==========================================================
+     LOGIN + LIVE AUTO-REFRESH
+     ========================================================== */
+ 
   async function login() {
     let pin = document.getElementById('pin').value;
-    if (!pin) { showToast("Please Enter Passcode", "error"); return; }
+    if (!pin) { await wepAlert("Please enter your secure passcode.", "Passcode Required", "warn", "🔑"); return; }
  
     startGlobalLoader("Authenticating...");
     let res = await apiCall("getAdminDashboard", { pin: pin });
  
     if (!res || res.error) {
-        showToast((res && res.error) ? res.error : "Authentication failed.", "error");
         failGlobalLoader();
+        await wepAlert((res && res.error) ? res.error : "Authentication failed.", "Access Denied", "danger", "🔒");
         return;
     }
  
@@ -532,31 +686,75 @@
     adminData = res;
     document.getElementById('login-screen').style.display = "none";
     document.getElementById('dashboard').style.display = "flex";
-    document.body.style.overflow = "";     // allow the dashboard to scroll normally
- 
+    document.body.style.overflow = "";
     document.getElementById('role-display').innerText = "Logged in as: " + String(res.role).replace("_", " ");
  
     initDashboard();
  
     if (res.role === "UPLOADER") {
         document.querySelectorAll('.admin-only').forEach(function (el) { el.style.display = 'none'; });
+        document.getElementById('live-pill').style.display = 'none';
         switchTab('qbank', document.getElementById('nav-qbank'));
     } else {
         switchTab('analytics', document.querySelector('.nav-item.admin-only'));
+        startLive();
     }
  
     completeGlobalLoader();
     showToast("Access Granted");
   }
  
+  function startLive() {
+    clearInterval(liveTimer);
+    liveTimer = setInterval(liveRefresh, LIVE_INTERVAL_MS);
+    liveEnabled = true;
+    document.getElementById('live-pill').classList.remove('off');
+    document.getElementById('live-label').innerText = "LIVE · auto-sync on";
+  }
+ 
+  function toggleLive() {
+    if (liveEnabled) {
+      clearInterval(liveTimer); liveTimer = null; liveEnabled = false;
+      document.getElementById('live-pill').classList.add('off');
+      document.getElementById('live-label').innerText = "PAUSED · click to resume";
+      showToast("Live auto-refresh paused", "success");
+    } else {
+      startLive();
+      showToast("Live auto-refresh resumed", "success");
+      liveRefresh();
+    }
+  }
+ 
+  /** Silent background refresh - no loader, no scroll jump, never interrupts a dialog. */
+  async function liveRefresh() {
+    if (!liveEnabled || liveBusy || !sessionPin) return;
+    if (document.hidden) return;                 // nothing to update in a hidden tab
+    if (anyModalOpen()) return;                  // don't yank data while admin is editing
+    if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].indexOf(document.activeElement.tagName) !== -1) return;
+ 
+    liveBusy = true;
+    document.getElementById('live-label').innerText = "LIVE · syncing...";
+    let res = await apiCall("getAdminDashboard", { pin: sessionPin });
+    liveBusy = false;
+ 
+    if (!res || res.error) {
+      document.getElementById('live-label').innerText = "LIVE · retrying";
+      return;
+    }
+    adminData = res;
+    initDashboard(true);
+ 
+    let t = new Date();
+    document.getElementById('live-label').innerText = "LIVE · " +
+      ("0" + t.getHours()).slice(-2) + ":" + ("0" + t.getMinutes()).slice(-2) + ":" + ("0" + t.getSeconds()).slice(-2);
+  }
+ 
   async function forceRefresh() {
     startGlobalLoader("Syncing Data...");
     let res = await apiCall("getAdminDashboard", { pin: sessionPin });
-    // FIX: an error response used to be assigned straight into adminData,
-    // which then threw on every render function and blanked the dashboard.
     if (!res || res.error) {
-      showToast((res && res.error) ? res.error : "Sync failed.", "error");
       failGlobalLoader();
+      await wepAlert((res && res.error) ? res.error : "Sync failed.", "Sync Failed", "danger", "🚫");
       return;
     }
     adminData = res;
@@ -572,28 +770,28 @@
     adminData.responses = adminData.responses || [];
     adminData.questions = adminData.questions || [];
     adminData.trainingPlan = adminData.trainingPlan || [];
+    adminData.users = adminData.users || [];
+    adminData.proctoring = adminData.proctoring || [];
     adminData.settings = adminData.settings || {};
  
     if (adminData.role === "MASTER_ADMIN") {
+      document.getElementById('disp-live-status').innerText = adminData.settings.month + " (" + adminData.settings.week + ")";
       if (!isSilent) {
-        document.getElementById('disp-live-status').innerText = adminData.settings.month + " (" + adminData.settings.week + ")";
         setSelectValue('ctrl-month', adminData.settings.month);
         setSelectValue('ctrl-week', adminData.settings.week);
         setSelectValue('ctrl-status', adminData.settings.state || "LIVE");
         document.getElementById('ctrl-timer').value = adminData.settings.timer || 10;
         setSelectValue('ctrl-strict', adminData.settings.strict || "OFF");
-      } else {
-        document.getElementById('disp-live-status').innerText = adminData.settings.month + " (" + adminData.settings.week + ")";
+        setSelectValue('ctrl-camera', adminData.settings.camera || "OPTIONAL");
+        setSelectValue('ctrl-approval', adminData.settings.requireApproval || "ON");
       }
       renderCurrentWeek(); renderAttendancePivot(); renderSummaryPivot();
       initDetailedLogsSystem(); renderCharts(); renderBulkExport();
-      renderTrainingPlan();
+      renderTrainingPlan(); renderApprovals(); renderProctoring();
     }
     renderQuestionBank();
   }
  
-  // Adds the option if the stored value is not already in the dropdown, so a
-  // custom month/week saved in the sheet doesn't silently reset the selector.
   function setSelectValue(id, value) {
     let sel = document.getElementById(id);
     if (!sel || value === undefined || value === null || value === "") return;
@@ -602,39 +800,211 @@
     sel.value = value;
   }
  
-  function updateState() { let s = document.getElementById('ctrl-status').value; actionWithRefresh("updateAdminSettings", {type: "SET_STATE", value1: s}, "Applying State...", "Status Updated!"); }
-  function updateTimer() {
-    let t = parseInt(document.getElementById('ctrl-timer').value, 10);
-    if (isNaN(t) || t < 1) { showToast("Enter a valid timer value (minutes)", "error"); return; }   // FIX: blank/0 timer used to be saved
-    actionWithRefresh("updateAdminSettings", {type: "SET_TIMER", value1: t}, "Updating Timer...", "Timer Updated!");
-  }
-  function updateStrict() { let t = document.getElementById('ctrl-strict').value; actionWithRefresh("updateAdminSettings", {type: "SET_STRICT", value1: t}, "Applying Security...", "Strict Mode Updated!"); }
-  function setLiveStatus() { let m = document.getElementById('ctrl-month').value, w = document.getElementById('ctrl-week').value; actionWithRefresh("updateAdminSettings", {type: "SET_LIVE", value1: m, value2: w}, "Deploying Module...", "Module Deployed!"); }
-  function publishResults() {
-    if (!adminData || !adminData.settings) return;
-    let m = adminData.settings.month, w = adminData.settings.week;
-    if (!confirm("Publish results for " + m + " - " + w + " to all trainees?")) return;
-    actionWithRefresh("updateAdminSettings", {type: "PUBLISH_RESULT", value1: m, value2: w}, "Publishing Results...", "Results Declassified!");
-  }
-  function changeTrainerPass() {
-    let newP = document.getElementById('ctrl-uploader-pass').value.trim();
-    if (!newP) { showToast("Enter a new trainer passcode", "error"); return; }
-    document.getElementById('ctrl-uploader-pass').value = "";
-    actionWithRefresh("updateAdminSettings", {type: "CHANGE_UPLOADER_PASS", value1: newP}, "Updating Password...", "Password Updated!");
+  /* ==========================================================
+     SETTINGS ACTIONS
+     ========================================================== */
+ 
+  function updateState()  { actionWithRefresh("updateAdminSettings", {type:"SET_STATE",  value1: document.getElementById('ctrl-status').value}, "Applying State...", "Status Updated!"); }
+  function updateStrict() { actionWithRefresh("updateAdminSettings", {type:"SET_STRICT", value1: document.getElementById('ctrl-strict').value}, "Applying Security...", "Strict Mode Updated!"); }
+  function updateCamera() { actionWithRefresh("updateAdminSettings", {type:"SET_CAMERA", value1: document.getElementById('ctrl-camera').value}, "Applying Camera Policy...", "Camera Proctoring Updated!"); }
+  function updateApprovalMode() { actionWithRefresh("updateAdminSettings", {type:"SET_APPROVAL", value1: document.getElementById('ctrl-approval').value}, "Updating Registration Policy...", "Registration Policy Updated!"); }
+  function setLiveStatus() {
+    actionWithRefresh("updateAdminSettings",
+      {type:"SET_LIVE", value1: document.getElementById('ctrl-month').value, value2: document.getElementById('ctrl-week').value},
+      "Deploying Module...", "Module Deployed!");
   }
  
-  /* ---------- Training plan ---------- */
+  async function updateTimer() {
+    let t = parseInt(document.getElementById('ctrl-timer').value, 10);
+    if (isNaN(t) || t < 1) { await wepAlert("Please enter a valid timer value in minutes (minimum 1).", "Invalid Timer", "warn", "⏱️"); return; }
+    actionWithRefresh("updateAdminSettings", {type:"SET_TIMER", value1: t}, "Updating Timer...", "Timer Updated!");
+  }
+ 
+  async function publishResults() {
+    if (!adminData || !adminData.settings) return;
+    let m = adminData.settings.month, w = adminData.settings.week;
+    let ok = await wepConfirm(
+      "Scores for " + m + " - " + w + " will become visible to every trainee on their dashboard.\n\nThis cannot be undone from the portal.",
+      "Publish Results?", "", "Yes, Publish");
+    if (!ok) return;
+    actionWithRefresh("updateAdminSettings", {type:"PUBLISH_RESULT", value1:m, value2:w}, "Publishing Results...", "Results Declassified!");
+  }
+ 
+  async function changeTrainerPass() {
+    let newP = document.getElementById('ctrl-uploader-pass').value.trim();
+    if (!newP) { await wepAlert("Please type the new trainer passcode first.", "Passcode Required", "warn", "🔑"); return; }
+    let ok = await wepConfirm("The old trainer passcode will stop working immediately.\n\nNew passcode: " + newP, "Change Trainer Passcode?", "danger", "Yes, Change It");
+    if (!ok) return;
+    document.getElementById('ctrl-uploader-pass').value = "";
+    actionWithRefresh("updateAdminSettings", {type:"CHANGE_UPLOADER_PASS", value1:newP}, "Updating Password...", "Password Updated!");
+  }
+ 
+  /* ==========================================================
+     USER APPROVALS
+     ========================================================== */
+ 
+  function countPendingUsers() {
+    let n = 0;
+    for (let i = 1; i < (adminData.users || []).length; i++) {
+      if (cell(adminData.users[i], 5).trim().toUpperCase() === "PENDING") n++;
+    }
+    return n;
+  }
+ 
+  function renderApprovals() {
+    if (!adminData) return;
+    let filter = document.getElementById('appr-filter').value.trim().toUpperCase();
+    let search = document.getElementById('appr-search').value.trim().toLowerCase();
+    let table = document.getElementById('approvals-table');
+    let rows = adminData.users || [];
+ 
+    let pending = countPendingUsers();
+    let badge = document.getElementById('approval-badge');
+    badge.innerText = pending;
+    badge.style.display = pending > 0 ? "inline-block" : "none";
+ 
+    let html = ["<tr><th>Registered On</th><th>Name</th><th>Mobile</th><th>Email</th><th>Department</th><th>Status</th><th style='text-align:center; min-width:190px;'>Action</th></tr>"];
+    let count = 0;
+ 
+    for (let i = 1; i < rows.length; i++) {
+      let r = rows[i];
+      let status = cell(r, 5).trim() || "Pending";
+      if (filter !== "ALL" && status.toUpperCase() !== filter) continue;
+ 
+      let hay = (cell(r,1) + " " + cell(r,2) + " " + cell(r,3) + " " + cell(r,4)).toLowerCase();
+      if (search && hay.indexOf(search) === -1) continue;
+ 
+      let phone = digits(cell(r, 2));
+      let pillClass = status.toUpperCase() === "APPROVED" ? "pill-approved" : status.toUpperCase() === "REJECTED" ? "pill-rejected" : "pill-pending";
+ 
+      let actions = "";
+      if (status.toUpperCase() !== "APPROVED") actions += '<button class="btn-mini btn-green" onclick="decideUser(\'' + phone + '\',\'Approved\')" style="margin-right:6px;">✔ Approve</button>';
+      if (status.toUpperCase() !== "REJECTED") actions += '<button class="btn-mini" onclick="decideUser(\'' + phone + '\',\'Rejected\')" style="background:var(--danger); margin-right:6px;">✖ Reject</button>';
+      if (status.toUpperCase() !== "PENDING")  actions += '<button class="btn-mini" onclick="decideUser(\'' + phone + '\',\'Pending\')" style="background:#64748b;">↺ Reset</button>';
+ 
+      html.push('<tr>' +
+        '<td style="font-size:13px; color:var(--text-muted);">' + escapeHtml(cell(r,0)) + '</td>' +
+        '<td><b>' + escapeHtml(cell(r,1)) + '</b></td>' +
+        '<td>' + escapeHtml(cell(r,2)) + '</td>' +
+        '<td style="font-size:13px;">' + escapeHtml(cell(r,3) || '-') + '</td>' +
+        '<td style="font-size:13px;">' + escapeHtml(cell(r,4) || '-') + '</td>' +
+        '<td><span class="pill ' + pillClass + '">' + escapeHtml(status) + '</span></td>' +
+        '<td style="text-align:center;">' + actions + '</td>' +
+      '</tr>');
+      count++;
+    }
+ 
+    if (count === 0) html.push('<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">No registrations match this filter.</td></tr>');
+    table.innerHTML = html.join("");
+  }
+ 
+  async function decideUser(phone, status) {
+    let verb = status === "Approved" ? "approve" : status === "Rejected" ? "reject" : "reset to pending";
+    let ok = await wepConfirm(
+      "Are you sure you want to " + verb + " the registration for mobile number " + phone + "?" +
+      (status === "Approved" ? "\n\nThey will be able to login immediately with their Name and this number." : ""),
+      (status === "Approved" ? "Approve User?" : status === "Rejected" ? "Reject User?" : "Reset Status?"),
+      status === "Rejected" ? "danger" : "",
+      status === "Approved" ? "Yes, Approve" : status === "Rejected" ? "Yes, Reject" : "Yes, Reset");
+    if (!ok) return;
+    actionWithRefresh("setUserStatus", { phone: phone, status: status }, "Updating user status...", "User marked as " + status + "!");
+  }
+ 
+  /* ==========================================================
+     CAMERA PROCTORING VIEWS
+     ========================================================== */
+ 
+  function thumbUrl(fileId) { return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fileId) + "&sz=w400"; }
+  function viewUrl(fileId)  { return "https://drive.google.com/file/d/" + encodeURIComponent(fileId) + "/view"; }
+ 
+  function snapCard(row) {
+    let fileId = cell(row, 6), link = cell(row, 7) || (fileId ? viewUrl(fileId) : "");
+    let media = fileId
+      ? '<img loading="lazy" src="' + thumbUrl(fileId) + '" alt="snapshot" onerror="this.parentElement.innerHTML=\'<div class=&quot;snap-noimg&quot;>Preview unavailable<br>(open in Drive)</div>\'">'
+      : '<div class="snap-noimg">' + escapeHtml(cell(row, 5) || "No image") + '</div>';
+    let inner =
+      media +
+      '<div class="snap-meta"><b>' + escapeHtml(cell(row, 1) || "Unknown") + '</b>' +
+      escapeHtml(cell(row, 5)) + '<br>' + escapeHtml(cell(row, 0)) + '</div>';
+    return link
+      ? '<a class="snap-card" href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>'
+      : '<div class="snap-card">' + inner + '</div>';
+  }
+ 
+  function renderProctoring() {
+    if (!adminData) return;
+    let rows = adminData.proctoring || [];
+ 
+    // keep the user dropdown in sync
+    let sel = document.getElementById('proctor-user');
+    let prev = sel.value;
+    let map = {};
+    for (let i = 1; i < rows.length; i++) { let p = digits(cell(rows[i], 2)); if (p) map[p] = cell(rows[i], 1); }
+    let opts = ['<option value="All">All Users</option>'];
+    for (let p in map) opts.push('<option value="' + escapeHtml(p) + '">' + escapeHtml(map[p] || p) + ' (' + escapeHtml(p) + ')</option>');
+    sel.innerHTML = opts.join("");
+    if (prev && (prev === "All" || map[prev])) sel.value = prev;
+ 
+    let fUser  = sel.value;
+    let fEvent = document.getElementById('proctor-event').value;
+ 
+    let cards = [], tbl = ["<tr><th>Time</th><th>Name</th><th>Mobile</th><th>Module</th><th>Event</th><th>Image</th></tr>"];
+    let shown = 0;
+ 
+    for (let i = rows.length - 1; i >= 1; i--) {
+      let r = rows[i];
+      let p = digits(cell(r, 2)), ev = cell(r, 5);
+      if (fUser !== "All" && p !== fUser) continue;
+      if (fEvent !== "All" && ev.toLowerCase().indexOf(fEvent.toLowerCase()) === -1) continue;
+ 
+      if (cards.length < 60) cards.push(snapCard(r));
+      let fid = cell(r, 6);
+      tbl.push('<tr><td style="font-size:13px;">' + escapeHtml(cell(r,0)) + '</td><td><b>' + escapeHtml(cell(r,1)) + '</b></td>' +
+        '<td>' + escapeHtml(cell(r,2)) + '</td><td style="font-size:13px;">' + escapeHtml(cell(r,3) + " " + cell(r,4)) + '</td>' +
+        '<td>' + escapeHtml(ev) + '</td><td>' + (fid ? '<a href="' + escapeHtml(cell(r,7) || viewUrl(fid)) + '" target="_blank" rel="noopener noreferrer">Open</a>' : '—') + '</td></tr>');
+      shown++;
+    }
+ 
+    document.getElementById('proctor-grid').innerHTML = cards.length
+      ? cards.join("")
+      : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:20px 0;">No snapshots captured yet for this filter. Camera proctoring must be ON and users must allow the camera.</p>';
+ 
+    if (shown === 0) tbl.push("<tr><td colspan='6' style='text-align:center; padding:25px; color:#94a3b8;'>No proctoring records.</td></tr>");
+    document.getElementById('proctor-table').innerHTML = tbl.join("");
+  }
+ 
+  function openSnapshots(phone, name) {
+    let target = digits(phone);
+    let rows = adminData.proctoring || [];
+    let cards = [];
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (digits(cell(rows[i], 2)) === target) cards.push(snapCard(rows[i]));
+    }
+    document.getElementById('snap-user').innerText = (name || "") + " (" + target + ")";
+    document.getElementById('snap-grid').innerHTML = cards.length
+      ? cards.join("")
+      : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:25px 0;">No camera snapshots found for this user. Either camera proctoring was OFF, or the user denied permission.</p>';
+    document.getElementById('snapModal').style.display = "flex";
+  }
+ 
+  async function openSnapshotsForSelectedLog() {
+    let sel = document.getElementById('log-user-select');
+    if (!sel.value) { await wepAlert("Please select a user first.", "No User Selected", "warn", "👤"); return; }
+    openSnapshots(sel.value, sel.options[sel.selectedIndex].text);
+  }
+ 
+  /* ==========================================================
+     TRAINING PLAN
+     ========================================================== */
  
   function renderTrainingPlan() {
       let tbody = document.getElementById("training-tbody");
-      tbody.innerHTML = "";
       let tData = adminData.trainingPlan || [];
-      if (tData.length <= 1) return;
+      if (tData.length <= 1) { tbody.innerHTML = ""; return; }
  
       let html = [];
       for (let i = 1; i < tData.length; i++) {
-          let row = tData[i] || [];
-          let status = cell(row, 8);
+          let row = tData[i] || [], status = cell(row, 8);
           html.push('<tr>' +
             '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,0)) + '"></td>' +
             '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,1)) + '"></td>' +
@@ -654,10 +1024,7 @@
       tbody.innerHTML = html.join("");
   }
  
-  function removeTrainingRow(btn) {
-      let tr = btn.closest("tr");
-      if (tr) tr.remove();
-  }
+  function removeTrainingRow(btn) { let tr = btn.closest("tr"); if (tr) tr.remove(); }
  
   function addTrainingRow() {
       let tbody = document.getElementById("training-tbody");
@@ -677,58 +1044,53 @@
   }
  
   function saveTrainingPlan() {
-      let tbody = document.getElementById("training-tbody");
-      let rows = tbody.querySelectorAll("tr");
-      let data = [ ["Month", "Week", "Segment", "Assignment Date", "Presentation Date", "Presenter Name", "Email", "Product/Topic Assigned", "Status"] ];
+      let rows = document.getElementById("training-tbody").querySelectorAll("tr");
+      let data = [ ["Month","Week","Segment","Assignment Date","Presentation Date","Presenter Name","Email","Product/Topic Assigned","Status"] ];
       rows.forEach(function (tr) {
-          let inputs = tr.querySelectorAll("input, select");
           let rData = [];
-          inputs.forEach(function (inp) { rData.push(inp.value); });
-          // FIX: pad every row to exactly 9 columns. Ragged rows made
-          // Sheets setValues() throw "incorrect range width" server-side.
+          tr.querySelectorAll("input, select").forEach(function (inp) { rData.push(inp.value); });
           while (rData.length < 9) rData.push("");
           data.push(rData.slice(0, 9));
       });
       actionWithRefresh("saveTrainingPlan", { trainingData: data }, "Saving Training Plan...", "Training Plan Saved!");
   }
  
-  /* ---------- Reports ---------- */
+  /* ==========================================================
+     REPORTS
+     ========================================================== */
  
   function renderCurrentWeek() {
-    let cwTable = document.getElementById('current-week-table');
-    let html = ["<tr><th>Identity Info</th><th>Final Score</th><th>Evaluation Details</th></tr>"];
+    let html = ["<tr><th>Identity Info</th><th>Final Score</th><th>Evaluation Details</th><th style='text-align:center;'>Proctoring</th></tr>"];
     let count = 0;
     for (let i = 1; i < adminData.responses.length; i++) {
       let r = adminData.responses[i];
       if (cell(r,3) === adminData.settings.month && cell(r,4) === adminData.settings.week) {
         let color = parseFloat(cell(r,8)) >= 40 ? '#059669' : '#dc2626';
         let detailLog = cell(r,9).indexOf("Disqualified") !== -1 ? '<span style="color:#dc2626; font-size:11px; display:block;">(Disqualified)</span>' : "";
+        let phone = digits(cell(r,2));
         html.push('<tr><td><b style="font-size:15px;">' + escapeHtml(cell(r,1)) + '</b> <br><span style="color:#64748b; font-size:13px;">' + escapeHtml(cell(r,2)) + '</span> ' + detailLog +
           '</td><td><b style="color:' + color + '; font-size:16px;">' + escapeHtml(cell(r,8)) + '</b></td>' +
-          '<td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">' + escapeHtml(cell(r,6)) + ' Valid / ' + escapeHtml(cell(r,5)) + ' Total</span></td></tr>');
+          '<td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">' + escapeHtml(cell(r,6)) + ' Valid / ' + escapeHtml(cell(r,5)) + ' Total</span></td>' +
+          '<td style="text-align:center;"><button class="btn-mini btn-cam" onclick="openSnapshots(\'' + phone + '\',\'' + escapeHtml(cell(r,1)).replace(/'/g, "") + '\')">📷 View</button></td></tr>');
         count++;
       }
     }
-    if (count === 0) html.push("<tr><td colspan='3' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for current batch.</td></tr>");
-    cwTable.innerHTML = html.join("");
+    if (count === 0) html.push("<tr><td colspan='4' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for current batch.</td></tr>");
+    document.getElementById('current-week-table').innerHTML = html.join("");
   }
  
   function sortWeeksChronologically(weeksArray) {
     return weeksArray.slice().sort(function (a, b) {
       let pa = a.split(" Week "), pb = b.split(" Week ");
-      let valA = (monthOrder[pa[0]] || 0) * 10 + (parseInt(pa[1], 10) || 0);
-      let valB = (monthOrder[pb[0]] || 0) * 10 + (parseInt(pb[1], 10) || 0);
-      return valA - valB;
+      return ((monthOrder[pa[0]]||0)*10 + (parseInt(pa[1],10)||0)) - ((monthOrder[pb[0]]||0)*10 + (parseInt(pb[1],10)||0));
     });
   }
  
   function renderAttendancePivot() {
     let filterMonth = document.getElementById('att-month-filter').value.trim();
-    let users = {}, weeksSet = {};
-    let count = 0;
+    let users = {}, weeksSet = {}, count = 0;
     for (let i = 1; i < adminData.responses.length; i++) {
-      let r = adminData.responses[i];
-      let rMonth = cell(r,3).trim();
+      let r = adminData.responses[i], rMonth = cell(r,3).trim();
       if (filterMonth !== "All Months" && rMonth !== filterMonth) continue;
       let phone = cell(r,2), mw = rMonth + " " + cell(r,4).trim();
       weeksSet[mw] = true;
@@ -737,14 +1099,12 @@
       count++;
     }
     let weeksArray = sortWeeksChronologically(Object.keys(weeksSet));
- 
     let table = document.getElementById('attendance-table');
     if (count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
  
     let html = ["<tr><th>Identity Name</th>"];
     weeksArray.forEach(function (w) { html.push("<th>" + escapeHtml(w) + "</th>"); });
     html.push("</tr>");
- 
     for (let phone in users) {
       html.push('<tr><td><b>' + escapeHtml(users[phone].name) + '</b></td>');
       weeksArray.forEach(function (w) {
@@ -757,11 +1117,9 @@
  
   function renderSummaryPivot() {
     let filterMonth = document.getElementById('sum-month-filter').value.trim();
-    let users = {}, weeksSet = {};
-    let count = 0;
+    let users = {}, weeksSet = {}, count = 0;
     for (let i = 1; i < adminData.responses.length; i++) {
-      let r = adminData.responses[i];
-      let rMonth = cell(r,3).trim();
+      let r = adminData.responses[i], rMonth = cell(r,3).trim();
       if (filterMonth !== "All Months" && rMonth !== filterMonth) continue;
       let phone = cell(r,2), mw = rMonth + " " + cell(r,4).trim();
       weeksSet[mw] = true;
@@ -770,14 +1128,12 @@
       count++;
     }
     let weeksArray = sortWeeksChronologically(Object.keys(weeksSet));
- 
     let table = document.getElementById('summary-table');
     if (count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
  
     let html = ["<tr><th>Identity Name</th>"];
     weeksArray.forEach(function (w) { html.push("<th>" + escapeHtml(w) + "</th>"); });
     html.push("</tr>");
- 
     for (let phone in users) {
       html.push('<tr><td><b>' + escapeHtml(users[phone].name) + '</b></td>');
       weeksArray.forEach(function (w) { html.push('<td><b>' + escapeHtml(users[phone].scores[w] || '-') + '</b></td>'); });
@@ -820,14 +1176,8 @@
  
     let rowData = adminData.responses[parseInt(rowIndex, 10)];
     let jsonStr = cell(rowData, 9);
-    if (!jsonStr) {
-      html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">No detailed logs found.</td></tr>');
-      table.innerHTML = html.join(""); return;
-    }
-    if (jsonStr.indexOf("Disqualified") !== -1) {
-      html.push('<tr><td colspan="4" style="color:#dc2626; padding:20px; font-weight:bold;">🚨 Disqualified - Cheating</td></tr>');
-      table.innerHTML = html.join(""); return;
-    }
+    if (!jsonStr) { html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">No detailed logs found.</td></tr>'); table.innerHTML = html.join(""); return; }
+    if (jsonStr.indexOf("Disqualified") !== -1) { html.push('<tr><td colspan="4" style="color:#dc2626; padding:20px; font-weight:bold;">🚨 Disqualified - Cheating</td></tr>'); table.innerHTML = html.join(""); return; }
  
     try {
       let logsObj = JSON.parse(jsonStr);
@@ -840,7 +1190,6 @@
           '</td><td style="color:#065f46;">' + escapeHtml(d.correctAnswerText || d.correctAnswerLetter || d.correctAnswer) + '</td></tr>');
       });
     } catch (e) {
-      // FIX: the old silent catch left a blank table with no explanation.
       html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#dc2626;">Log data is corrupted and could not be parsed.</td></tr>');
     }
     table.innerHTML = html.join("");
@@ -849,15 +1198,12 @@
   function renderBulkExport() {
     let fMonth = document.getElementById('export-month').value.trim();
     let fWeek = document.getElementById('export-week').value.trim();
-    let table = document.getElementById('bulk-export-table');
     let html = ["<tr><th>User Name</th><th>Q. ID</th><th>Question</th><th>User Ans</th><th>Correct Ans</th><th>Status</th></tr>"];
- 
     let count = 0;
+ 
     for (let i = 1; i < adminData.responses.length; i++) {
       let r = adminData.responses[i];
-      let rMonth = cell(r,3).trim();
-      let rWeek = cell(r,4).trim();
- 
+      let rMonth = cell(r,3).trim(), rWeek = cell(r,4).trim();
       if ((fMonth === "All" || rMonth === fMonth) && (fWeek === "All" || rWeek === fWeek)) {
         let jsonStr = cell(r,9);
         if (jsonStr && jsonStr.indexOf("Disqualified") === -1) {
@@ -872,35 +1218,29 @@
                  '</td><td>' + (d.isRight ? 'Correct' : 'Wrong') + '</td></tr>');
                count++;
              });
-           } catch (e) { /* skip malformed row */ }
+           } catch (e) {}
         }
       }
     }
     if (count === 0) html.push("<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for selected filter.</td></tr>");
-    table.innerHTML = html.join("");
+    document.getElementById('bulk-export-table').innerHTML = html.join("");
   }
  
   function renderQuestionBank() {
     if (!adminData) return;
     let fMonth = document.getElementById('qb-month').value.trim();
     let fWeek = document.getElementById('qb-week').value.trim();
-    let table = document.getElementById('qb-table');
     let html = ["<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th><th style='text-align:center;'>Actions</th></tr>"];
     let count = 0;
  
     for (let i = 1; i < adminData.questions.length; i++) {
       let q = adminData.questions[i];
-      let qMonth = cell(q,1).trim();
-      let qWeek = cell(q,2).trim();
- 
+      let qMonth = cell(q,1).trim(), qWeek = cell(q,2).trim();
       if ((fMonth === "All Months" || qMonth === fMonth) && (fWeek === "All Weeks" || qWeek === fWeek)) {
         let ansLetter = cell(q,8).trim().toUpperCase();
         let letterIdx = { A:4, B:5, C:6, D:7 };
         let realAnsText = (letterIdx[ansLetter] !== undefined) ? cell(q, letterIdx[ansLetter]) : "";
  
-        // FIX: the old code embedded a JSON blob into an inline onclick attribute,
-        // which broke on quotes, angle brackets and line breaks inside a question.
-        // Row index lookup is safe for any content.
         html.push('<tr>' +
             '<td>' + escapeHtml(cell(q,0)) + '</td>' +
             '<td><span style="font-size:11px; font-weight:600; color:#64748b;">' + escapeHtml(qMonth) + ' - ' + escapeHtml(qWeek) + '</span></td>' +
@@ -909,42 +1249,35 @@
             "<td style='text-align:center; min-width:90px;'>" +
                '<button type="button" onclick="openEditQ(' + i + ')" style="background:#f59e0b; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:4px; margin:0 0 5px 0; width:100%; cursor:pointer;">✏️ Edit</button>' +
                '<button type="button" onclick="deleteQ(' + i + ')" style="background:#dc2626; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:4px; margin:0; width:100%; cursor:pointer;">🗑️ Delete</button>' +
-            '</td>' +
-        '</tr>');
+            '</td></tr>');
         count++;
       }
     }
     if (count === 0) html.push('<tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">No questions found.</td></tr>');
-    table.innerHTML = html.join("");
+    document.getElementById('qb-table').innerHTML = html.join("");
   }
  
-  /* ---------- CSV bulk upload ---------- */
+  /* ==========================================================
+     CSV BULK UPLOAD
+     ========================================================== */
  
   function downloadCSVTemplate() {
     let csvContent = "Month,Week,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nSeptember,Week 1,What is WeP?,Company,Brand,Fruit,Animal,A\n";
-    // BOM keeps Excel happy with non-ASCII characters.
     let blob = new Blob(["﻿" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement("a");
-    let url = URL.createObjectURL(blob);
-    link.href = url;
-    link.download = "WeP_Questions_Template.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    let link = document.createElement("a"), url = URL.createObjectURL(blob);
+    link.href = url; link.download = "WeP_Questions_Template.csv";
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     showToast("Template Downloaded!");
   }
  
-  // Proper RFC-4180-ish CSV line parser (handles quoted commas and escaped "" quotes).
   function parseCsvLine(line) {
     let out = [], cur = "", inQuotes = false;
     for (let i = 0; i < line.length; i++) {
       let ch = line[i];
       if (inQuotes) {
-        if (ch === '"') {
-          if (line[i + 1] === '"') { cur += '"'; i++; }
-          else inQuotes = false;
-        } else cur += ch;
+        if (ch === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQuotes = false; }
+        else cur += ch;
       } else {
         if (ch === '"') inQuotes = true;
         else if (ch === ',') { out.push(cur); cur = ""; }
@@ -955,16 +1288,16 @@
     return out;
   }
  
-  function uploadCSV() {
+  async function uploadCSV() {
     let fileInput = document.getElementById('csv-upload-file');
     let file = fileInput.files[0];
-    if (!file) { showToast("Please select a CSV file first", "error"); return; }
+    if (!file) { await wepAlert("Please choose a CSV file first.", "No File Selected", "warn", "📄"); return; }
  
     let reader = new FileReader();
-    reader.onerror = function () { showToast("Could not read the selected file", "error"); };
+    reader.onerror = function () { wepAlert("The selected file could not be read.", "Read Error", "danger", "🚫"); };
     reader.onload = async function (e) {
-      let text = String(e.target.result).replace(/^﻿/, "");   // strip BOM
-      let lines = text.split(/\r\n|\n|\r/);                        // FIX: handles CRLF and old-Mac line endings
+      let text = String(e.target.result).replace(/^﻿/, "");
+      let lines = text.split(/\r\n|\n|\r/);
       let dataArr = [];
       for (let i = 1; i < lines.length; i++) {
         let line = lines[i];
@@ -972,31 +1305,32 @@
         let parts = parseCsvLine(line);
         if (parts.length >= 8) {
           let row = {
-            month: (parts[0] || "").trim(),
-            week:  (parts[1] || "").trim(),
-            q:     (parts[2] || "").trim(),
-            a:     (parts[3] || "").trim(),
-            b:     (parts[4] || "").trim(),
-            c:     (parts[5] || "").trim(),
-            d:     (parts[6] || "").trim(),
-            ans:   (parts[7] || "").trim().toUpperCase()
+            month:(parts[0]||"").trim(), week:(parts[1]||"").trim(), q:(parts[2]||"").trim(),
+            a:(parts[3]||"").trim(), b:(parts[4]||"").trim(), c:(parts[5]||"").trim(), d:(parts[6]||"").trim(),
+            ans:(parts[7]||"").trim().toUpperCase()
           };
           if (row.q && row.a && ["A","B","C","D"].indexOf(row.ans) !== -1) dataArr.push(row);
         }
       }
-      if (dataArr.length === 0) { showToast("No valid rows found. Check the template format.", "error"); return; }
+      if (dataArr.length === 0) { await wepAlert("No valid rows were found. Please check the template format.", "Nothing to Upload", "warn", "📄"); return; }
+ 
+      let ok = await wepConfirm(dataArr.length + " question(s) will be added to the repository.", "Confirm Bulk Upload", "", "Yes, Upload");
+      if (!ok) return;
+ 
       await actionWithRefresh("bulkUploadQuestions", { questionsData: dataArr }, "Uploading CSV...", dataArr.length + " questions uploaded!");
       fileInput.value = "";
     };
     reader.readAsText(file);
   }
  
-  /* ---------- Question CRUD ---------- */
+  /* ==========================================================
+     QUESTION CRUD
+     ========================================================== */
  
   let editingQId = null;
-  function openEditQ(rowIndex) {
+  async function openEditQ(rowIndex) {
     let qData = adminData.questions[rowIndex];
-    if (!qData) { showToast("Question not found. Please sync data.", "error"); return; }
+    if (!qData) { await wepAlert("That question is no longer available. Please sync the data.", "Not Found", "warn", "🔍"); return; }
     editingQId = cell(qData, 0);
     document.getElementById('eq-month').value = cell(qData,1);
     document.getElementById('eq-week').value  = cell(qData,2);
@@ -1010,56 +1344,50 @@
     document.getElementById('editQModal').style.display = 'flex';
   }
  
-  function saveEditQ() {
+  async function saveEditQ() {
     let data = {
-      month: document.getElementById('eq-month').value.trim(),
-      week:  document.getElementById('eq-week').value.trim(),
-      q:     document.getElementById('eq-q').value.trim(),
-      a:     document.getElementById('eq-a').value.trim(),
-      b:     document.getElementById('eq-b').value.trim(),
-      c:     document.getElementById('eq-c').value.trim(),
-      d:     document.getElementById('eq-d').value.trim(),
-      ans:   document.getElementById('eq-ans').value
+      month: document.getElementById('eq-month').value.trim(), week: document.getElementById('eq-week').value.trim(),
+      q: document.getElementById('eq-q').value.trim(), a: document.getElementById('eq-a').value.trim(),
+      b: document.getElementById('eq-b').value.trim(), c: document.getElementById('eq-c').value.trim(),
+      d: document.getElementById('eq-d').value.trim(), ans: document.getElementById('eq-ans').value
     };
-    if (!data.q || !data.a) { showToast("Error: Question and Option A are required", "error"); return; }
-    if (editingQId === null || editingQId === "") { showToast("Error: Missing question ID", "error"); return; }
+    if (!data.q || !data.a) { await wepAlert("Question statement and Option A are required.", "Missing Details", "warn", "✏️"); return; }
+    if (editingQId === null || editingQId === "") { await wepAlert("The question ID is missing. Please sync and try again.", "Missing ID", "danger", "🚫"); return; }
     document.getElementById('editQModal').style.display = 'none';
     actionWithRefresh("editQuestion", { id: editingQId, questionData: data }, "Updating Question...", "Question Updated Successfully!");
   }
  
-  function deleteQ(rowIndex) {
+  async function deleteQ(rowIndex) {
     let qData = adminData.questions[rowIndex];
-    if (!qData) { showToast("Question not found. Please sync data.", "error"); return; }
+    if (!qData) { await wepAlert("That question is no longer available. Please sync the data.", "Not Found", "warn", "🔍"); return; }
     let id = cell(qData, 0);
-    if (!confirm("Are you sure you want to delete Question ID: " + id + "?\n\n" + cell(qData, 3))) return;
+    let ok = await wepConfirm("Question ID " + id + " will be permanently deleted:\n\n" + cell(qData, 3), "Delete Question?", "danger", "Yes, Delete");
+    if (!ok) return;
     actionWithRefresh("deleteQuestion", { id: id }, "Deleting Question...", "Question Deleted!");
   }
  
-  function addQ() {
+  async function addQ() {
     let data = {
-      month: document.getElementById('nq-month').value,
-      week:  document.getElementById('nq-week').value,
-      q:     document.getElementById('nq-q').value.trim(),
-      a:     document.getElementById('nq-a').value.trim(),
-      b:     document.getElementById('nq-b').value.trim(),
-      c:     document.getElementById('nq-c').value.trim(),
-      d:     document.getElementById('nq-d').value.trim(),
-      ans:   document.getElementById('nq-ans').value
+      month: document.getElementById('nq-month').value, week: document.getElementById('nq-week').value,
+      q: document.getElementById('nq-q').value.trim(), a: document.getElementById('nq-a').value.trim(),
+      b: document.getElementById('nq-b').value.trim(), c: document.getElementById('nq-c').value.trim(),
+      d: document.getElementById('nq-d').value.trim(), ans: document.getElementById('nq-ans').value
     };
-    if (!data.q || !data.a) { showToast("Error: Question and Option A are required", "error"); return; }
+    if (!data.q || !data.a) { await wepAlert("Question statement and Option A are required.", "Missing Details", "warn", "✏️"); return; }
     ['nq-q','nq-a','nq-b','nq-c','nq-d'].forEach(function (id) { document.getElementById(id).value = ""; });
     actionWithRefresh("addWeeklyQuestion", { questionData: data }, "Uploading to Repository...", "Question Bank Updated!");
   }
  
-  /* ---------- Charts ---------- */
+  /* ==========================================================
+     CHARTS
+     ========================================================== */
  
   function renderCharts() {
     if (!CHARTS_AVAILABLE || !adminData) return;
-    if (document.getElementById('view-analytics').style.display === 'none') return;  // don't build 0-height charts
+    if (document.getElementById('view-analytics').style.display === 'none') return;
  
     let usersStats = {}, weeksMap = {}, pass = 0, fail = 0;
     let distribution = { "Excellent(>80%)":0, "Good(60-80%)":0, "Average(40-60%)":0, "Fail(<40%)":0 };
- 
     let filterMonth = document.getElementById('user-chart-month').value;
     let filterWeek = document.getElementById('user-chart-week').value;
     let userWiseGraphData = {};
@@ -1076,9 +1404,7 @@
       if (!weeksMap[mwKey]) weeksMap[mwKey] = { sum: 0, count: 0 };
       weeksMap[mwKey].sum += score; weeksMap[mwKey].count++;
  
-      if (cell(r,3) === adminData.settings.month && cell(r,4) === adminData.settings.week) {
-        if (score >= 40) pass++; else fail++;
-      }
+      if (cell(r,3) === adminData.settings.month && cell(r,4) === adminData.settings.week) { if (score >= 40) pass++; else fail++; }
  
       if (score > 80) distribution["Excellent(>80%)"]++;
       else if (score >= 60) distribution["Good(60-80%)"]++;
@@ -1087,29 +1413,28 @@
  
       if ((filterMonth === "All" || cell(r,3) === filterMonth) && (filterWeek === "All" || cell(r,4) === filterWeek)) {
           if (!userWiseGraphData[name]) userWiseGraphData[name] = { score: 0, count: 0 };
-          userWiseGraphData[name].score += score;
-          userWiseGraphData[name].count++;
+          userWiseGraphData[name].score += score; userWiseGraphData[name].count++;
       }
     }
  
     let sortedWeeks = sortWeeksChronologically(Object.keys(weeksMap));
     let trendScores = sortedWeeks.map(function (w) { return Math.round(weeksMap[w].sum / weeksMap[w].count); });
  
-    let barDL = { datalabels: { color: '#ffffff', font: {weight: 'bold', size: 10}, formatter: function (v) { return v > 0 ? v + '%' : ''; } } };
-    let lineDL = { datalabels: { color: '#1e3a8a', align: 'top', anchor: 'end', font: {weight: 'bold', size: 11}, formatter: function (v) { return v > 0 ? v + '%' : ''; } } };
-    let countDL = { datalabels: { color: '#ffffff', font: {weight: 'bold', size: 12}, formatter: function (v) { return v > 0 ? v : ''; } } };
-    let pieDL = { datalabels: { color: '#ffffff', font: {weight: 'bold', size: 12}, formatter: function (v, ctx) { let sum = 0; ctx.chart.data.datasets[0].data.forEach(function (d) { sum += d; }); return (v > 0 && sum > 0) ? Math.round((v * 100) / sum) + '%' : ''; } } };
+    let barDL   = { datalabels: { color:'#ffffff', font:{weight:'bold',size:10}, formatter:function(v){return v>0?v+'%':'';} } };
+    let lineDL  = { datalabels: { color:'#1e3a8a', align:'top', anchor:'end', font:{weight:'bold',size:11}, formatter:function(v){return v>0?v+'%':'';} } };
+    let countDL = { datalabels: { color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v){return v>0?v:'';} } };
+    let pieDL   = { datalabels: { color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v,ctx){ let sum=0; ctx.chart.data.datasets[0].data.forEach(function(d){sum+=d;}); return (v>0&&sum>0)?Math.round((v*100)/sum)+'%':''; } } };
  
     let uwNames = [], uwScores = [];
     for (let n in userWiseGraphData) { uwNames.push(n); uwScores.push(Math.round(userWiseGraphData[n].score / userWiseGraphData[n].count)); }
     if (chartUserWise) chartUserWise.destroy();
-    chartUserWise = new Chart(document.getElementById('chartUserWise'), { type: 'bar', data: { labels: uwNames, datasets: [{ label: 'Average Score (%)', data: uwScores, backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: barDL } });
+    chartUserWise = new Chart(document.getElementById('chartUserWise'), { type:'bar', data:{ labels:uwNames, datasets:[{ label:'Average Score (%)', data:uwScores, backgroundColor:'#6366f1', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:barDL } });
  
     if (chart1) chart1.destroy();
-    chart1 = new Chart(document.getElementById('chartAverage'), { type: 'line', data: { labels: sortedWeeks, datasets: [{ label: 'Mean Score (%)', data: trendScores, borderColor: '#2563eb', tension: 0.3, fill: true, backgroundColor: 'rgba(37, 99, 235, 0.1)' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: lineDL } });
+    chart1 = new Chart(document.getElementById('chartAverage'), { type:'line', data:{ labels:sortedWeeks, datasets:[{ label:'Mean Score (%)', data:trendScores, borderColor:'#2563eb', tension:0.3, fill:true, backgroundColor:'rgba(37,99,235,0.1)' }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:lineDL } });
  
     if (chart2) chart2.destroy();
-    chart2 = new Chart(document.getElementById('chartPassFail'), { type: 'doughnut', data: { labels: ['Passed', 'Failed'], datasets: [{ data: [pass, fail], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: pieDL } });
+    chart2 = new Chart(document.getElementById('chartPassFail'), { type:'doughnut', data:{ labels:['Passed','Failed'], datasets:[{ data:[pass,fail], backgroundColor:['#10b981','#ef4444'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:pieDL } });
  
     let topUsersArray = [];
     for (let ph in usersStats) topUsersArray.push({ n: usersStats[ph].name, avg: Math.round(usersStats[ph].totalScore / usersStats[ph].attempts) });
@@ -1117,18 +1442,18 @@
  
     let top5 = topUsersArray.slice(0, 5);
     if (chart3) chart3.destroy();
-    chart3 = new Chart(document.getElementById('chartTop5'), { type: 'bar', data: { labels: top5.map(function (x) { return x.n; }), datasets: [{ label: 'Score', data: top5.map(function (x) { return x.avg; }), backgroundColor: '#0f766e', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: barDL } });
+    chart3 = new Chart(document.getElementById('chartTop5'), { type:'bar', data:{ labels:top5.map(function(x){return x.n;}), datasets:[{ label:'Score', data:top5.map(function(x){return x.avg;}), backgroundColor:'#0f766e', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:barDL } });
  
     let bottom5 = topUsersArray.slice().reverse().slice(0, 5);
     if (chart4) chart4.destroy();
-    chart4 = new Chart(document.getElementById('chartBottom5'), { type: 'bar', data: { labels: bottom5.map(function (x) { return x.n; }), datasets: [{ label: 'Score', data: bottom5.map(function (x) { return x.avg; }), backgroundColor: '#f59e0b', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: barDL } });
+    chart4 = new Chart(document.getElementById('chartBottom5'), { type:'bar', data:{ labels:bottom5.map(function(x){return x.n;}), datasets:[{ label:'Score', data:bottom5.map(function(x){return x.avg;}), backgroundColor:'#f59e0b', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:barDL } });
  
     let partCount = sortedWeeks.map(function (w) { return weeksMap[w].count; });
     if (chart5) chart5.destroy();
-    chart5 = new Chart(document.getElementById('chartParticipation'), { type: 'bar', data: { labels: sortedWeeks, datasets: [{ label: 'Submissions', data: partCount, backgroundColor: '#8b5cf6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: countDL } });
+    chart5 = new Chart(document.getElementById('chartParticipation'), { type:'bar', data:{ labels:sortedWeeks, datasets:[{ label:'Submissions', data:partCount, backgroundColor:'#8b5cf6', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:countDL } });
  
     if (chart6) chart6.destroy();
-    chart6 = new Chart(document.getElementById('chartDistribution'), { type: 'pie', data: { labels: Object.keys(distribution), datasets: [{ data: Object.values(distribution), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: pieDL } });
+    chart6 = new Chart(document.getElementById('chartDistribution'), { type:'pie', data:{ labels:Object.keys(distribution), datasets:[{ data:Object.values(distribution), backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:pieDL } });
   }
  
   function exportChart(canvasId, fileName) {
@@ -1139,8 +1464,7 @@
       let ctx = destCanvas.getContext("2d");
       ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, destCanvas.width, destCanvas.height); ctx.drawImage(canvas, 0, 0);
       let link = document.createElement('a');
-      link.download = fileName + ".png";
-      link.href = destCanvas.toDataURL("image/png");
+      link.download = fileName + ".png"; link.href = destCanvas.toDataURL("image/png");
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       showToast("Chart Exported", "success");
   }
@@ -1148,8 +1472,7 @@
   function downloadCSV(tableId, filename) {
     let table = document.getElementById(tableId);
     if (!table) return;
-    let rows = table.querySelectorAll('tr');
-    let csv = [];
+    let rows = table.querySelectorAll('tr'), csv = [];
     for (let i = 0; i < rows.length; i++) {
         let row = [], cols = rows[i].querySelectorAll('td, th');
         for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, " ") + '"');
