@@ -81,16 +81,16 @@
     .training-input { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 0; }
     .training-select { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; margin:0;}
 
-    /* Skeleton & Loader CSS */
+    /* Skeleton & Global Loader CSS */
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-    .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 22px; overflow: hidden; position: relative; margin-top: 15px; display: none; }
-    .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
-    .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 24px; overflow: hidden; position: relative; margin-top: 15px; }
+    .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.2s linear; }
+    .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 24px; font-size: 13px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-    /* EDIT MODAL */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
-    .modal-box { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
+    /* EDIT & GLOBAL MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 99999; animation: fadeIn 0.2s ease-out; }
+    .modal-box { background: white; padding: 35px 30px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
 
     @media (max-width: 768px) {
       body { overflow-y: auto; }
@@ -111,6 +111,19 @@
 <body>
 
 <div id="toast-container"></div>
+
+<!-- GLOBAL 0-100% LOADER MODAL -->
+<div class="modal-overlay" id="globalLoaderModal">
+  <div class="modal-box" style="max-width:400px; text-align:center;">
+    <div style="font-size: 45px; margin-bottom: 15px; animation: pulse 1.5s infinite;">⏳</div>
+    <h2 id="loader-title" style="color:var(--primary); margin-top:0; font-size:22px;">Processing...</h2>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:25px;">Please wait while we sync with the secure server.</p>
+    <div class="load-container" style="display:block;">
+       <div id="global-progress-fill" class="load-fill" style="width:0%;"></div>
+       <div id="global-progress-text" class="load-text">0%</div>
+    </div>
+  </div>
+</div>
 
 <!-- EDIT QUESTION MODAL -->
 <div class="modal-overlay" id="editQModal">
@@ -151,12 +164,6 @@
     
     <input type="password" id="pin" placeholder="Enter Secure Passcode" style="text-align:center; letter-spacing: 2px; font-size:16px;">
     <button id="authBtn" onclick="login()" style="padding: 16px; font-size: 17px; margin-top:10px; width:100%;">Authenticate Access</button>
-
-    <div id="login-progress-container" class="load-container">
-       <div id="login-progress-fill" class="load-fill"></div>
-       <div id="login-progress-text" class="load-text">0%</div>
-    </div>
-
   </div>
 </div>
 
@@ -294,7 +301,7 @@
         <textarea id="nq-q" rows="2" style="resize:vertical;"></textarea>
         <div class="flex-row">
           <div style="flex:1;"><label>Option A</label><input type="text" id="nq-a"></div>
-          <div style="flex:1;"><label>Option B</label><input type="text" id="nq-b"></div>
+          <div style="flex:1;"><label>Option B</label><input type="text" id="eq-b"></div>
         </div>
         <div class="flex-row">
           <div style="flex:1;"><label>Option C</label><input type="text" id="nq-c"></div>
@@ -317,42 +324,52 @@
   Chart.register(ChartDataLabels);
   Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
 
-  // PROGRESS BAR ANIMATION LOGIC
-  let loginProgressInterval;
-
-  function startLoginProgress() {
-      document.getElementById('authBtn').style.display = "none";
-      let container = document.getElementById('login-progress-container');
-      let fill = document.getElementById('login-progress-fill');
-      let txt = document.getElementById('login-progress-text');
-      
-      container.style.display = "block";
+  // --- GLOBAL PROGRESS LOADER ---
+  let globalProgressInterval;
+  function startGlobalLoader(titleText) {
+      document.getElementById('loader-title').innerText = titleText || "Processing...";
+      document.getElementById('globalLoaderModal').style.display = "flex";
+      let fill = document.getElementById('global-progress-fill');
+      let txt = document.getElementById('global-progress-text');
+      fill.style.width = "0%";
+      txt.innerText = "0%";
       let w = 0;
-      loginProgressInterval = setInterval(() => {
+      globalProgressInterval = setInterval(() => {
           if(w < 90) {
               w += Math.floor(Math.random() * 15) + 5;
               if(w > 90) w = 90;
               fill.style.width = w + "%";
               txt.innerText = w + "%";
           }
-      }, 300);
+      }, 200);
+  }
+  function completeGlobalLoader() {
+      clearInterval(globalProgressInterval);
+      document.getElementById('global-progress-fill').style.width = "100%";
+      document.getElementById('global-progress-text').innerText = "100%";
+      setTimeout(() => { document.getElementById('globalLoaderModal').style.display = "none"; }, 400);
+  }
+  function failGlobalLoader() {
+      clearInterval(globalProgressInterval);
+      document.getElementById('globalLoaderModal').style.display = "none";
   }
 
-  function completeLoginProgress() {
-      clearInterval(loginProgressInterval);
-      document.getElementById('login-progress-fill').style.width = "100%";
-      document.getElementById('login-progress-text').innerText = "100%";
+  async function actionWithRefresh(actionName, payload, loadText, successToast) {
+      startGlobalLoader(loadText);
+      let actionRes = await apiCall(actionName, payload);
+      if(actionRes.error) { showToast(actionRes.error, "error"); failGlobalLoader(); return; }
+      
+      let pin = document.getElementById('pin').value;
+      let refreshRes = await apiCall("getAdminDashboard", { pin: pin });
+      if(refreshRes.error) { showToast(refreshRes.error, "error"); failGlobalLoader(); return; }
+      
+      adminData = refreshRes;
+      initDashboard(true);
+      completeGlobalLoader();
+      if(successToast) showToast(successToast, "success");
   }
 
-  function resetLoginProgress() {
-      clearInterval(loginProgressInterval);
-      document.getElementById('login-progress-container').style.display = "none";
-      document.getElementById('login-progress-fill').style.width = "0%";
-      document.getElementById('login-progress-text').innerText = "0%";
-      document.getElementById('authBtn').style.display = "block";
-  }
-
-  // INSTANT LOAD FROM CACHE, THEN FETCH FRESH
+  // INSTANT LOAD LOGO FROM CACHE
   document.addEventListener("DOMContentLoaded", async () => {
       let cachedLogo = localStorage.getItem("wep_logo");
       let cachedFav = localStorage.getItem("wep_favicon");
@@ -407,51 +424,39 @@
     let pin = document.getElementById('pin').value;
     if(!pin) { showToast("Please Enter Passcode", "error"); return; }
     
-    startLoginProgress();
-    
+    startGlobalLoader("Authenticating...");
     let res = await apiCall("getAdminDashboard", { pin: pin });
     
     if(res.error) { 
         showToast(res.error, "error"); 
-        resetLoginProgress();
+        failGlobalLoader();
         return; 
     }
     
-    completeLoginProgress();
+    adminData = res;
+    document.getElementById('login-screen').style.display = "none";
+    document.getElementById('dashboard').style.display = "flex";
     
-    setTimeout(() => {
-        adminData = res;
-        document.getElementById('login-screen').style.display = "none";
-        document.getElementById('dashboard').style.display = "flex";
-        
-        document.getElementById('role-display').innerText = "Logged in as: " + res.role.replace("_", " ");
-        if(res.role === "UPLOADER") {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-            switchTab('qbank', document.querySelector('.nav-item:not(.admin-only)'));
-        } else {
-            switchTab('analytics', document.querySelector('.nav-item.admin-only'));
-        }
+    document.getElementById('role-display').innerText = "Logged in as: " + res.role.replace("_", " ");
+    if(res.role === "UPLOADER") {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        switchTab('qbank', document.querySelector('.nav-item:not(.admin-only)'));
+    } else {
+        switchTab('analytics', document.querySelector('.nav-item.admin-only'));
+    }
 
-        showToast("Access Granted");
-        initDashboard();
-        clearInterval(autoRefreshTimer);
-        autoRefreshTimer = setInterval(silentRefresh, 15000); 
-    }, 300);
+    completeGlobalLoader();
+    showToast("Access Granted");
+    initDashboard();
   }
 
   async function forceRefresh() {
-    document.getElementById('refBtn').style.opacity = '0.5';
-    let res = await apiCall("getAdminDashboard", { pin: document.getElementById('pin').value });
-    adminData = res;
-    initDashboard();
-    document.getElementById('refBtn').style.opacity = '1';
-    showToast("Data Synchronized", "success");
-  }
-
-  async function silentRefresh() {
+    startGlobalLoader("Syncing Data...");
     let res = await apiCall("getAdminDashboard", { pin: document.getElementById('pin').value });
     adminData = res;
     initDashboard(true);
+    completeGlobalLoader();
+    showToast("Data Synchronized", "success");
   }
 
   function initDashboard(isSilent=false) {
@@ -471,12 +476,12 @@
     renderQuestionBank();
   }
 
-  async function updateState() { let s = document.getElementById('ctrl-status').value; await apiCall("updateAdminSettings", {type: "SET_STATE", value1: s}); forceRefresh(); }
-  async function updateTimer() { let t = document.getElementById('ctrl-timer').value; await apiCall("updateAdminSettings", {type: "SET_TIMER", value1: t}); forceRefresh(); }
-  async function updateStrict() { let t = document.getElementById('ctrl-strict').value; await apiCall("updateAdminSettings", {type: "SET_STRICT", value1: t}); forceRefresh(); }
-  async function setLiveStatus() { let m = document.getElementById('ctrl-month').value, w = document.getElementById('ctrl-week').value; await apiCall("updateAdminSettings", {type: "SET_LIVE", value1: m, value2: w}); forceRefresh(); }
-  async function publishResults() { let m = adminData.settings.month, w = adminData.settings.week; await apiCall("updateAdminSettings", {type: "PUBLISH_RESULT", value1: m, value2: w}); forceRefresh(); }
-  async function changeTrainerPass() { let newP = document.getElementById('ctrl-uploader-pass').value; if(!newP) return; await apiCall("updateAdminSettings", {type: "CHANGE_UPLOADER_PASS", value1: newP}); document.getElementById('ctrl-uploader-pass').value=""; showToast("Password Updated"); }
+  function updateState() { let s = document.getElementById('ctrl-status').value; actionWithRefresh("updateAdminSettings", {type: "SET_STATE", value1: s}, "Applying State...", "Status Updated!"); }
+  function updateTimer() { let t = document.getElementById('ctrl-timer').value; actionWithRefresh("updateAdminSettings", {type: "SET_TIMER", value1: t}, "Updating Timer...", "Timer Updated!"); }
+  function updateStrict() { let t = document.getElementById('ctrl-strict').value; actionWithRefresh("updateAdminSettings", {type: "SET_STRICT", value1: t}, "Applying Security...", "Strict Mode Updated!"); }
+  function setLiveStatus() { let m = document.getElementById('ctrl-month').value, w = document.getElementById('ctrl-week').value; actionWithRefresh("updateAdminSettings", {type: "SET_LIVE", value1: m, value2: w}, "Deploying Module...", "Module Deployed!"); }
+  function publishResults() { let m = adminData.settings.month, w = adminData.settings.week; actionWithRefresh("updateAdminSettings", {type: "PUBLISH_RESULT", value1: m, value2: w}, "Publishing Results...", "Results Declassified!"); }
+  function changeTrainerPass() { let newP = document.getElementById('ctrl-uploader-pass').value; if(!newP) return; actionWithRefresh("updateAdminSettings", {type: "CHANGE_UPLOADER_PASS", value1: newP}, "Updating Password...", "Password Updated!"); document.getElementById('ctrl-uploader-pass').value=""; }
 
   function renderTrainingPlan() {
       let tbody = document.getElementById("training-tbody");
@@ -520,35 +525,33 @@
       tbody.appendChild(tr);
   }
 
-  async function saveTrainingPlan() {
+  function saveTrainingPlan() {
       let tbody = document.getElementById("training-tbody");
       let rows = tbody.querySelectorAll("tr");
       let data = [ ["Month", "Week", "Segment", "Assignment Date", "Presentation Date", "Presenter Name", "Email", "Product/Topic Assigned", "Status"] ];
-      
       rows.forEach(tr => {
           let inputs = tr.querySelectorAll("input, select");
           let rData = [];
           inputs.forEach(inp => rData.push(inp.value));
           data.push(rData);
       });
-      
-      document.getElementById('refBtn').style.opacity = '0.5';
-      await apiCall("saveTrainingPlan", { trainingData: data });
-      forceRefresh();
-      showToast("Training Plan Saved!");
+      actionWithRefresh("saveTrainingPlan", { trainingData: data }, "Saving Training Plan...", "Training Plan Saved!");
   }
 
   function renderCurrentWeek() {
     let cwTable = document.getElementById('current-week-table');
     cwTable.innerHTML = "<tr><th>Identity Info</th><th>Final Score</th><th>Evaluation Details</th></tr>";
+    let count = 0;
     for(let i=1; i<adminData.responses.length; i++) {
       let r = adminData.responses[i];
       if(r[3] === adminData.settings.month && r[4] === adminData.settings.week) {
         let color = parseFloat(r[8]) >= 40 ? '#059669' : '#dc2626';
         let detailLog = r[9] && r[9].includes("Disqualified") ? `<span style="color:#dc2626; font-size:11px; display:block;">(Disqualified)</span>` : "";
         cwTable.innerHTML += `<tr><td><b style="font-size:15px;">${r[1]}</b> <br><span style="color:#64748b; font-size:13px;">${r[2]}</span> ${detailLog}</td><td><b style="color:${color}; font-size:16px;">${r[8]}</b></td><td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">${r[6]} Valid / ${r[5]} Total</span></td></tr>`;
+        count++;
       }
     }
+    if(count === 0) cwTable.innerHTML += "<tr><td colspan='3' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for current batch.</td></tr>";
   }
 
   function sortWeeksChronologically(weeksArray) {
@@ -562,22 +565,25 @@
   }
 
   function renderAttendancePivot() {
-    let filterMonth = document.getElementById('att-month-filter').value;
+    let filterMonth = document.getElementById('att-month-filter').value.trim();
     let users = {}, weeksSet = new Set();
+    let count = 0;
     for(let i=1; i<adminData.responses.length; i++) {
       let r = adminData.responses[i];
-      if(filterMonth !== "All Months" && r[3] !== filterMonth) continue;
-      let phone = r[2], mw = r[3] + " " + r[4]; 
+      let rMonth = r[3] ? r[3].toString().trim() : "";
+      if(filterMonth !== "All Months" && rMonth !== filterMonth) continue;
+      let phone = r[2], mw = rMonth + " " + (r[4] ? r[4].toString().trim() : ""); 
       weeksSet.add(mw);
       if(!users[phone]) users[phone] = { name: r[1] };
       users[phone][mw] = "P";
+      count++;
     }
     let weeksArray = sortWeeksChronologically(Array.from(weeksSet));
     
     let table = document.getElementById('attendance-table');
     let headerHtml = "<tr><th>Identity Name</th>";
     weeksArray.forEach(w => headerHtml += `<th>${w}</th>`); headerHtml += "</tr>";
-    if(weeksArray.length === 0) { table.innerHTML = "<tr><td style='padding:20px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
+    if(count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
     table.innerHTML = headerHtml;
     for (let phone in users) {
       let rowHtml = `<tr><td><b>${users[phone].name}</b></td>`;
@@ -589,22 +595,25 @@
   }
 
   function renderSummaryPivot() {
-    let filterMonth = document.getElementById('sum-month-filter').value;
+    let filterMonth = document.getElementById('sum-month-filter').value.trim();
     let users = {}, weeksSet = new Set();
+    let count = 0;
     for(let i=1; i<adminData.responses.length; i++) {
       let r = adminData.responses[i];
-      if(filterMonth !== "All Months" && r[3] !== filterMonth) continue;
-      let phone = r[2], mw = r[3] + " " + r[4];
+      let rMonth = r[3] ? r[3].toString().trim() : "";
+      if(filterMonth !== "All Months" && rMonth !== filterMonth) continue;
+      let phone = r[2], mw = rMonth + " " + (r[4] ? r[4].toString().trim() : "");
       weeksSet.add(mw);
       if(!users[phone]) users[phone] = { name: r[1], scores: {} };
       users[phone].scores[mw] = r[8]; 
+      count++;
     }
     let weeksArray = sortWeeksChronologically(Array.from(weeksSet));
     
     let table = document.getElementById('summary-table');
     let headerHtml = "<tr><th>Identity Name</th>";
     weeksArray.forEach(w => headerHtml += `<th>${w}</th>`); headerHtml += "</tr>";
-    if(weeksArray.length === 0) { table.innerHTML = "<tr><td style='padding:20px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
+    if(count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
     table.innerHTML = headerHtml;
     for (let phone in users) {
       let rowHtml = `<tr><td><b>${users[phone].name}</b></td>`;
@@ -642,7 +651,7 @@
     try {
       let rowData = adminData.responses[rowIndex];
       let jsonStr = rowData[9]; 
-      if(!jsonStr) return;
+      if(!jsonStr) { table.innerHTML += `<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">No detailed logs found.</td></tr>`; return; }
       if(jsonStr.includes("Disqualified")) { table.innerHTML += `<tr><td colspan="4" style="color:#dc2626; padding:20px; font-weight:bold;">🚨 Disqualified - Cheating</td></tr>`; return; }
       
       let logsObj = JSON.parse(jsonStr);
@@ -655,13 +664,18 @@
   }
 
   function renderBulkExport() {
-    let fMonth = document.getElementById('export-month').value, fWeek = document.getElementById('export-week').value;
+    let fMonth = document.getElementById('export-month').value.trim();
+    let fWeek = document.getElementById('export-week').value.trim();
     let table = document.getElementById('bulk-export-table');
     table.innerHTML = "<tr><th>User Name</th><th>Q. ID</th><th>Question</th><th>User Ans</th><th>Correct Ans</th><th>Status</th></tr>";
     
+    let count = 0;
     for(let i=1; i<adminData.responses.length; i++) {
       let r = adminData.responses[i];
-      if((fMonth === "All" || r[3] === fMonth) && (fWeek === "All" || r[4] === fWeek)) {
+      let rMonth = r[3] ? r[3].toString().trim() : "";
+      let rWeek = r[4] ? r[4].toString().trim() : "";
+
+      if((fMonth === "All" || rMonth === fMonth) && (fWeek === "All" || rWeek === fWeek)) {
         let jsonStr = r[9];
         if(jsonStr && !jsonStr.includes("Disqualified")) {
            try {
@@ -669,30 +683,35 @@
              Object.keys(logsObj).forEach(k => {
                let d = logsObj[k];
                table.innerHTML += `<tr><td><b>${r[1]}</b></td><td>${k}</td><td>${d.question}</td><td>${d.userAnswerText||d.userAnswer}</td><td>${d.correctAnswerText||d.correctAnswer}</td><td>${d.isRight?'Correct':'Wrong'}</td></tr>`;
+               count++;
              });
            } catch(e) {}
         }
       }
     }
+    if(count === 0) table.innerHTML += "<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for selected filter.</td></tr>";
   }
 
-  // --- UPDATED Q-BANK RENDERER (EDIT/DELETE ADDED) ---
   function renderQuestionBank() {
-    let fMonth = document.getElementById('qb-month').value, fWeek = document.getElementById('qb-week').value;
+    let fMonth = document.getElementById('qb-month').value.trim();
+    let fWeek = document.getElementById('qb-week').value.trim();
     let table = document.getElementById('qb-table');
     table.innerHTML = "<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th><th style='text-align:center;'>Actions</th></tr>";
     let count = 0;
     for(let i=1; i<adminData.questions.length; i++) {
       let q = adminData.questions[i];
-      if((fMonth === "All Months" || q[1] === fMonth) && (fWeek === "All Weeks" || q[2] === fWeek)) {
+      let qMonth = q[1] ? q[1].toString().trim() : "";
+      let qWeek = q[2] ? q[2].toString().trim() : "";
+
+      if((fMonth === "All Months" || qMonth === fMonth) && (fWeek === "All Weeks" || qWeek === fWeek)) {
         let ansLetter = q[8], realAnsText = "";
         if(ansLetter==='A') realAnsText=q[4]; if(ansLetter==='B') realAnsText=q[5]; if(ansLetter==='C') realAnsText=q[6]; if(ansLetter==='D') realAnsText=q[7];
         
-        let qJson = JSON.stringify(q).replace(/'/g, "&apos;");
+        let qJson = JSON.stringify(q).replace(/'/g, "&apos;").replace(/"/g, '&quot;');
 
         table.innerHTML += `<tr>
             <td>${q[0]}</td>
-            <td><span style="font-size:11px; font-weight:600; color:#64748b;">${q[1]} - ${q[2]}</span></td>
+            <td><span style="font-size:11px; font-weight:600; color:#64748b;">${qMonth} - ${qWeek}</span></td>
             <td>${q[3]}</td>
             <td><b>${ansLetter})</b> ${realAnsText}</td>
             <td style='text-align:center; min-width:80px;'>
@@ -706,7 +725,6 @@
     if(count===0) table.innerHTML += `<tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">No questions found.</td></tr>`;
   }
 
-  // --- NEW Q-BANK ACTIONS (DOWNLOAD, UPLOAD, EDIT, DELETE) ---
   function downloadCSVTemplate() {
     let csvContent = "Month,Week,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nSeptember,Week 1,What is WeP?,Company,Brand,Fruit,Animal,A\n";
     let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -727,11 +745,9 @@
       let text = e.target.result;
       let lines = text.split('\n');
       let dataArr = [];
-      
       for(let i=1; i<lines.length; i++) {
         let line = lines[i].trim();
         if(!line) continue;
-        
         let parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         if(parts.length >= 8) {
           dataArr.push({
@@ -747,12 +763,7 @@
         }
       }
       if(dataArr.length === 0) { showToast("No valid data found in CSV", "error"); return; }
-      
-      document.getElementById('refBtn').style.opacity = '0.5';
-      showToast("Uploading " + dataArr.length + " questions... Please wait.");
-      let res = await apiCall("bulkUploadQuestions", { questionsData: dataArr });
-      forceRefresh();
-      showToast(res);
+      await actionWithRefresh("bulkUploadQuestions", { questionsData: dataArr }, "Uploading CSV...", "Bulk Upload Successful!");
       fileInput.value = "";
     };
     reader.readAsText(file);
@@ -772,36 +783,23 @@
     document.getElementById('editQModal').style.display = 'flex';
   }
 
-  async function saveEditQ() {
-    let data = { 
-      month: document.getElementById('eq-month').value, 
-      week: document.getElementById('eq-week').value, 
-      q: document.getElementById('eq-q').value, 
-      a: document.getElementById('eq-a').value, 
-      b: document.getElementById('eq-b').value, 
-      c: document.getElementById('eq-c').value, 
-      d: document.getElementById('eq-d').value, 
-      ans: document.getElementById('eq-ans').value 
-    };
+  function saveEditQ() {
+    let data = { month: document.getElementById('eq-month').value, week: document.getElementById('eq-week').value, q: document.getElementById('eq-q').value, a: document.getElementById('eq-a').value, b: document.getElementById('eq-b').value, c: document.getElementById('eq-c').value, d: document.getElementById('eq-d').value, ans: document.getElementById('eq-ans').value };
     if(!data.q || !data.a) { showToast("Error: Missing Data", "error"); return; }
-    
     document.getElementById('editQModal').style.display = 'none';
-    document.getElementById('refBtn').style.opacity = '0.5';
-    showToast("Updating Question...");
-    
-    let res = await apiCall("editQuestion", { id: editingQId, questionData: data });
-    forceRefresh();
-    showToast("Question Updated Successfully!");
+    actionWithRefresh("editQuestion", { id: editingQId, questionData: data }, "Updating Question...", "Question Updated Successfully!");
   }
 
-  async function deleteQ(id) {
+  function deleteQ(id) {
     if(!confirm("Are you sure you want to delete Question ID: " + id + "?")) return;
-    document.getElementById('refBtn').style.opacity = '0.5';
-    showToast("Deleting Question...");
-    
-    let res = await apiCall("deleteQuestion", { id: id });
-    forceRefresh();
-    showToast("Question Deleted!");
+    actionWithRefresh("deleteQuestion", { id: id }, "Deleting Question...", "Question Deleted!");
+  }
+
+  function addQ() {
+    let data = { month: document.getElementById('nq-month').value, week: document.getElementById('nq-week').value, q: document.getElementById('nq-q').value, a: document.getElementById('nq-a').value, b: document.getElementById('nq-b').value, c: document.getElementById('nq-c').value, d: document.getElementById('nq-d').value, ans: document.getElementById('nq-ans').value };
+    if(!data.q || !data.a) { showToast("Error: Missing Data", "error"); return; }
+    document.getElementById('nq-q').value=""; document.getElementById('nq-a').value=""; document.getElementById('nq-b').value=""; document.getElementById('nq-c').value=""; document.getElementById('nq-d').value="";
+    actionWithRefresh("addWeeklyQuestion", { questionData: data }, "Uploading to Repository...", "Question Bank Updated!");
   }
 
   function renderCharts() {
@@ -899,12 +897,6 @@
     let csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
     let downloadLink = document.createElement('a'); downloadLink.download = filename; downloadLink.href = window.URL.createObjectURL(csvFile); downloadLink.style.display = 'none'; document.body.appendChild(downloadLink); downloadLink.click();
     showToast("Export Downloaded", "success");
-  }
-
-  async function addQ() {
-    let data = { month: document.getElementById('nq-month').value, week: document.getElementById('nq-week').value, q: document.getElementById('nq-q').value, a: document.getElementById('nq-a').value, b: document.getElementById('nq-b').value, c: document.getElementById('nq-c').value, d: document.getElementById('nq-d').value, ans: document.getElementById('nq-ans').value };
-    if(!data.q || !data.a) { showToast("Error: Missing Data", "error"); return; }
-    await apiCall("addWeeklyQuestion", { questionData: data }); showToast("Question Bank Updated!"); document.getElementById('nq-q').value=""; document.getElementById('nq-a').value=""; document.getElementById('nq-b').value=""; document.getElementById('nq-c').value=""; document.getElementById('nq-d').value=""; forceRefresh();
   }
 </script>
 </body>
