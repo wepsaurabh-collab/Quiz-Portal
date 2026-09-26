@@ -11,7 +11,7 @@
 
   <script>
     // ==========================================
-    // YOUR ORIGINAL DEPLOYED WEB APP URL:
+    // YOUR DEPLOYED WEB APP URL:
     const API_URL = "https://script.google.com/macros/s/AKfycbyTjVMCuVx9KzH1StvSRIGR41QKOsTUM6zyoinkmOC8fANFlbDqRPJJPYmDGCq7kwPl/exec";
     // ==========================================
 
@@ -20,7 +20,7 @@
         let response = await fetch(API_URL, {
           method: 'POST',
           headers: {
-            "Content-Type": "text/plain;charset=utf-8" // 🚀 FAST CORS BYPASS FOR GOOGLE APPS SCRIPT
+            "Content-Type": "text/plain;charset=utf-8" // 🚀 FAST CORS BYPASS ADDED HERE
           },
           body: JSON.stringify({ action: actionName, data: payloadData })
         });
