@@ -12,7 +12,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbws_hXYbCzMCmPhZiEiCsRscKDqoJiI010bD4omBLQepLiYElfhzucvw7GQtYvJY0AR/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzEdGkPyAsTl_lXJLlnOurql4blh-qRlQ2yEmGf96z9tJ6Yzk78WX2WaH-WH0t8Ab7t/exec";
     // ==========================================
  
     const API_TIMEOUT_MS = 60000;
@@ -157,6 +157,7 @@
        <div id="global-progress-fill" class="load-fill" style="width:0%;"></div>
        <div id="global-progress-text" class="load-text">0%</div>
     </div>
+    <p id="loader-stage" style="font-size:12px; color:var(--text-muted); margin:12px 0 0 0; font-weight:600;"></p>
   </div>
 </div>
  
@@ -386,18 +387,28 @@
       document.getElementById('globalLoaderModal').style.display = "flex";
       let fill = document.getElementById('global-progress-fill');
       let txt = document.getElementById('global-progress-text');
+      let stage = document.getElementById('loader-stage');
       fill.style.width = "0%";
       txt.innerText = "0%";
-      let w = 0;
+      stage.innerText = "Connecting to WeP server...";
+ 
+      // FIX: the bar used to hit 90% in under two seconds and then sit frozen,
+      // which made a normal request look like a hang. It now eases to 97%
+      // and narrates what is actually happening.
+      let w = 0, ticks = 0;
       clearInterval(globalProgressInterval);
       globalProgressInterval = setInterval(function () {
-          if (w < 90) {
-              w += Math.floor(Math.random() * 15) + 5;
-              if (w > 90) w = 90;
+          ticks++;
+          if (w < 97) {
+              w += Math.max(1, Math.round((97 - w) * 0.12));
+              if (w > 97) w = 97;
               fill.style.width = w + "%";
               txt.innerText = w + "%";
           }
-      }, 200);
+          if (ticks === 10) stage.innerText = "Reading the response database...";
+          if (ticks === 24) stage.innerText = "Building analytics...";
+          if (ticks === 44) stage.innerText = "Server is waking up, almost there...";
+      }, 250);
   }
   function completeGlobalLoader() {
       clearInterval(globalProgressInterval);
@@ -452,6 +463,11 @@
       document.getElementById('pin').addEventListener("keydown", function (ev) {
           if (ev.key === "Enter") { ev.preventDefault(); login(); }
       });
+ 
+      // SPEED: wake the Apps Script container while the admin is still typing the
+      // passcode. A cold instance costs 3-6 seconds on the FIRST request only,
+      // so paying it here makes the actual authentication feel instant.
+      apiCall("ping", {});
  
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { document.getElementById('login-logo-skeleton').style.display = 'none'; return; }
