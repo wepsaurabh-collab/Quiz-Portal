@@ -10,7 +10,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbws_hXYbCzMCmPhZiEiCsRscKDqoJiI010bD4omBLQepLiYElfhzucvw7GQtYvJY0AR/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzEdGkPyAsTl_lXJLlnOurql4blh-qRlQ2yEmGf96z9tJ6Yzk78WX2WaH-WH0t8Ab7t/exec";
     // ==========================================
  
     const API_TIMEOUT_MS = 45000;
@@ -211,6 +211,7 @@
        <div id="login-progress-fill" class="load-fill"></div>
        <div id="login-progress-text" class="load-text">0%</div>
     </div>
+    <p id="login-stage-text" style="display:none; text-align:center; font-size:12px; color:var(--text-muted); margin:10px 0 0 0; font-weight:600;"></p>
   </div>
 </div>
  
@@ -419,6 +420,11 @@
           this.value = this.value.replace(/[^0-9]/g, "").slice(0, 10);
       });
  
+      // SPEED: wake the Apps Script container the moment the page opens, while the
+      // user is still typing. A cold Apps Script instance costs 3-6 seconds on the
+      // FIRST request only - paying that here makes the actual login feel instant.
+      apiCall("ping", {});
+ 
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) {
           // Never block the login screen because branding failed to load.
@@ -473,18 +479,29 @@
       let container = safeGet('login-progress-container');
       let fill = safeGet('login-progress-fill');
       let txt = safeGet('login-progress-text');
+      let stage = safeGet('login-stage-text');
  
       container.style.display = "block";
-      let w = 0;
+      stage.style.display = "block";
+      stage.innerText = "Connecting to WeP server...";
+ 
+      // FIX: the old bar jumped to 90% in ~2 seconds and then froze there, which
+      // made a normal 4-second login look like a hang. It now eases towards 97%
+      // over the realistic response window and reports what it is doing.
+      let w = 0, ticks = 0;
       clearInterval(loginProgressInterval);
       loginProgressInterval = setInterval(function () {
-          if (w < 90) {
-              w += Math.floor(Math.random() * 15) + 5;
-              if (w > 90) w = 90;
+          ticks++;
+          if (w < 97) {
+              w += Math.max(1, Math.round((97 - w) * 0.12));
+              if (w > 97) w = 97;
               fill.style.width = w + "%";
               txt.innerText = w + "%";
           }
-      }, 300);
+          if (ticks === 8)  stage.innerText = "Verifying your registration...";
+          if (ticks === 16) stage.innerText = "Loading leaderboard & history...";
+          if (ticks === 32) stage.innerText = "Server is waking up, almost there...";
+      }, 250);
   }
  
   function completeLoginProgress() {
@@ -497,6 +514,7 @@
   function resetLoginProgress() {
       clearInterval(loginProgressInterval);
       loginProgressInterval = null;
+      safeGet('login-stage-text').style.display = "none";
       safeGet('login-progress-container').style.display = "none";
       safeGet('login-progress-fill').style.width = "0%";
       safeGet('login-progress-text').innerText = "0%";
@@ -620,13 +638,16 @@
     }
  
     // FIX: only one auto-sync timer can ever exist, and it never runs during a live quiz.
+    // SPEED: 15s was hammering the backend (4 full dashboard reads every minute for
+    // every logged-in user), which slowed the server down for everybody. 90s is plenty.
     clearInterval(autoSyncTimer);
-    autoSyncTimer = setInterval(silentSync, 15000);
+    autoSyncTimer = setInterval(silentSync, 90000);
   }
  
   function silentSync() {
     // FIX: the guard now runs BEFORE dimming the button, which used to leave it stuck at 50% opacity.
     if (isQuizActive || isSubmitting || !isLoggedIn) return;
+    if (document.hidden) return;      // SPEED: no pointless polling in a background tab
     let btn = safeGet('syncBtn');
     btn.style.opacity = '0.5';
     loginUser(true).then(function () { btn.style.opacity = '1'; })
