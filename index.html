@@ -10,7 +10,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbzg5t0OCZRkcjENApX2KZ0ylCCwRgIXDRVMKWuQgxRECEP6hmIVlq9PrQyviWuuxOns/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwcNbP8xkhQZorZQkugLz97u808p89VoSwFZWOHATOjJPRl_rJ4xHUFzHbkhZp4hS5o/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 40000;
@@ -255,7 +255,7 @@
           <p style="margin:0 0 15px 0; font-size:13px; color:var(--text-muted);">The following trainers have missed their scheduled presentation date.</p>
           <div id="defaulter-items" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
-      <button onclick="document.getElementById('trainingModal').style.display='none'" class="btn" style="background: white; color: var(--primary); font-weight: 800; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); padding:16px;">Proceed to Login ➡️</button>
+      <button onclick="closeTrainingModal()" class="btn" style="background: white; color: var(--primary); font-weight: 800; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); padding:16px;">Proceed to Login ➡️</button>
   </div>
 </div>
 
@@ -632,14 +632,31 @@
      TRAINING ANNOUNCEMENT
      ========================================================== */
 
+  let trainingDismissed = false;
+
+  function closeTrainingModal() {
+      trainingDismissed = true;
+      safeGet('trainingModal').style.display = 'none';
+  }
+
   function renderTraining(res) {
-      if (!res || !res.trainingPlan || res.trainingPlan.length <= 1) return;
+      let modal = safeGet('trainingModal');
+      let wasOpen = (modal.style.display === 'flex');
+
+      // FIX: the old version only ADDED content, so a second (fresh) render
+      // could never replace or remove what the stale cached copy had drawn.
+      safeGet('training-announcement').style.display = 'none';
+      safeGet('defaulter-list').style.display = 'none';
+      safeGet('defaulter-items').innerHTML = '';
+      safeGet('t-next').innerHTML = '';
+
+      if (!res || !res.trainingPlan || res.trainingPlan.length <= 1) { modal.style.display = 'none'; return; }
       let now = new Date(); now.setHours(0, 0, 0, 0);
 
       let pendingRows = res.trainingPlan.slice(1).filter(function (r) {
           return r && r[8] && r[8].toString().trim().toLowerCase() === 'pending';
       });
-      if (pendingRows.length === 0) return;
+      if (pendingRows.length === 0) { modal.style.display = 'none'; return; }
 
       let sortedPendings = pendingRows
         .map(function (r) { return { row: r, date: parseDate(r[4]) }; })
@@ -675,7 +692,12 @@
           safeGet('defaulter-items').innerHTML = defaultersHtml;
           safeGet('defaulter-list').style.display = 'block';
       }
-      if (nextTrain || defaultersHtml !== "") safeGet('trainingModal').style.display = 'flex';
+      // Re-open only if the learner has not already dismissed it.
+      if (nextTrain || defaultersHtml !== "") {
+          if (!trainingDismissed || wasOpen) modal.style.display = 'flex';
+      } else {
+          modal.style.display = 'none';
+      }
   }
 
   /* ==========================================================
@@ -686,7 +708,6 @@
       let cachedLogo = lsGet("wep_logo");
       let cachedFav = lsGet("wep_favicon");
       let cachedTraining = lsGet("wep_training");
-      let renderedFromCache = false;
 
       if (cachedLogo) {
           safeGet('login-logo-skeleton').style.display = 'none';
@@ -697,7 +718,7 @@
       if (cachedFav) safeGet('favicon').href = cachedFav;
 
       if (cachedTraining) {
-          try { renderTraining(JSON.parse(cachedTraining)); renderedFromCache = true; }
+          try { renderTraining(JSON.parse(cachedTraining)); }
           catch (e) { try { localStorage.removeItem("wep_training"); } catch (e2) {} }
       }
 
@@ -729,18 +750,15 @@
           });
       });
 
-      // SPEED: when the logo and the training banner are already cached, the
-      // branding request is DEFERRED until after login. Nothing then sits in
-      // front of the login request in the queue - that alone removes a whole
-      // round-trip from the critical path.
-      if (cachedLogo && cachedTraining) {
-        safeGet('login-logo-skeleton').style.display = 'none';
-        return;
-      }
-      await refreshPublicData(renderedFromCache);
+      // The cached copy is painted instantly above, then ALWAYS refreshed from
+      // the server in the background and re-rendered when it arrives.
+      // FIX: deferring this until after login is what made the training banner
+      // show a stale presenter name even after the admin had changed it.
+      if (cachedLogo) safeGet('login-logo-skeleton').style.display = 'none';
+      refreshPublicData();
   });
 
-  async function refreshPublicData(alreadyRendered) {
+  async function refreshPublicData() {
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { safeGet('login-logo-skeleton').style.display = 'none'; return; }
 
@@ -757,7 +775,7 @@
 
       if (res.trainingPlan) {
           lsSet("wep_training", JSON.stringify(res));
-          if (!alreadyRendered && !isLoggedIn) renderTraining(res);
+          if (!isLoggedIn) renderTraining(res);   // fresh data always wins over the cached paint
       }
   }
 
