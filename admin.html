@@ -12,37 +12,77 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbw0HdBVZSbo4FXzzZjuytBJMnSleCTueUKmZvAgcw5_8uh_uqE6BcBoLMpq_ZGUuLOK/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyh-4vJK7qA8y7G6SeTXPTlkQYJmHjZIM3yVC36qMFq5DJpi5XIrLe2CtvErDynHGiC/exec";
     // ==========================================
  
-    const API_TIMEOUT_MS = 60000;
+    const API_TIMEOUT_MS = 55000;
+    const EXPECTED_API = 4.1;          // must match API_VERSION in Code.gs
+    let SERVER_API = null;
  
-    async function apiCall(actionName, payloadData, attempt) {
-      attempt = attempt || 1;
-      let controller = new AbortController();
-      let timeoutId = setTimeout(function () { controller.abort(); }, API_TIMEOUT_MS);
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
  
-      try {
-        let response = await fetch(API_URL, {
-          method: 'POST', mode: 'cors', redirect: 'follow', cache: 'no-cache',
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: actionName, data: payloadData }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+    /**
+     * A POST to /exec is answered with a 302 to script.googleusercontent.com.
+     * That second hop is short-lived and single-use: under load, or when the
+     * script execution runs long, Google answers it with 404 or 5xx — which is
+     * exactly the "Server responded with status 404" popup. Retrying clears it.
+     */
+    async function rawApiCall(actionName, payloadData) {
+      const RETRY_STATUS = [404, 408, 429, 500, 502, 503, 504];
+      let lastErr = "Server connection failed. Please check internet or API URL.";
  
-        if (!response.ok) return { error: "Server responded with status " + response.status + ". Re-deploy the Web App with access 'Anyone'." };
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        let controller = new AbortController();
+        let timeoutId = setTimeout(function () { controller.abort(); }, API_TIMEOUT_MS);
+        try {
+          let response = await fetch(API_URL, {
+            method: 'POST', mode: 'cors', redirect: 'follow', cache: 'no-cache',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: actionName, data: payloadData }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
  
-        let raw = await response.text();
-        try { return JSON.parse(raw); }
-        catch (parseErr) { return { error: "Invalid server response. Verify the deployed Web App URL." }; }
-      } catch (error) {
-        clearTimeout(timeoutId);
-        if (attempt < 2 && error && error.name !== 'AbortError') return await apiCall(actionName, payloadData, attempt + 1);
-        if (error && error.name === 'AbortError') return { error: "Request timed out. Please check your connection and retry." };
-        return { error: "Server connection failed. Please check internet or API URL." };
+          if (!response.ok) {
+            if (RETRY_STATUS.indexOf(response.status) !== -1 && attempt < 3) { await sleep(700 * attempt); continue; }
+            return { error: "Server responded with status " + response.status +
+              ". Open the Apps Script project and publish a NEW deployment version with access set to 'Anyone'." };
+          }
+ 
+          let raw = await response.text();
+          let parsed;
+          try { parsed = JSON.parse(raw); }
+          catch (parseErr) {
+            if (attempt < 3) { await sleep(700 * attempt); continue; }
+            return { error: "Invalid server response. Verify the deployed Web App URL." };
+          }
+          if (parsed && parsed.apiVersion) SERVER_API = parseFloat(parsed.apiVersion);
+          return parsed;
+ 
+        } catch (error) {
+          clearTimeout(timeoutId);
+          if (error && error.name === 'AbortError') {
+            lastErr = "Request timed out. Please check your connection and retry.";
+            if (attempt < 3) { await sleep(500); continue; }
+            return { error: lastErr };
+          }
+          if (attempt < 3) { await sleep(700 * attempt); continue; }
+          return { error: lastErr };
+        }
       }
+      return { error: lastErr };
     }
+ 
+    /** All calls run one at a time - overlapping requests are what trigger the flaky redirect. */
+    let _apiChain = Promise.resolve();
+    function apiCall(actionName, payloadData) {
+      let run = function () { return rawApiCall(actionName, payloadData); };
+      let p = _apiChain.then(run, run);
+      _apiChain = p.then(function () {}, function () {});
+      return p;
+    }
+ 
+    function backendIsOutdated() { return SERVER_API !== null && SERVER_API < EXPECTED_API; }
   </script>
  
   <style>
@@ -710,6 +750,15 @@
  
     completeGlobalLoader();
     showToast("Access Granted");
+ 
+    // Loud, actionable warning instead of silently-empty screens.
+    if (backendIsOutdated() || typeof res.cameras === "undefined") {
+      await wepAlert("This dashboard expects WeP server v" + EXPECTED_API +
+        (SERVER_API ? " but the deployed script is v" + SERVER_API : " but the deployed script is older") +
+        ".\n\nOpen the Apps Script project, paste the latest Code.gs, run setupSheets once, then publish a NEW deployment version.\n\n" +
+        "Until then, Live Camera stays empty and logins stay slow.",
+        "Server Version Mismatch", "warn", "🔧");
+    }
   }
  
   function startLive() {
@@ -959,9 +1008,11 @@
       shown++;
     }
  
-    document.getElementById('proctor-grid').innerHTML = cards.length
-      ? cards.join("")
-      : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:20px 0;">No camera frames captured yet. Camera Proctoring must be ON (Quiz Config → Step 2) and the user must allow their camera.</p>';
+    let emptyMsg = backendIsOutdated()
+      ? '<p style="color:#b45309; background:#fef3c7; border:1px solid #fcd34d; padding:14px 16px; border-radius:10px; font-size:14px; grid-column:1/-1;"><b>Server script is outdated.</b> Paste the latest Code.gs, run <b>setupSheets</b> once, then publish a NEW deployment version. The <b>LiveCamera</b> sheet is created by that step — without it nothing can be saved.</p>'
+      : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:20px 0;">No camera frames captured yet. Camera Proctoring must be ON (Quiz Config → Step 2), the user must allow their camera, and they must log in once after that.</p>';
+ 
+    document.getElementById('proctor-grid').innerHTML = cards.length ? cards.join("") : emptyMsg;
  
     if (shown === 0) tbl.push("<tr><td colspan='5' style='text-align:center; padding:25px; color:#94a3b8;'>No camera records.</td></tr>");
     document.getElementById('proctor-table').innerHTML = tbl.join("");
