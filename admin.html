@@ -12,7 +12,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbz12H0C3nlVhKupjXfZhwLZN_M66C1M6itgLqjwczPSbEKNOL1v40VRKzPNU5OhaIjU/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycby4mEdbdF8z4a8wi9ww63T5e_04KZ6nh-WuYnIBEZk2LYPi217cTfz4SRl3LF6KCGjC/exec";
     // ==========================================
 
     async function apiCall(actionName, payloadData) {
@@ -231,17 +231,32 @@
   Chart.register(ChartDataLabels);
   Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
 
-  // FETCH LOGO ON LOAD
+  // FETCH LOGO ON LOAD using Cache
   document.addEventListener("DOMContentLoaded", async () => {
+      let cachedLogo = localStorage.getItem("wep_logo");
+      let cachedFav = localStorage.getItem("wep_favicon");
+      if(cachedLogo) {
+          document.getElementById('login-logo-skeleton').style.display = 'none';
+          document.getElementById('login-logo').src = cachedLogo;
+          document.getElementById('login-logo').style.display = 'block';
+          document.getElementById('sidebar-logo').src = cachedLogo;
+          document.getElementById('sidebar-logo').style.display = 'block';
+      }
+      if(cachedFav) document.getElementById('favicon').href = cachedFav;
+
       let res = await apiCall("getPublicData", {});
       if(res && res.settings) {
-          if(res.settings.favicon) document.getElementById('favicon').href = res.settings.favicon;
+          if(res.settings.favicon) {
+              document.getElementById('favicon').href = res.settings.favicon;
+              localStorage.setItem("wep_favicon", res.settings.favicon);
+          }
           if(res.settings.logo) {
               document.getElementById('login-logo-skeleton').style.display = 'none';
               document.getElementById('login-logo').src = res.settings.logo;
               document.getElementById('login-logo').style.display = 'block';
               document.getElementById('sidebar-logo').src = res.settings.logo;
               document.getElementById('sidebar-logo').style.display = 'block';
+              localStorage.setItem("wep_logo", res.settings.logo);
           }
       }
   });
@@ -269,7 +284,7 @@
     let btn = document.getElementById('authBtn');
     let pin = document.getElementById('pin').value;
     
-    btn.innerText = "⏳ Verifying... Please wait";
+    btn.innerText = "⏳ Verifying...";
     btn.style.opacity = "0.7";
     btn.disabled = true;
     
