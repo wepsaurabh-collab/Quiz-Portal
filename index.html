@@ -9,7 +9,7 @@
 
   <script>
     // ==========================================
-    // YOUR DEPLOYED WEB APP URL:
+    // PLACE YOUR DEPLOYED WEB APP URL HERE:
     const API_URL = "https://script.google.com/macros/s/AKfycbyTjVMCuVx9KzH1StvSRIGR41QKOsTUM6zyoinkmOC8fANFlbDqRPJJPYmDGCq7kwPl/exec";
     // ==========================================
 
@@ -95,7 +95,7 @@
     .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
     .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-    .app-container { max-width: 700px; padding: 15px; }
+    .app-container { max-width: 700px; padding: 20px; margin: 0 auto; }
 
     @media (max-width: 600px) {
       .top-nav { flex-direction: column; gap: 8px; }
@@ -153,8 +153,10 @@
   </div>
 </div>
 
-<div class="app-container" id="login-container">
-  <div id="login-section" class="box" style="padding-top: 45px; padding-bottom: 45px; margin-top: 5vh;">
+<!-- PERFECTLY CENTERED LOGIN CONTAINER -->
+<div id="login-container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; width: 100%; box-sizing: border-box;">
+  
+  <div id="login-section" class="box" style="width: 100%; max-width: 420px; padding: 45px 30px; margin: 0;">
     
     <div id="login-logo-skeleton" class="skeleton" style="height: 50px; width: 160px; margin: 0 auto 20px auto;"></div>
     <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
@@ -186,8 +188,10 @@
        <div id="login-progress-text" class="load-text">0%</div>
     </div>
   </div>
+
 </div>
 
+<!-- MAIN DASHBOARD -->
 <div id="main-app" class="app-container" style="display:none;">
     
     <div class="header">
@@ -313,7 +317,7 @@
               for(let i=0; i<overdue.length; i++) {
                   let tr = overdue[i];
                   defaultersHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5; margin-bottom: 8px;">
                       <div><b style="color:#991b1b; display:block; font-size:14px;">${tr.row[5]}</b><span style="font-size:12px; color:#b91c1c;">${tr.row[7]}</span></div>
                       <div style="font-size:12px; color:#991b1b; font-weight:bold;">${tr.row[4]}</div>
                     </div>`;
@@ -323,11 +327,9 @@
                   document.getElementById('defaulter-list').style.display = 'block';
               }
               
-              // ONLY SHOW POPUP IF THERE IS EITHER UPCOMING OR OVERDUE
               if(nextTrain || defaultersHtml !== "") {
                   document.getElementById('trainingModal').style.display = 'flex';
               }
-
           }
       }
   }
@@ -347,7 +349,6 @@
       }
       if(cachedFav) document.getElementById('favicon').href = cachedFav;
       
-      // If we don't have cached training, wait for API. If we do, show it instantly.
       if(cachedTraining) renderTraining(JSON.parse(cachedTraining));
 
       let res = await apiCall("getPublicData", {});
@@ -368,7 +369,6 @@
       }
       if(res && res.trainingPlan) {
           localStorage.setItem("wep_training", JSON.stringify(res));
-          // Re-render if it wasn't cached or to update changes
           if(!cachedTraining) renderTraining(res);
       }
   });
@@ -433,7 +433,6 @@
         return; 
       }
       
-      // Start 0-100% Animation
       startLoginProgress();
     }
 
