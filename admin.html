@@ -6,21 +6,21 @@
   <title>WeP Operations Command</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
- 
+
   <link rel="icon" type="image/png" id="favicon" href="">
- 
+
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbyh-4vJK7qA8y7G6SeTXPTlkQYJmHjZIM3yVC36qMFq5DJpi5XIrLe2CtvErDynHGiC/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxXWR54cBRZxcaJvRV0SQjqKY6SUoJixoDCD1MUNU0wASW4t7ZNP2eAe4jU4XOmCBZ-/exec";
     // ==========================================
- 
+
     const API_TIMEOUT_MS = 55000;
     const EXPECTED_API = 4.1;          // must match API_VERSION in Code.gs
     let SERVER_API = null;
- 
+
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
- 
+
     /**
      * A POST to /exec is answered with a 302 to script.googleusercontent.com.
      * That second hop is short-lived and single-use: under load, or when the
@@ -30,7 +30,7 @@
     async function rawApiCall(actionName, payloadData) {
       const RETRY_STATUS = [404, 408, 429, 500, 502, 503, 504];
       let lastErr = "Server connection failed. Please check internet or API URL.";
- 
+
       for (let attempt = 1; attempt <= 3; attempt++) {
         let controller = new AbortController();
         let timeoutId = setTimeout(function () { controller.abort(); }, API_TIMEOUT_MS);
@@ -42,13 +42,13 @@
             signal: controller.signal
           });
           clearTimeout(timeoutId);
- 
+
           if (!response.ok) {
             if (RETRY_STATUS.indexOf(response.status) !== -1 && attempt < 3) { await sleep(700 * attempt); continue; }
             return { error: "Server responded with status " + response.status +
               ". Open the Apps Script project and publish a NEW deployment version with access set to 'Anyone'." };
           }
- 
+
           let raw = await response.text();
           let parsed;
           try { parsed = JSON.parse(raw); }
@@ -58,7 +58,7 @@
           }
           if (parsed && parsed.apiVersion) SERVER_API = parseFloat(parsed.apiVersion);
           return parsed;
- 
+
         } catch (error) {
           clearTimeout(timeoutId);
           if (error && error.name === 'AbortError') {
@@ -72,7 +72,7 @@
       }
       return { error: lastErr };
     }
- 
+
     /** All calls run one at a time - overlapping requests are what trigger the flaky redirect. */
     let _apiChain = Promise.resolve();
     function apiCall(actionName, payloadData) {
@@ -81,27 +81,27 @@
       _apiChain = p.then(function () {}, function () {});
       return p;
     }
- 
+
     function backendIsOutdated() { return SERVER_API !== null && SERVER_API < EXPECTED_API; }
   </script>
- 
+
   <style>
     :root { --primary: #0f172a; --secondary: #1e293b; --accent: #2563eb; --success: #059669; --danger: #dc2626; --warn: #f59e0b; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); overflow: hidden; font-size: 15px;}
- 
+
     .layout-wrapper { display: flex; height: 100vh; width: 100%; }
     .sidebar { width: 270px; background: var(--primary); color: #cbd5e1; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0;}
     .main-content { flex: 1; overflow-y: auto; background: var(--bg); padding: 35px; position: relative; min-width: 0;}
- 
+
     .brand { padding: 30px 20px; font-size: 22px; font-weight: 800; color: white; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; margin-bottom: 15px;}
     .brand img { height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain; background: white; padding: 4px 8px; border-radius: 8px; flex-shrink: 0; }
- 
+
     .nav-item { padding: 16px 20px; cursor: pointer; transition: 0.2s; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; border-left: 4px solid transparent;}
     .nav-item:hover { background: var(--secondary); color: white;}
     .nav-item.active { background: var(--secondary); color: white; border-left-color: var(--accent); }
     .nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 20px; display: none; }
     .role-badge { margin: auto 20px 20px 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600;}
- 
+
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 15px; flex-wrap: wrap;}
     .page-header h1 { margin: 0; font-size: 26px; color: var(--primary); font-weight: 800;}
     .header-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -111,7 +111,7 @@
     .live-pill .dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation: pulse 1.4s infinite;}
     .live-pill.off { background:#f1f5f9; border-color:var(--border); color:var(--text-muted);}
     .live-pill.off .dot { background:#94a3b8; animation:none;}
- 
+
     .box { background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid var(--border); }
     input, select, textarea, button { padding: 12px 16px; margin: 6px 0 16px 0; border-radius: 8px; border: 1px solid var(--border); outline:none; font-size: 15px; width: 100%; box-sizing: border-box; font-family:inherit; transition: 0.2s;}
     input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
@@ -123,42 +123,42 @@
     .btn-export-sm:hover { background: #115e59; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .btn-mini { width:auto; margin:0; padding:6px 12px; font-size:12px; border-radius:6px; font-weight:700; }
     .btn-cam { background:#7c3aed; } .btn-cam:hover { background:#6d28d9; }
- 
+
     table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
     th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); text-align: left; }
     th { background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: 0.5px;}
- 
+
     .pill { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px;}
     .pill-pending { background:#fef08a; color:#854d0e; }
     .pill-approved { background:#dcfce7; color:#166534; }
     .pill-rejected { background:#fee2e2; color:#991b1b; }
- 
+
     .flex-row { display: flex; gap: 18px; margin-bottom: 10px; align-items:flex-start; flex-wrap: wrap;}
     .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 25px;}
     .chart-box { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.02); min-width: 0;}
     .chart-container { position: relative; height: 280px; width: 100%; margin-top: 15px;}
     .large-chart-container { position: relative; height: 400px; width: 100%; margin-top: 15px;}
- 
+
     #toast-container { position: fixed; top: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; gap: 10px;}
     .toast { background: var(--primary); color: white; padding: 14px 24px; border-radius: 8px; font-size: 15px; font-weight:500; box-shadow: 0 10px 20px rgba(0,0,0,0.2); border-left: 5px solid var(--accent); animation: slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards;}
     .toast.error { border-left-color: var(--danger); }
     @keyframes slideIn { from{ transform: translateX(100%); } to { transform: translateX(0); } }
     @keyframes fadeOut { to { opacity: 0; } }
- 
+
     .training-input { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 0; }
     .training-select { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; margin:0;}
- 
+
     .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
     .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 24px; overflow: hidden; position: relative; margin-top: 15px; }
     .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.2s linear; }
     .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 24px; font-size: 13px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
- 
+
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 99999; animation: fadeIn 0.2s ease-out; overflow-y: auto; padding: 20px; box-sizing: border-box;}
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     .modal-box { background: white; padding: 35px 30px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); margin: auto;}
- 
+
     /* ===== BRANDED DIALOG (replaces every native alert / confirm) ===== */
     #wepDialog { position: fixed; inset: 0; background: rgba(15,23,42,0.88); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box; animation: fadeIn 0.18s ease-out; }
     #wepDialog .dlg { background: #fff; border-radius: 18px; width: 100%; max-width: 430px; box-shadow: 0 25px 55px rgba(0,0,0,0.35); animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow: hidden; }
@@ -177,7 +177,7 @@
     #wepDialog.danger .dlg-bar { background: var(--danger); }
     #wepDialog.success .dlg-bar { background: var(--success); }
     #wepDialog.warn .dlg-bar { background: var(--warn); }
- 
+
     /* ===== SNAPSHOT GALLERY ===== */
     .snap-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:14px; margin-top:18px; }
     .snap-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#f8fafc; text-decoration:none; display:block; transition:0.2s; }
@@ -186,7 +186,7 @@
     .snap-meta { padding:8px 10px; font-size:11px; color:var(--text-muted); font-weight:700; line-height:1.4; }
     .snap-meta b { display:block; color:var(--primary); font-size:11px; }
     .snap-noimg { height:112px; display:flex; align-items:center; justify-content:center; background:#1e293b; color:#fca5a5; font-size:11px; font-weight:800; text-align:center; padding:8px; }
- 
+
     @media (max-width: 768px) {
       body { overflow-y: auto; }
       .layout-wrapper { flex-direction: column; height: auto; }
@@ -207,9 +207,15 @@
   </style>
 </head>
 <body>
- 
+
 <div id="toast-container"></div>
- 
+
+<!-- Lightweight inline loader used for per-tab data pulls (no blocking modal) -->
+<div id="tab-loading" style="display:none; position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:99998; background:var(--primary); color:#fff; padding:10px 20px; border-radius:22px; font-size:13px; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,0.28); align-items:center; gap:10px;">
+  <span style="width:9px; height:9px; border-radius:50%; background:#38bdf8; animation:pulse 1s infinite; display:inline-block;"></span>
+  <span id="tab-loading-text">Loading…</span>
+</div>
+
 <!-- ===== BRANDED DIALOG ===== -->
 <div id="wepDialog" role="dialog" aria-modal="true">
   <div class="dlg">
@@ -225,7 +231,7 @@
     </div>
   </div>
 </div>
- 
+
 <!-- GLOBAL 0-100% LOADER MODAL -->
 <div class="modal-overlay" id="globalLoaderModal">
   <div class="modal-box" style="max-width:400px; text-align:center;">
@@ -239,19 +245,19 @@
     <p id="loader-stage" style="font-size:12px; color:var(--text-muted); margin:12px 0 0 0; font-weight:600;"></p>
   </div>
 </div>
- 
+
 <!-- SNAPSHOT GALLERY MODAL -->
 <div class="modal-overlay" id="snapModal">
   <div class="modal-box" style="max-width: 900px;">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px; gap:12px; flex-wrap:wrap;">
-      <h3 style="margin:0; color:var(--primary); font-size:20px;">📷 Proctoring Snapshots — <span id="snap-user" style="color:var(--accent);"></span></h3>
+      <h3 style="margin:0; color:var(--primary); font-size:20px;">📷 Live Frame — <span id="snap-user" style="color:var(--accent);"></span></h3>
       <button onclick="document.getElementById('snapModal').style.display='none'" class="btn-mini" style="background:#64748b;">Close</button>
     </div>
-    <p style="font-size:13px; color:var(--text-muted); margin:14px 0 0 0;">Images are stored in your Google Drive folder <b>WeP Proctoring Snapshots</b>. Click any frame to open the full-size image.</p>
+    <p style="font-size:13px; color:var(--text-muted); margin:14px 0 0 0;">The user's most recent camera frame, stored in the <b>LiveCamera</b> sheet. Use Refresh to pull the latest one.</p>
     <div id="snap-grid" class="snap-grid"></div>
   </div>
 </div>
- 
+
 <!-- EDIT QUESTION MODAL -->
 <div class="modal-overlay" id="editQModal">
   <div class="modal-box">
@@ -272,14 +278,14 @@
     </div>
     <label style="font-weight:600; font-size:14px; color:var(--success);">Correct Answer (A/B/C/D)</label>
     <select id="eq-ans" style="font-weight:bold; color:var(--success); font-size:15px; padding:10px;"><option>A</option><option>B</option><option>C</option><option>D</option></select>
- 
+
     <div style="display:flex; justify-content:space-between; gap:15px; margin-top:20px;">
       <button onclick="document.getElementById('editQModal').style.display='none'" style="background:#64748b; padding:12px; width:50%;">Cancel</button>
       <button onclick="saveEditQ()" style="padding: 12px; width:50%;">💾 Save Changes</button>
     </div>
   </div>
 </div>
- 
+
 <div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0; padding:20px; box-sizing:border-box;">
   <div class="box" style="width: 100%; max-width: 420px; text-align:center; padding: 45px 30px; margin:0;">
     <div id="login-logo-skeleton" class="skeleton" style="height: 55px; width: 160px; margin: 0 auto 20px auto;"></div>
@@ -290,9 +296,9 @@
     <button id="authBtn" onclick="login()" style="padding: 16px; font-size: 17px; margin-top:10px; width:100%;">Authenticate Access</button>
   </div>
 </div>
- 
+
 <div id="dashboard" class="layout-wrapper" style="display:none;">
- 
+
   <div class="sidebar">
     <div class="brand">
       <img src="" alt="Logo" id="sidebar-logo" style="display:none;">
@@ -312,7 +318,7 @@
     <div style="flex:1;"></div>
     <div class="role-badge" id="role-display">Role: Verifying...</div>
   </div>
- 
+
   <div class="main-content">
     <div class="page-header">
       <h1 id="page-title">Dashboard Hub</h1>
@@ -323,7 +329,7 @@
         <button class="refresh-btn" id="refBtn" onclick="forceRefresh()">🔄 Sync Data</button>
       </div>
     </div>
- 
+
     <!-- TAB 0: ANALYTICS -->
     <div id="view-analytics" class="tab-content">
       <div class="chart-box" style="margin-bottom: 25px;">
@@ -351,7 +357,7 @@
         <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Score Distribution</h3><button onclick="exportChart('chartDistribution', 'Distribution')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartDistribution"></canvas></div></div>
       </div>
     </div>
- 
+
     <!-- TAB: USER APPROVALS -->
     <div id="view-approvals" class="tab-content" style="display:none;">
       <div class="box" style="background:#faf5ff; border-color:#e9d5ff;">
@@ -372,11 +378,11 @@
         </div>
       </div>
     </div>
- 
+
     <!-- TAB 1: MASTER CONTROLS -->
     <div id="view-controls" class="tab-content" style="display:none;">
       <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 1: Evaluation Module Activation</h3><div class="flex-row"><div style="flex:1;"><label>Target Month</label><select id="ctrl-month"><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Target Week</label><select id="ctrl-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><button onclick="setLiveStatus()" style="width:auto; padding:12px 24px;">Deploy Active Module</button><p style="font-size:14px; color:#64748b; margin-top:15px; background: #f8fafc; padding:10px; border-radius:8px;">Currently Active Infrastructure: <b id="disp-live-status" style="color:var(--primary);"></b></p></div>
- 
+
       <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 2: Security &amp; Accessibility</h3>
         <div class="flex-row" style="gap:25px;">
           <div style="flex:1;"><label>Portal Access</label><select id="ctrl-status"><option value="LIVE">🟢 LIVE (Open)</option><option value="PAUSED">🛑 PAUSED (Closed)</option></select><button onclick="updateState()" class="btn-green">Apply Access</button></div>
@@ -390,17 +396,25 @@
             </select>
             <button onclick="updateCamera()" style="background:#7c3aed;">Apply Camera</button>
           </div>
+          <div style="flex:1;"><label style="color:#7c3aed;">Camera Icon on User Screen</label>
+            <select id="ctrl-widget">
+              <option value="SHOW">👁️ SHOW preview box</option>
+              <option value="HIDE">🙈 HIDE (capture silently)</option>
+            </select>
+            <button onclick="updateWidget()" style="background:#6d28d9;">Apply Icon</button>
+          </div>
         </div>
         <p style="font-size:13px; color:var(--text-muted); margin:0; background:#f8fafc; padding:10px 12px; border-radius:8px;">
           <b>OPTIONAL</b> shows the browser camera prompt to every user and captures snapshots if allowed — a denial is logged but the user can still continue.
           <b>REQUIRED</b> blocks the Start button until the camera is allowed.
+          <b>Camera Icon</b> only controls whether the little preview box is visible to the user — on HIDE, capture keeps working exactly the same, just invisibly.
         </p>
       </div>
- 
+
       <div class="box" style="background: #eff6ff; border-color:#bfdbfe;"><h3 style="color:#1d4ed8; margin-top:0;">Step 3: Result Publication</h3><p style="font-size: 14px; color:#475569; margin-top:0; margin-bottom:15px;">End users see "Evaluating" until you declassify the results.</p><button onclick="publishResults()" style="width:auto; padding:12px 24px; background:#1d4ed8; font-size:15px;">✅ Publish Results to Trainees</button></div>
       <div class="box" style="background: #fff1f2; border-color:#fecdd3;"><h3 style="color:#be123c; margin-top:0;">Step 4: Trainer/Uploader Security</h3><div class="flex-row" style="align-items: flex-end;"><div style="flex:1;"><label style="color:#be123c;">New Trainer Passcode</label><input type="text" id="ctrl-uploader-pass" placeholder="e.g. 9999" style="margin:0; border-color:#fda4af;"></div><button onclick="changeTrainerPass()" style="width:auto; margin:0; background:#be123c;">Update Trainer Passcode</button></div></div>
     </div>
- 
+
     <!-- TAB: LIVE CAMERA -->
     <div id="view-proctoring" class="tab-content" style="display:none;">
       <div class="box">
@@ -425,7 +439,7 @@
         </div>
       </div>
     </div>
- 
+
     <!-- TAB: PLANNED TRAINING -->
     <div id="view-training" class="tab-content" style="display:none;">
       <div class="box">
@@ -447,22 +461,22 @@
         </div>
       </div>
     </div>
- 
+
     <!-- TAB 2: CURRENT WEEK DATA -->
     <div id="view-current" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Active Batch Execution Roster</h3><button class="btn-export" onclick="downloadCSV('current-week-table', 'Active_Week.csv')">Export CSV</button></div><div style="overflow-x: auto;"><table id="current-week-table"></table></div></div></div>
- 
+
     <!-- TAB 3: ATTENDANCE -->
     <div id="view-attendance" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Attendance Matrix</h3><button class="btn-export" onclick="downloadCSV('attendance-table', 'Attendance.csv')">Export CSV</button></div><label style="font-weight:600;">Filter by Cycle:</label><select id="att-month-filter" onchange="renderAttendancePivot()" style="max-width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto; margin-top:10px;"><table id="attendance-table"></table></div></div></div>
- 
+
     <!-- TAB 4: DETAILED ANSWER LOGS -->
     <div id="view-userlogs" class="tab-content" style="display:none;"><div class="box"><h3 style="margin-top:0; color:var(--primary); font-size:20px;">Micro-Telemetry Audit Engine</h3><div class="flex-row"><div style="flex:1;"><label>Select User</label><select id="log-user-select" onchange="populateLogModules()"><option value="">-- Select Identity --</option></select></div><div style="flex:1;"><label>Select Assessment</label><select id="log-module-select" onchange="renderDetailedLogs()"><option value="">Select User First</option></select></div><div style="flex:0.6; padding-top:20px;"><button class="btn-cam" onclick="openSnapshotsForSelectedLog()" style="margin:0;">📷 View Camera</button></div></div><div style="overflow-x: auto;"><table id="detailed-log-table"><tr><th>Q. ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr></table></div></div></div>
- 
+
     <!-- TAB 5: BULK DATA EXPORT -->
     <div id="view-bulkexport" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Bulk Data Extraction</h3><button class="btn-export" onclick="downloadCSV('bulk-export-table', 'Bulk_Dump.csv')">Download Dataset</button></div><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="export-month"><option value="All">All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="export-week"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div><div style="flex:0.5; padding-top:20px;"><button class="btn-green" onclick="loadBulkExport()" style="margin:0;">Load Data</button></div></div><div style="overflow-x: auto; max-height: 400px; border:1px solid var(--border); border-radius:6px;"><table id="bulk-export-table"></table></div></div></div>
- 
+
     <!-- TAB 6: SUMMARY -->
     <div id="view-summary" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Operations Summary</h3><button class="btn-export" onclick="downloadCSV('summary-table', 'Summary.csv')">Export CSV</button></div><label>Filter Month:</label><select id="sum-month-filter" onchange="renderSummaryPivot()" style="max-width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto;"><table id="summary-table"></table></div></div></div>
- 
+
     <!-- TAB 7: QUESTION BANK -->
     <div id="view-qbank" class="tab-content" style="display:none;">
       <div class="box" style="background:#f0fdf4; border-color:#bbf7d0; margin-bottom: 20px;">
@@ -474,7 +488,7 @@
           <button onclick="uploadCSV()" style="width:auto; padding:10px 15px; background:#059669; margin:0;">2. Upload CSV</button>
         </div>
       </div>
- 
+
       <div class="box">
         <h3 style="margin-top:0;">Question Repository</h3>
         <div class="flex-row">
@@ -485,7 +499,7 @@
            <table id="qb-table"></table>
         </div>
       </div>
- 
+
       <div class="box" style="background:#f8fafc;">
         <h3 style="margin-top:0; color:var(--primary);">➕ Upload New Question (Single)</h3>
         <div class="flex-row">
@@ -507,18 +521,21 @@
         <button onclick="addQ()" style="padding: 12px; margin-top:10px;">Upload to Repository</button>
       </div>
     </div>
- 
+
   </div>
 </div>
- 
+
 <script>
   let adminData = null;
+  // SPEED: big tables are pulled per tab, once, and kept here for the session.
+  let dataStore = { responses: null, flags: null, questions: null, training: null };
+  let knownCounts = { responses: -1, questions: -1, training: -1, users: -1 };
   let chart1 = null, chart2 = null, chart3 = null, chart4 = null, chart5 = null, chart6 = null, chartUserWise = null;
   let sessionPin = "";
   let liveTimer = null, liveEnabled = true, liveBusy = false;
   const LIVE_INTERVAL_MS = 60000;
   const monthOrder = { "January":1,"February":2,"March":3,"April":4,"May":5,"June":6,"July":7,"August":8,"September":9,"October":10,"November":11,"December":12 };
- 
+
   const CHARTS_AVAILABLE = (typeof Chart !== "undefined");
   if (CHARTS_AVAILABLE) {
     try {
@@ -526,51 +543,51 @@
       Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
     } catch (e) {}
   }
- 
+
   /* ==========================================================
      BRANDED DIALOG
      ========================================================== */
   let _dlgResolve = null;
- 
+
   function wepDialog(opts) {
     opts = opts || {};
     let box = document.getElementById('wepDialog');
     let okBtn = document.getElementById('dlg-ok');
     let cnBtn = document.getElementById('dlg-cancel');
- 
+
     document.getElementById('dlg-icon').innerText  = opts.icon  || "❓";
     document.getElementById('dlg-title').innerText = opts.title || "Please Confirm";
     document.getElementById('dlg-msg').innerHTML   = opts.html ? opts.message : escapeHtml(opts.message || "").replace(/\n/g, "<br>");
- 
+
     okBtn.innerText = opts.okText || "OK";
     if (opts.cancelText === null) cnBtn.style.display = "none";
     else { cnBtn.style.display = "block"; cnBtn.innerText = opts.cancelText || "Cancel"; }
- 
+
     box.className = "";
     if (opts.tone) box.classList.add(opts.tone);
     box.style.display = "flex";
     setTimeout(function () { okBtn.focus(); }, 60);
- 
+
     return new Promise(function (resolve) { _dlgResolve = resolve; });
   }
- 
+
   function closeWepDialog(result) {
     document.getElementById('wepDialog').style.display = "none";
     if (_dlgResolve) { let r = _dlgResolve; _dlgResolve = null; r(result); }
   }
- 
+
   function wepAlert(message, title, tone, icon) {
     return wepDialog({ message: message, title: title || "Notice",
       icon: icon || (tone === "danger" ? "⚠️" : tone === "success" ? "✅" : "ℹ️"),
       tone: tone || "", okText: "Got it", cancelText: null });
   }
- 
+
   function wepConfirm(message, title, tone, okText) {
     return wepDialog({ message: message, title: title || "Please Confirm",
       icon: tone === "danger" ? "🚨" : "❓", tone: tone || "",
       okText: okText || "Yes, Continue", cancelText: "Cancel" });
   }
- 
+
   document.getElementById('dlg-ok').addEventListener('click', function () { closeWepDialog(true); });
   document.getElementById('dlg-cancel').addEventListener('click', function () { closeWepDialog(false); });
   document.addEventListener('keydown', function (e) {
@@ -578,9 +595,9 @@
     if (e.key === "Escape") { e.preventDefault(); closeWepDialog(false); }
     if (e.key === "Enter")  { e.preventDefault(); closeWepDialog(true); }
   });
- 
+
   /* ---------- helpers ---------- */
- 
+
   function escapeHtml(value) {
     if (value === null || value === undefined) return "";
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -594,7 +611,7 @@
         || document.getElementById('snapModal').style.display === 'flex'
         || document.getElementById('globalLoaderModal').style.display === 'flex';
   }
- 
+
   /* ---------- global loader ---------- */
   let globalProgressInterval = null;
   function startGlobalLoader(titleText) {
@@ -605,7 +622,7 @@
       let stage = document.getElementById('loader-stage');
       fill.style.width = "0%"; txt.innerText = "0%";
       stage.innerText = "Connecting to WeP server...";
- 
+
       let w = 0, ticks = 0;
       clearInterval(globalProgressInterval);
       globalProgressInterval = setInterval(function () {
@@ -626,7 +643,14 @@
       clearInterval(globalProgressInterval); globalProgressInterval = null;
       document.getElementById('globalLoaderModal').style.display = "none";
   }
- 
+
+  /** Which cached table an action invalidates. */
+  const INVALIDATES = {
+    addWeeklyQuestion: ["questions"], editQuestion: ["questions"],
+    deleteQuestion: ["questions"], bulkUploadQuestions: ["questions"],
+    saveTrainingPlan: ["training"], setUserStatus: [], updateAdminSettings: []
+  };
+
   async function actionWithRefresh(actionName, payload, loadText, successToast) {
       startGlobalLoader(loadText);
       let actionRes = await apiCall(actionName, payload);
@@ -635,24 +659,34 @@
         await wepAlert((actionRes && actionRes.error) ? actionRes.error : "Action failed.", "Action Failed", "danger", "🚫");
         return false;
       }
-      let refreshRes = await apiCall("getAdminDashboard", { pin: sessionPin });
-      if (!refreshRes || refreshRes.error) {
+
+      // Drop only what this action actually changed, then reload the LIGHT core.
+      (INVALIDATES[actionName] || []).forEach(function (k) {
+        if (k === "responses") { dataStore.responses = null; dataStore.flags = null; }
+        else dataStore[k] = null;
+      });
+
+      let core = await apiCall("getAdminDashboard", { pin: sessionPin });
+      if (!core || core.error) {
         failGlobalLoader();
-        await wepAlert((refreshRes && refreshRes.error) ? refreshRes.error : "Refresh failed.", "Sync Failed", "danger", "🚫");
+        await wepAlert((core && core.error) ? core.error : "Refresh failed.", "Sync Failed", "danger", "🚫");
         return false;
       }
-      adminData = refreshRes;
+
+      adminData = core;
+      applyCounts(core.counts);
       initDashboard(true);
+      await refreshActiveTab();
       completeGlobalLoader();
       if (successToast) showToast(successToast, "success");
       return true;
   }
- 
+
   /* ---------- boot ---------- */
   document.addEventListener("DOMContentLoaded", async function () {
       let cachedLogo = null, cachedFav = null;
       try { cachedLogo = localStorage.getItem("wep_logo"); cachedFav = localStorage.getItem("wep_favicon"); } catch (e) {}
- 
+
       if (cachedLogo) {
           document.getElementById('login-logo-skeleton').style.display = 'none';
           document.getElementById('login-logo').src = cachedLogo;
@@ -661,18 +695,18 @@
           document.getElementById('sidebar-logo').style.display = 'block';
       }
       if (cachedFav) document.getElementById('favicon').href = cachedFav;
- 
+
       document.getElementById('pin').addEventListener("keydown", function (ev) {
           if (ev.key === "Enter") { ev.preventDefault(); login(); }
       });
- 
+
       // SPEED: getPublicData doubles as the warm-up call. A separate "ping" was
       // removed on purpose - Apps Script queues concurrent executions for the
       // same owner, so an extra request could make authentication wait behind it.
- 
+
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { document.getElementById('login-logo-skeleton').style.display = 'none'; return; }
- 
+
       if (res.settings) {
           if (res.settings.favicon) {
               document.getElementById('favicon').href = res.settings.favicon;
@@ -688,7 +722,7 @@
           } else { document.getElementById('login-logo-skeleton').style.display = 'none'; }
       } else { document.getElementById('login-logo-skeleton').style.display = 'none'; }
   });
- 
+
   function showToast(message, type) {
     type = type || "success";
     let container = document.getElementById("toast-container");
@@ -698,8 +732,62 @@
     container.appendChild(toast);
     setTimeout(function () { toast.remove(); }, 3000);
   }
- 
-  function switchTab(tabId, elem) {
+
+  let activeTab = "analytics";
+
+  // Which lazy table each tab needs.
+  const TAB_NEEDS = {
+    analytics: "responses", current: "responses", attendance: "responses",
+    summary: "responses", userlogs: "responses", bulkexport: "responses",
+    qbank: "questions", training: "training",
+    approvals: null, controls: null, proctoring: null
+  };
+
+  function tabBusy(on, msg) {
+    let el = document.getElementById('tab-loading');
+    el.style.display = on ? "flex" : "none";
+    if (on) document.getElementById('tab-loading-text').innerText = msg || "Loading…";
+  }
+
+  /** Fetches a big table once, then serves it from memory for the whole session. */
+  async function ensureTable(kind) {
+    if (!kind) return true;
+    if (kind === "responses" && dataStore.responses) return true;
+    if (kind === "questions" && dataStore.questions) return true;
+    if (kind === "training"  && dataStore.training)  return true;
+
+    tabBusy(true, kind === "responses" ? "Loading assessment data…" : kind === "questions" ? "Loading question bank…" : "Loading training plan…");
+    let action = kind === "responses" ? "getResponses" : kind === "questions" ? "getQuestions" : "getTraining";
+    let res = await apiCall(action, { pin: sessionPin });
+    tabBusy(false);
+
+    if (!res || res.error) { showToast((res && res.error) || "Could not load data.", "error"); return false; }
+
+    if (kind === "responses") { dataStore.responses = res.responses || []; dataStore.flags = res.flags || []; }
+    if (kind === "questions") dataStore.questions = res.questions || [];
+    if (kind === "training")  dataStore.training  = res.trainingPlan || [];
+    return true;
+  }
+
+  /** Renders only what the visible tab needs - nothing else. */
+  function renderTab(tabId) {
+    if (tabId === 'analytics')   renderCharts();
+    if (tabId === 'current')     renderCurrentWeek();
+    if (tabId === 'attendance')  renderAttendancePivot();
+    if (tabId === 'summary')     renderSummaryPivot();
+    if (tabId === 'userlogs')    initDetailedLogsSystem();
+    if (tabId === 'bulkexport')  renderBulkExport();
+    if (tabId === 'qbank')       renderQuestionBank();
+    if (tabId === 'training')    renderTrainingPlan();
+    if (tabId === 'approvals')   renderApprovals();
+    if (tabId === 'proctoring')  renderProctoring();
+  }
+
+  async function refreshActiveTab() {
+    if (await ensureTable(TAB_NEEDS[activeTab])) renderTab(activeTab);
+  }
+
+  async function switchTab(tabId, elem) {
     document.querySelectorAll('.tab-content').forEach(function (el) { el.style.display = 'none'; });
     let view = document.getElementById('view-' + tabId);
     if (view) view.style.display = 'block';
@@ -710,35 +798,41 @@
       let badge = label.querySelector('.nav-badge'); if (badge) badge.remove();
       document.getElementById('page-title').innerText = label.innerText.replace(/[^\x00-\x7F]/g, "").trim();
     }
-    if (tabId === 'analytics' && adminData && adminData.role === "MASTER_ADMIN") renderCharts();
+    activeTab = tabId;
+    if (!adminData) return;
+    if (await ensureTable(TAB_NEEDS[tabId])) renderTab(tabId);
   }
- 
+
   /* ==========================================================
      LOGIN + LIVE AUTO-REFRESH
      ========================================================== */
- 
+
   async function login() {
     let pin = document.getElementById('pin').value;
     if (!pin) { await wepAlert("Please enter your secure passcode.", "Passcode Required", "warn", "🔑"); return; }
- 
+
     startGlobalLoader("Authenticating...");
     let res = await apiCall("getAdminDashboard", { pin: pin });
- 
+
     if (!res || res.error) {
         failGlobalLoader();
         await wepAlert((res && res.error) ? res.error : "Authentication failed.", "Access Denied", "danger", "🔒");
         return;
     }
- 
+
     sessionPin = pin;
     adminData = res;
+    applyCounts(res.counts);
+
     document.getElementById('login-screen').style.display = "none";
     document.getElementById('dashboard').style.display = "flex";
     document.body.style.overflow = "";
     document.getElementById('role-display').innerText = "Logged in as: " + String(res.role).replace("_", " ");
- 
+
     initDashboard();
- 
+    completeGlobalLoader();          // dashboard is usable immediately
+    showToast("Access Granted");
+
     if (res.role === "UPLOADER") {
         document.querySelectorAll('.admin-only').forEach(function (el) { el.style.display = 'none'; });
         document.getElementById('live-pill').style.display = 'none';
@@ -747,20 +841,25 @@
         switchTab('analytics', document.querySelector('.nav-item.admin-only'));
         startLive();
     }
- 
-    completeGlobalLoader();
-    showToast("Access Granted");
- 
-    // Loud, actionable warning instead of silently-empty screens.
-    if (backendIsOutdated() || typeof res.cameras === "undefined") {
+
+    if (backendIsOutdated() || typeof res.counts === "undefined") {
       await wepAlert("This dashboard expects WeP server v" + EXPECTED_API +
         (SERVER_API ? " but the deployed script is v" + SERVER_API : " but the deployed script is older") +
-        ".\n\nOpen the Apps Script project, paste the latest Code.gs, run setupSheets once, then publish a NEW deployment version.\n\n" +
-        "Until then, Live Camera stays empty and logins stay slow.",
+        ".\n\nPaste the latest Code.gs, run setupSheets once, then publish a NEW deployment version.",
         "Server Version Mismatch", "warn", "🔧");
     }
   }
- 
+
+  function applyCounts(c) {
+    if (!c) return;
+    // A counter that moved means that table is stale - drop it so the next
+    // visit to its tab pulls a fresh copy. Nothing else is re-downloaded.
+    if (knownCounts.responses !== -1 && c.responses !== knownCounts.responses) { dataStore.responses = null; dataStore.flags = null; }
+    if (knownCounts.questions !== -1 && c.questions !== knownCounts.questions) dataStore.questions = null;
+    if (knownCounts.training  !== -1 && c.training  !== knownCounts.training)  dataStore.training  = null;
+    knownCounts = { responses: c.responses, questions: c.questions, training: c.training, users: c.users };
+  }
+
   function startLive() {
     clearInterval(liveTimer);
     liveTimer = setInterval(liveRefresh, LIVE_INTERVAL_MS);
@@ -768,7 +867,7 @@
     document.getElementById('live-pill').classList.remove('off');
     document.getElementById('live-label').innerText = "LIVE · auto-sync on";
   }
- 
+
   function toggleLive() {
     if (liveEnabled) {
       clearInterval(liveTimer); liveTimer = null; liveEnabled = false;
@@ -781,57 +880,78 @@
       liveRefresh();
     }
   }
- 
-  /** Silent background refresh - no loader, no scroll jump, never interrupts a dialog. */
+
+  /**
+   * SPEED: the heartbeat now asks only for counters, settings, users and the
+   * camera index - no tables. A table is re-downloaded ONLY if its row count
+   * changed, and even then only for the tab you are actually looking at.
+   */
   async function liveRefresh() {
     if (!liveEnabled || liveBusy || !sessionPin) return;
-    if (document.hidden) return;                 // nothing to update in a hidden tab
-    if (anyModalOpen()) return;                  // don't yank data while admin is editing
+    if (document.hidden) return;
+    if (anyModalOpen()) return;
     if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].indexOf(document.activeElement.tagName) !== -1) return;
- 
+
     liveBusy = true;
     document.getElementById('live-label').innerText = "LIVE · syncing...";
-    let res = await apiCall("getAdminDashboard", { pin: sessionPin });
+    let res = await apiCall("getPulse", { pin: sessionPin });
     liveBusy = false;
- 
-    if (!res || res.error) {
-      document.getElementById('live-label').innerText = "LIVE · retrying";
-      return;
-    }
-    adminData = res;
-    initDashboard(true);
- 
+
+    if (!res || res.error) { document.getElementById('live-label').innerText = "LIVE · retrying"; return; }
+
+    let before = { r: dataStore.responses, q: dataStore.questions, t: dataStore.training };
+    applyCounts(res.counts);
+
+    adminData.cameras = res.cameras || [];
+    adminData.users = res.users || adminData.users;
+    if (res.settings) for (let k in res.settings) adminData.settings[k] = res.settings[k];
+
+    renderApprovals();
+    if (activeTab === 'proctoring') renderProctoring();
+
+    // Only re-pull + re-render when the data this tab uses actually changed.
+    let needed = TAB_NEEDS[activeTab];
+    let changed = (needed === "responses" && before.r && !dataStore.responses)
+               || (needed === "questions" && before.q && !dataStore.questions)
+               || (needed === "training"  && before.t && !dataStore.training);
+    if (changed) await refreshActiveTab();
+
     let t = new Date();
     document.getElementById('live-label').innerText = "LIVE · " +
       ("0" + t.getHours()).slice(-2) + ":" + ("0" + t.getMinutes()).slice(-2) + ":" + ("0" + t.getSeconds()).slice(-2);
   }
- 
+
   async function forceRefresh() {
-    startGlobalLoader("Syncing Data...");
+    document.getElementById('refBtn').disabled = true;
+    tabBusy(true, "Syncing…");
+    dataStore = { responses: null, flags: null, questions: null, training: null };
+
     let res = await apiCall("getAdminDashboard", { pin: sessionPin });
     if (!res || res.error) {
-      failGlobalLoader();
+      tabBusy(false);
+      document.getElementById('refBtn').disabled = false;
       await wepAlert((res && res.error) ? res.error : "Sync failed.", "Sync Failed", "danger", "🚫");
       return;
     }
     adminData = res;
+    knownCounts = { responses: -1, questions: -1, training: -1, users: -1 };
+    applyCounts(res.counts);
     initDashboard(true);
-    completeGlobalLoader();
+    await refreshActiveTab();
+    tabBusy(false);
+    document.getElementById('refBtn').disabled = false;
     showToast("Data Synchronized", "success");
   }
- 
+
+  /** Renders only the always-available light data. Big tables are per tab. */
   function initDashboard(isSilent) {
     isSilent = (isSilent === true);
     if (!adminData) return;
- 
-    adminData.responses = adminData.responses || [];
-    adminData.questions = adminData.questions || [];
-    adminData.trainingPlan = adminData.trainingPlan || [];
+
     adminData.users = adminData.users || [];
     adminData.cameras = adminData.cameras || [];
-    adminData.flags = adminData.flags || [];
     adminData.settings = adminData.settings || {};
- 
+
     if (adminData.role === "MASTER_ADMIN") {
       document.getElementById('disp-live-status').innerText = adminData.settings.month + " (" + adminData.settings.week + ")";
       if (!isSilent) {
@@ -841,15 +961,14 @@
         document.getElementById('ctrl-timer').value = adminData.settings.timer || 10;
         setSelectValue('ctrl-strict', adminData.settings.strict || "OFF");
         setSelectValue('ctrl-camera', adminData.settings.camera || "OPTIONAL");
+        setSelectValue('ctrl-widget', adminData.settings.widget || "SHOW");
         setSelectValue('ctrl-approval', adminData.settings.requireApproval || "ON");
       }
-      renderCurrentWeek(); renderAttendancePivot(); renderSummaryPivot();
-      initDetailedLogsSystem(); renderCharts(); renderBulkExport();
-      renderTrainingPlan(); renderApprovals(); renderProctoring();
+      renderApprovals();
+      renderProctoring();
     }
-    renderQuestionBank();
   }
- 
+
   function setSelectValue(id, value) {
     let sel = document.getElementById(id);
     if (!sel || value === undefined || value === null || value === "") return;
@@ -857,27 +976,28 @@
     if (!found) { let opt = document.createElement("option"); opt.text = value; opt.value = value; sel.add(opt); }
     sel.value = value;
   }
- 
+
   /* ==========================================================
      SETTINGS ACTIONS
      ========================================================== */
- 
+
   function updateState()  { actionWithRefresh("updateAdminSettings", {type:"SET_STATE",  value1: document.getElementById('ctrl-status').value}, "Applying State...", "Status Updated!"); }
   function updateStrict() { actionWithRefresh("updateAdminSettings", {type:"SET_STRICT", value1: document.getElementById('ctrl-strict').value}, "Applying Security...", "Strict Mode Updated!"); }
   function updateCamera() { actionWithRefresh("updateAdminSettings", {type:"SET_CAMERA", value1: document.getElementById('ctrl-camera').value}, "Applying Camera Policy...", "Camera Proctoring Updated!"); }
+  function updateWidget() { actionWithRefresh("updateAdminSettings", {type:"SET_WIDGET", value1: document.getElementById('ctrl-widget').value}, "Updating Camera Icon...", "Camera Icon Setting Updated!"); }
   function updateApprovalMode() { actionWithRefresh("updateAdminSettings", {type:"SET_APPROVAL", value1: document.getElementById('ctrl-approval').value}, "Updating Registration Policy...", "Registration Policy Updated!"); }
   function setLiveStatus() {
     actionWithRefresh("updateAdminSettings",
       {type:"SET_LIVE", value1: document.getElementById('ctrl-month').value, value2: document.getElementById('ctrl-week').value},
       "Deploying Module...", "Module Deployed!");
   }
- 
+
   async function updateTimer() {
     let t = parseInt(document.getElementById('ctrl-timer').value, 10);
     if (isNaN(t) || t < 1) { await wepAlert("Please enter a valid timer value in minutes (minimum 1).", "Invalid Timer", "warn", "⏱️"); return; }
     actionWithRefresh("updateAdminSettings", {type:"SET_TIMER", value1: t}, "Updating Timer...", "Timer Updated!");
   }
- 
+
   async function publishResults() {
     if (!adminData || !adminData.settings) return;
     let m = adminData.settings.month, w = adminData.settings.week;
@@ -887,7 +1007,7 @@
     if (!ok) return;
     actionWithRefresh("updateAdminSettings", {type:"PUBLISH_RESULT", value1:m, value2:w}, "Publishing Results...", "Results Declassified!");
   }
- 
+
   async function changeTrainerPass() {
     let newP = document.getElementById('ctrl-uploader-pass').value.trim();
     if (!newP) { await wepAlert("Please type the new trainer passcode first.", "Passcode Required", "warn", "🔑"); return; }
@@ -896,11 +1016,11 @@
     document.getElementById('ctrl-uploader-pass').value = "";
     actionWithRefresh("updateAdminSettings", {type:"CHANGE_UPLOADER_PASS", value1:newP}, "Updating Password...", "Password Updated!");
   }
- 
+
   /* ==========================================================
      USER APPROVALS
      ========================================================== */
- 
+
   function countPendingUsers() {
     let n = 0;
     for (let i = 1; i < (adminData.users || []).length; i++) {
@@ -908,38 +1028,38 @@
     }
     return n;
   }
- 
+
   function renderApprovals() {
     if (!adminData) return;
     let filter = document.getElementById('appr-filter').value.trim().toUpperCase();
     let search = document.getElementById('appr-search').value.trim().toLowerCase();
     let table = document.getElementById('approvals-table');
     let rows = adminData.users || [];
- 
+
     let pending = countPendingUsers();
     let badge = document.getElementById('approval-badge');
     badge.innerText = pending;
     badge.style.display = pending > 0 ? "inline-block" : "none";
- 
+
     let html = ["<tr><th>Registered On</th><th>Name</th><th>Mobile</th><th>Email</th><th>Department</th><th>Status</th><th style='text-align:center; min-width:190px;'>Action</th></tr>"];
     let count = 0;
- 
+
     for (let i = 1; i < rows.length; i++) {
       let r = rows[i];
       let status = cell(r, 5).trim() || "Pending";
       if (filter !== "ALL" && status.toUpperCase() !== filter) continue;
- 
+
       let hay = (cell(r,1) + " " + cell(r,2) + " " + cell(r,3) + " " + cell(r,4)).toLowerCase();
       if (search && hay.indexOf(search) === -1) continue;
- 
+
       let phone = digits(cell(r, 2));
       let pillClass = status.toUpperCase() === "APPROVED" ? "pill-approved" : status.toUpperCase() === "REJECTED" ? "pill-rejected" : "pill-pending";
- 
+
       let actions = "";
       if (status.toUpperCase() !== "APPROVED") actions += '<button class="btn-mini btn-green" onclick="decideUser(\'' + phone + '\',\'Approved\')" style="margin-right:6px;">✔ Approve</button>';
       if (status.toUpperCase() !== "REJECTED") actions += '<button class="btn-mini" onclick="decideUser(\'' + phone + '\',\'Rejected\')" style="background:var(--danger); margin-right:6px;">✖ Reject</button>';
       if (status.toUpperCase() !== "PENDING")  actions += '<button class="btn-mini" onclick="decideUser(\'' + phone + '\',\'Pending\')" style="background:#64748b;">↺ Reset</button>';
- 
+
       html.push('<tr>' +
         '<td style="font-size:13px; color:var(--text-muted);">' + escapeHtml(cell(r,0)) + '</td>' +
         '<td><b>' + escapeHtml(cell(r,1)) + '</b></td>' +
@@ -951,11 +1071,11 @@
       '</tr>');
       count++;
     }
- 
+
     if (count === 0) html.push('<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">No registrations match this filter.</td></tr>');
     table.innerHTML = html.join("");
   }
- 
+
   async function decideUser(phone, status) {
     let verb = status === "Approved" ? "approve" : status === "Rejected" ? "reject" : "reset to pending";
     let ok = await wepConfirm(
@@ -967,15 +1087,15 @@
     if (!ok) return;
     actionWithRefresh("setUserStatus", { phone: phone, status: status }, "Updating user status...", "User marked as " + status + "!");
   }
- 
+
   /* ==========================================================
      CAMERA PROCTORING VIEWS
      ========================================================== */
- 
+
   // Images are base64 JPEGs held in the sheet, fetched ONE user at a time so
   // the dashboard payload (and therefore login time) stays small.
   let photoCache = {};   // phone -> { photo, event, capturedOn, name }
- 
+
   function camCardShell(entry, loaded) {
     let p = entry.phone;
     let media = loaded && loaded.photo
@@ -987,52 +1107,52 @@
         escapeHtml(entry.event || "-") + '<br>' + escapeHtml(entry.capturedOn || "") + '</div>' +
       '</div>';
   }
- 
+
   function renderProctoring() {
     if (!adminData) return;
     let list = adminData.cameras || [];
     let search = (document.getElementById('proctor-search').value || "").trim().toLowerCase();
- 
+
     let cards = [], tbl = ["<tr><th>Name</th><th>Mobile</th><th>Last Event</th><th>Captured On</th><th style='text-align:center;'>Frame</th></tr>"];
     let shown = 0;
- 
+
     for (let i = 0; i < list.length; i++) {
       let e = list[i];
       let hay = ((e.name || "") + " " + (e.phone || "")).toLowerCase();
       if (search && hay.indexOf(search) === -1) continue;
- 
+
       cards.push('<div id="camcard-' + e.phone + '">' + camCardShell(e, photoCache[e.phone]) + '</div>');
       tbl.push('<tr><td><b>' + escapeHtml(e.name || "-") + '</b></td><td>' + escapeHtml(e.phone) + '</td>' +
         '<td>' + escapeHtml(e.event || "-") + '</td><td style="font-size:13px;">' + escapeHtml(e.capturedOn || "-") + '</td>' +
         '<td style="text-align:center;"><button class="btn-mini btn-cam" onclick="openSnapshots(\'' + e.phone + '\',\'' + escapeHtml(e.name || "").replace(/'/g, "") + '\')">📷 View</button></td></tr>');
       shown++;
     }
- 
+
     let emptyMsg = backendIsOutdated()
       ? '<p style="color:#b45309; background:#fef3c7; border:1px solid #fcd34d; padding:14px 16px; border-radius:10px; font-size:14px; grid-column:1/-1;"><b>Server script is outdated.</b> Paste the latest Code.gs, run <b>setupSheets</b> once, then publish a NEW deployment version. The <b>LiveCamera</b> sheet is created by that step — without it nothing can be saved.</p>'
       : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:20px 0;">No camera frames captured yet. Camera Proctoring must be ON (Quiz Config → Step 2), the user must allow their camera, and they must log in once after that.</p>';
- 
+
     document.getElementById('proctor-grid').innerHTML = cards.length ? cards.join("") : emptyMsg;
- 
+
     if (shown === 0) tbl.push("<tr><td colspan='5' style='text-align:center; padding:25px; color:#94a3b8;'>No camera records.</td></tr>");
     document.getElementById('proctor-table').innerHTML = tbl.join("");
   }
- 
+
   /** Pulls a single user's current frame from the server. */
   async function loadCameraFrame(phone, silent) {
     let p = digits(phone);
     let holder = document.getElementById('camcard-' + p);
     let entry = (adminData.cameras || []).filter(function (e) { return e.phone === p; })[0] || { phone: p };
- 
+
     if (holder && !silent) holder.innerHTML = '<div class="snap-card"><div class="snap-noimg">Loading…</div><div class="snap-meta"><b>' + escapeHtml(entry.name || p) + '</b>please wait</div></div>';
- 
+
     let res = await apiCall("getLoginPhoto", { pin: sessionPin, phone: p });
     photoCache[p] = (res && res.ok) ? { photo: res.photo, event: res.event, capturedOn: res.capturedOn, name: res.name } : { photo: "" };
- 
+
     if (holder) holder.innerHTML = camCardShell(entry, photoCache[p]);
     return photoCache[p];
   }
- 
+
   async function loadAllCameraFrames() {
     let list = adminData.cameras || [];
     if (list.length === 0) { await wepAlert("No camera frames have been captured yet.", "Nothing to Load", "warn", "📷"); return; }
@@ -1044,16 +1164,16 @@
     for (let i = 0; i < list.length; i++) await loadCameraFrame(list[i].phone);
     showToast("All frames loaded", "success");
   }
- 
+
   /** Big single-user view with a manual refresh button. */
   async function openSnapshots(phone, name) {
     let p = digits(phone);
     document.getElementById('snap-user').innerText = (name || "") + " (" + p + ")";
     document.getElementById('snap-grid').innerHTML = '<p style="grid-column:1/-1; color:var(--text-muted); padding:25px 0;">Loading current frame…</p>';
     document.getElementById('snapModal').style.display = "flex";
- 
+
     let res = await apiCall("getLoginPhoto", { pin: sessionPin, phone: p });
- 
+
     if (!res || res.error || !res.photo) {
       document.getElementById('snap-grid').innerHTML =
         '<div style="grid-column:1/-1; padding:20px 0;">' +
@@ -1062,7 +1182,7 @@
         '</div>';
       return;
     }
- 
+
     photoCache[p] = { photo: res.photo, event: res.event, capturedOn: res.capturedOn, name: res.name };
     document.getElementById('snap-grid').innerHTML =
       '<div style="grid-column:1/-1; text-align:center;">' +
@@ -1072,22 +1192,22 @@
         '<button class="btn-mini btn-cam" onclick="openSnapshots(\'' + p + '\',\'' + escapeHtml(res.name || "").replace(/'/g, "") + '\')">🔄 Refresh Frame</button>' +
       '</div>';
   }
- 
+
   async function openSnapshotsForSelectedLog() {
     let sel = document.getElementById('log-user-select');
     if (!sel.value) { await wepAlert("Please select a user first.", "No User Selected", "warn", "👤"); return; }
     openSnapshots(sel.value, sel.options[sel.selectedIndex].text);
   }
- 
+
   /* ==========================================================
      TRAINING PLAN
      ========================================================== */
- 
+
   function renderTrainingPlan() {
       let tbody = document.getElementById("training-tbody");
-      let tData = adminData.trainingPlan || [];
+      let tData = (dataStore.training || []) || [];
       if (tData.length <= 1) { tbody.innerHTML = ""; return; }
- 
+
       let html = [];
       for (let i = 1; i < tData.length; i++) {
           let row = tData[i] || [], status = cell(row, 8);
@@ -1109,9 +1229,9 @@
       }
       tbody.innerHTML = html.join("");
   }
- 
+
   function removeTrainingRow(btn) { let tr = btn.closest("tr"); if (tr) tr.remove(); }
- 
+
   function addTrainingRow() {
       let tbody = document.getElementById("training-tbody");
       let tr = document.createElement("tr");
@@ -1128,7 +1248,7 @@
         '<td><button type="button" onclick="removeTrainingRow(this)" style="background:#dc2626; padding:6px 12px; margin:0; color:white; border:none; border-radius:4px; width:auto;">X</button></td>';
       tbody.appendChild(tr);
   }
- 
+
   function saveTrainingPlan() {
       let rows = document.getElementById("training-tbody").querySelectorAll("tr");
       let data = [ ["Month","Week","Segment","Assignment Date","Presentation Date","Presenter Name","Email","Product/Topic Assigned","Status"] ];
@@ -1140,20 +1260,20 @@
       });
       actionWithRefresh("saveTrainingPlan", { trainingData: data }, "Saving Training Plan...", "Training Plan Saved!");
   }
- 
+
   /* ==========================================================
      REPORTS
      ========================================================== */
- 
+
   function renderCurrentWeek() {
     let html = ["<tr><th>Identity Info</th><th>Final Score</th><th>Evaluation Details</th><th style='text-align:center;'>Proctoring</th></tr>"];
     let count = 0;
-    for (let i = 1; i < adminData.responses.length; i++) {
-      let r = adminData.responses[i];
+    for (let i = 1; i < (dataStore.responses || []).length; i++) {
+      let r = (dataStore.responses || [])[i];
       if (cell(r,3) === adminData.settings.month && cell(r,4) === adminData.settings.week) {
         let color = parseFloat(cell(r,8)) >= 40 ? '#059669' : '#dc2626';
         // Flag comes from its own light column, so the heavy log column never loads.
-        let flag = (adminData.flags && adminData.flags[i]) ? String(adminData.flags[i]) : "";
+        let flag = ((dataStore.flags || []) && (dataStore.flags || [])[i]) ? String((dataStore.flags || [])[i]) : "";
         let detailLog = flag ? '<span style="color:#dc2626; font-size:11px; display:block;">(' + escapeHtml(flag) + ')</span>' : "";
         let phone = digits(cell(r,2));
         html.push('<tr><td><b style="font-size:15px;">' + escapeHtml(cell(r,1)) + '</b> <br><span style="color:#64748b; font-size:13px;">' + escapeHtml(cell(r,2)) + '</span> ' + detailLog +
@@ -1166,19 +1286,19 @@
     if (count === 0) html.push("<tr><td colspan='4' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for current batch.</td></tr>");
     document.getElementById('current-week-table').innerHTML = html.join("");
   }
- 
+
   function sortWeeksChronologically(weeksArray) {
     return weeksArray.slice().sort(function (a, b) {
       let pa = a.split(" Week "), pb = b.split(" Week ");
       return ((monthOrder[pa[0]]||0)*10 + (parseInt(pa[1],10)||0)) - ((monthOrder[pb[0]]||0)*10 + (parseInt(pb[1],10)||0));
     });
   }
- 
+
   function renderAttendancePivot() {
     let filterMonth = document.getElementById('att-month-filter').value.trim();
     let users = {}, weeksSet = {}, count = 0;
-    for (let i = 1; i < adminData.responses.length; i++) {
-      let r = adminData.responses[i], rMonth = cell(r,3).trim();
+    for (let i = 1; i < (dataStore.responses || []).length; i++) {
+      let r = (dataStore.responses || [])[i], rMonth = cell(r,3).trim();
       if (filterMonth !== "All Months" && rMonth !== filterMonth) continue;
       let phone = cell(r,2), mw = rMonth + " " + cell(r,4).trim();
       weeksSet[mw] = true;
@@ -1189,7 +1309,7 @@
     let weeksArray = sortWeeksChronologically(Object.keys(weeksSet));
     let table = document.getElementById('attendance-table');
     if (count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
- 
+
     let html = ["<tr><th>Identity Name</th>"];
     weeksArray.forEach(function (w) { html.push("<th>" + escapeHtml(w) + "</th>"); });
     html.push("</tr>");
@@ -1202,12 +1322,12 @@
     }
     table.innerHTML = html.join("");
   }
- 
+
   function renderSummaryPivot() {
     let filterMonth = document.getElementById('sum-month-filter').value.trim();
     let users = {}, weeksSet = {}, count = 0;
-    for (let i = 1; i < adminData.responses.length; i++) {
-      let r = adminData.responses[i], rMonth = cell(r,3).trim();
+    for (let i = 1; i < (dataStore.responses || []).length; i++) {
+      let r = (dataStore.responses || [])[i], rMonth = cell(r,3).trim();
       if (filterMonth !== "All Months" && rMonth !== filterMonth) continue;
       let phone = cell(r,2), mw = rMonth + " " + cell(r,4).trim();
       weeksSet[mw] = true;
@@ -1218,7 +1338,7 @@
     let weeksArray = sortWeeksChronologically(Object.keys(weeksSet));
     let table = document.getElementById('summary-table');
     if (count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
- 
+
     let html = ["<tr><th>Identity Name</th>"];
     weeksArray.forEach(function (w) { html.push("<th>" + escapeHtml(w) + "</th>"); });
     html.push("</tr>");
@@ -1229,33 +1349,33 @@
     }
     table.innerHTML = html.join("");
   }
- 
+
   function initDetailedLogsSystem() {
     let uSelect = document.getElementById('log-user-select');
     let usersMap = {};
-    for (let i = 1; i < adminData.responses.length; i++) usersMap[cell(adminData.responses[i],2)] = cell(adminData.responses[i],1);
+    for (let i = 1; i < (dataStore.responses || []).length; i++) usersMap[cell((dataStore.responses || [])[i],2)] = cell((dataStore.responses || [])[i],1);
     let currentVal = uSelect.value;
     let html = ["<option value=''>-- Select Identity --</option>"];
     for (let phone in usersMap) html.push('<option value="' + escapeHtml(phone) + '">' + escapeHtml(usersMap[phone]) + '</option>');
     uSelect.innerHTML = html.join("");
     if (currentVal && usersMap[currentVal]) { uSelect.value = currentVal; populateLogModules(); }
   }
- 
+
   function populateLogModules() {
     let phone = document.getElementById('log-user-select').value;
     let mSelect = document.getElementById('log-module-select');
     let html = ["<option value=''>-- Select Module --</option>"];
     if (phone) {
-      for (let i = 1; i < adminData.responses.length; i++) {
-        if (cell(adminData.responses[i],2) === String(phone)) {
-          html.push('<option value="' + i + '">' + escapeHtml(cell(adminData.responses[i],3)) + ' - ' + escapeHtml(cell(adminData.responses[i],4)) + ' (Final: ' + escapeHtml(cell(adminData.responses[i],8)) + ')</option>');
+      for (let i = 1; i < (dataStore.responses || []).length; i++) {
+        if (cell((dataStore.responses || [])[i],2) === String(phone)) {
+          html.push('<option value="' + i + '">' + escapeHtml(cell((dataStore.responses || [])[i],3)) + ' - ' + escapeHtml(cell((dataStore.responses || [])[i],4)) + ' (Final: ' + escapeHtml(cell((dataStore.responses || [])[i],8)) + ')</option>');
         }
       }
     }
     mSelect.innerHTML = html.join("");
     renderDetailedLogs();
   }
- 
+
   /**
    * SPEED: detailed answer logs are NOT part of the dashboard payload any more
    * (they were megabytes of JSON). They are fetched for one row, on demand.
@@ -1265,20 +1385,20 @@
     let table = document.getElementById('detailed-log-table');
     let html = ["<tr><th>ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr>"];
     if (!rowIndex) { table.innerHTML = html.join(""); return; }
- 
+
     table.innerHTML = html.join("") + '<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">Loading answer log…</td></tr>';
- 
+
     // Sheet rows are 1-based and include the header, so array index + 1 = sheet row.
     let res = await apiCall("getResponseLog", { pin: sessionPin, row: parseInt(rowIndex, 10) + 1 });
     if (!res || res.error) {
       html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#dc2626;">' + escapeHtml((res && res.error) || "Could not load the log.") + '</td></tr>');
       table.innerHTML = html.join(""); return;
     }
- 
+
     let jsonStr = res.log || "";
     if (!jsonStr) { html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">No detailed logs found.</td></tr>'); table.innerHTML = html.join(""); return; }
     if (jsonStr.indexOf("Disqualified") !== -1) { html.push('<tr><td colspan="4" style="color:#dc2626; padding:20px; font-weight:bold;">🚨 Disqualified - Cheating</td></tr>'); table.innerHTML = html.join(""); return; }
- 
+
     try {
       let logsObj = JSON.parse(jsonStr);
       Object.keys(logsObj).forEach(function (qKey) {
@@ -1294,7 +1414,7 @@
     }
     table.innerHTML = html.join("");
   }
- 
+
   /**
    * SPEED: like Telemetry, bulk logs are fetched on demand for the chosen
    * month/week instead of riding along with every dashboard sync.
@@ -1310,21 +1430,21 @@
     }
     // Already loaded: leave the table alone so a background sync never re-fetches it.
   }
- 
+
   async function loadBulkExport() {
     let fMonth = document.getElementById('export-month').value.trim();
     let fWeek = document.getElementById('export-week').value.trim();
     let table = document.getElementById('bulk-export-table');
     let head = "<tr><th>User Name</th><th>Q. ID</th><th>Question</th><th>User Ans</th><th>Correct Ans</th><th>Status</th></tr>";
- 
+
     table.innerHTML = head + "<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>Loading answer logs…</td></tr>";
- 
+
     let res = await apiCall("getBulkLogs", { pin: sessionPin, month: fMonth, week: fWeek });
     if (!res || res.error) {
       table.innerHTML = head + "<tr><td colspan='6' style='text-align:center; padding:30px; color:#dc2626;'>" + escapeHtml((res && res.error) || "Could not load logs.") + "</td></tr>";
       return;
     }
- 
+
     bulkLoaded = true;
     let html = [head], count = 0;
     (res.rows || []).forEach(function (row) {
@@ -1343,26 +1463,26 @@
         });
       } catch (e) {}
     });
- 
+
     if (count === 0) html.push("<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for selected filter.</td></tr>");
     table.innerHTML = html.join("");
   }
- 
+
   function renderQuestionBank() {
-    if (!adminData) return;
+    if (!adminData || !dataStore.questions) return;
     let fMonth = document.getElementById('qb-month').value.trim();
     let fWeek = document.getElementById('qb-week').value.trim();
     let html = ["<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th><th style='text-align:center;'>Actions</th></tr>"];
     let count = 0;
- 
-    for (let i = 1; i < adminData.questions.length; i++) {
-      let q = adminData.questions[i];
+
+    for (let i = 1; i < (dataStore.questions || []).length; i++) {
+      let q = (dataStore.questions || [])[i];
       let qMonth = cell(q,1).trim(), qWeek = cell(q,2).trim();
       if ((fMonth === "All Months" || qMonth === fMonth) && (fWeek === "All Weeks" || qWeek === fWeek)) {
         let ansLetter = cell(q,8).trim().toUpperCase();
         let letterIdx = { A:4, B:5, C:6, D:7 };
         let realAnsText = (letterIdx[ansLetter] !== undefined) ? cell(q, letterIdx[ansLetter]) : "";
- 
+
         html.push('<tr>' +
             '<td>' + escapeHtml(cell(q,0)) + '</td>' +
             '<td><span style="font-size:11px; font-weight:600; color:#64748b;">' + escapeHtml(qMonth) + ' - ' + escapeHtml(qWeek) + '</span></td>' +
@@ -1378,11 +1498,11 @@
     if (count === 0) html.push('<tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">No questions found.</td></tr>');
     document.getElementById('qb-table').innerHTML = html.join("");
   }
- 
+
   /* ==========================================================
      CSV BULK UPLOAD
      ========================================================== */
- 
+
   function downloadCSVTemplate() {
     let csvContent = "Month,Week,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nSeptember,Week 1,What is WeP?,Company,Brand,Fruit,Animal,A\n";
     let blob = new Blob(["﻿" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1392,7 +1512,7 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     showToast("Template Downloaded!");
   }
- 
+
   function parseCsvLine(line) {
     let out = [], cur = "", inQuotes = false;
     for (let i = 0; i < line.length; i++) {
@@ -1409,12 +1529,12 @@
     out.push(cur);
     return out;
   }
- 
+
   async function uploadCSV() {
     let fileInput = document.getElementById('csv-upload-file');
     let file = fileInput.files[0];
     if (!file) { await wepAlert("Please choose a CSV file first.", "No File Selected", "warn", "📄"); return; }
- 
+
     let reader = new FileReader();
     reader.onerror = function () { wepAlert("The selected file could not be read.", "Read Error", "danger", "🚫"); };
     reader.onload = async function (e) {
@@ -1435,23 +1555,23 @@
         }
       }
       if (dataArr.length === 0) { await wepAlert("No valid rows were found. Please check the template format.", "Nothing to Upload", "warn", "📄"); return; }
- 
+
       let ok = await wepConfirm(dataArr.length + " question(s) will be added to the repository.", "Confirm Bulk Upload", "", "Yes, Upload");
       if (!ok) return;
- 
+
       await actionWithRefresh("bulkUploadQuestions", { questionsData: dataArr }, "Uploading CSV...", dataArr.length + " questions uploaded!");
       fileInput.value = "";
     };
     reader.readAsText(file);
   }
- 
+
   /* ==========================================================
      QUESTION CRUD
      ========================================================== */
- 
+
   let editingQId = null;
   async function openEditQ(rowIndex) {
-    let qData = adminData.questions[rowIndex];
+    let qData = (dataStore.questions || [])[rowIndex];
     if (!qData) { await wepAlert("That question is no longer available. Please sync the data.", "Not Found", "warn", "🔍"); return; }
     editingQId = cell(qData, 0);
     document.getElementById('eq-month').value = cell(qData,1);
@@ -1465,7 +1585,7 @@
     document.getElementById('eq-ans').value = (["A","B","C","D"].indexOf(ans) !== -1) ? ans : "A";
     document.getElementById('editQModal').style.display = 'flex';
   }
- 
+
   async function saveEditQ() {
     let data = {
       month: document.getElementById('eq-month').value.trim(), week: document.getElementById('eq-week').value.trim(),
@@ -1478,16 +1598,16 @@
     document.getElementById('editQModal').style.display = 'none';
     actionWithRefresh("editQuestion", { id: editingQId, questionData: data }, "Updating Question...", "Question Updated Successfully!");
   }
- 
+
   async function deleteQ(rowIndex) {
-    let qData = adminData.questions[rowIndex];
+    let qData = (dataStore.questions || [])[rowIndex];
     if (!qData) { await wepAlert("That question is no longer available. Please sync the data.", "Not Found", "warn", "🔍"); return; }
     let id = cell(qData, 0);
     let ok = await wepConfirm("Question ID " + id + " will be permanently deleted:\n\n" + cell(qData, 3), "Delete Question?", "danger", "Yes, Delete");
     if (!ok) return;
     actionWithRefresh("deleteQuestion", { id: id }, "Deleting Question...", "Question Deleted!");
   }
- 
+
   async function addQ() {
     let data = {
       month: document.getElementById('nq-month').value, week: document.getElementById('nq-week').value,
@@ -1499,85 +1619,85 @@
     ['nq-q','nq-a','nq-b','nq-c','nq-d'].forEach(function (id) { document.getElementById(id).value = ""; });
     actionWithRefresh("addWeeklyQuestion", { questionData: data }, "Uploading to Repository...", "Question Bank Updated!");
   }
- 
+
   /* ==========================================================
      CHARTS
      ========================================================== */
- 
+
   function renderCharts() {
-    if (!CHARTS_AVAILABLE || !adminData) return;
+    if (!CHARTS_AVAILABLE || !adminData || !dataStore.responses) return;
     if (document.getElementById('view-analytics').style.display === 'none') return;
- 
+
     let usersStats = {}, weeksMap = {}, pass = 0, fail = 0;
     let distribution = { "Excellent(>80%)":0, "Good(60-80%)":0, "Average(40-60%)":0, "Fail(<40%)":0 };
     let filterMonth = document.getElementById('user-chart-month').value;
     let filterWeek = document.getElementById('user-chart-week').value;
     let userWiseGraphData = {};
- 
-    for (let i = 1; i < adminData.responses.length; i++) {
-      let r = adminData.responses[i];
+
+    for (let i = 1; i < (dataStore.responses || []).length; i++) {
+      let r = (dataStore.responses || [])[i];
       let phone = cell(r,2), name = cell(r,1), score = parseFloat(cell(r,8)) || 0;
       if (!phone && !name) continue;
- 
+
       if (!usersStats[phone]) usersStats[phone] = { name: (name.split(" ")[0] || name), totalScore: 0, attempts: 0 };
       usersStats[phone].totalScore += score; usersStats[phone].attempts += 1;
- 
+
       let mwKey = cell(r,3) + " " + cell(r,4);
       if (!weeksMap[mwKey]) weeksMap[mwKey] = { sum: 0, count: 0 };
       weeksMap[mwKey].sum += score; weeksMap[mwKey].count++;
- 
+
       if (cell(r,3) === adminData.settings.month && cell(r,4) === adminData.settings.week) { if (score >= 40) pass++; else fail++; }
- 
+
       if (score > 80) distribution["Excellent(>80%)"]++;
       else if (score >= 60) distribution["Good(60-80%)"]++;
       else if (score >= 40) distribution["Average(40-60%)"]++;
       else distribution["Fail(<40%)"]++;
- 
+
       if ((filterMonth === "All" || cell(r,3) === filterMonth) && (filterWeek === "All" || cell(r,4) === filterWeek)) {
           if (!userWiseGraphData[name]) userWiseGraphData[name] = { score: 0, count: 0 };
           userWiseGraphData[name].score += score; userWiseGraphData[name].count++;
       }
     }
- 
+
     let sortedWeeks = sortWeeksChronologically(Object.keys(weeksMap));
     let trendScores = sortedWeeks.map(function (w) { return Math.round(weeksMap[w].sum / weeksMap[w].count); });
- 
+
     let barDL   = { datalabels: { color:'#ffffff', font:{weight:'bold',size:10}, formatter:function(v){return v>0?v+'%':'';} } };
     let lineDL  = { datalabels: { color:'#1e3a8a', align:'top', anchor:'end', font:{weight:'bold',size:11}, formatter:function(v){return v>0?v+'%':'';} } };
     let countDL = { datalabels: { color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v){return v>0?v:'';} } };
     let pieDL   = { datalabels: { color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v,ctx){ let sum=0; ctx.chart.data.datasets[0].data.forEach(function(d){sum+=d;}); return (v>0&&sum>0)?Math.round((v*100)/sum)+'%':''; } } };
- 
+
     let uwNames = [], uwScores = [];
     for (let n in userWiseGraphData) { uwNames.push(n); uwScores.push(Math.round(userWiseGraphData[n].score / userWiseGraphData[n].count)); }
     if (chartUserWise) chartUserWise.destroy();
     chartUserWise = new Chart(document.getElementById('chartUserWise'), { type:'bar', data:{ labels:uwNames, datasets:[{ label:'Average Score (%)', data:uwScores, backgroundColor:'#6366f1', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:barDL } });
- 
+
     if (chart1) chart1.destroy();
     chart1 = new Chart(document.getElementById('chartAverage'), { type:'line', data:{ labels:sortedWeeks, datasets:[{ label:'Mean Score (%)', data:trendScores, borderColor:'#2563eb', tension:0.3, fill:true, backgroundColor:'rgba(37,99,235,0.1)' }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:lineDL } });
- 
+
     if (chart2) chart2.destroy();
     chart2 = new Chart(document.getElementById('chartPassFail'), { type:'doughnut', data:{ labels:['Passed','Failed'], datasets:[{ data:[pass,fail], backgroundColor:['#10b981','#ef4444'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:pieDL } });
- 
+
     let topUsersArray = [];
     for (let ph in usersStats) topUsersArray.push({ n: usersStats[ph].name, avg: Math.round(usersStats[ph].totalScore / usersStats[ph].attempts) });
     topUsersArray.sort(function (a, b) { return b.avg - a.avg; });
- 
+
     let top5 = topUsersArray.slice(0, 5);
     if (chart3) chart3.destroy();
     chart3 = new Chart(document.getElementById('chartTop5'), { type:'bar', data:{ labels:top5.map(function(x){return x.n;}), datasets:[{ label:'Score', data:top5.map(function(x){return x.avg;}), backgroundColor:'#0f766e', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:barDL } });
- 
+
     let bottom5 = topUsersArray.slice().reverse().slice(0, 5);
     if (chart4) chart4.destroy();
     chart4 = new Chart(document.getElementById('chartBottom5'), { type:'bar', data:{ labels:bottom5.map(function(x){return x.n;}), datasets:[{ label:'Score', data:bottom5.map(function(x){return x.avg;}), backgroundColor:'#f59e0b', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:100 } }, plugins:barDL } });
- 
+
     let partCount = sortedWeeks.map(function (w) { return weeksMap[w].count; });
     if (chart5) chart5.destroy();
     chart5 = new Chart(document.getElementById('chartParticipation'), { type:'bar', data:{ labels:sortedWeeks, datasets:[{ label:'Submissions', data:partCount, backgroundColor:'#8b5cf6', borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:countDL } });
- 
+
     if (chart6) chart6.destroy();
     chart6 = new Chart(document.getElementById('chartDistribution'), { type:'pie', data:{ labels:Object.keys(distribution), datasets:[{ data:Object.values(distribution), backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:pieDL } });
   }
- 
+
   function exportChart(canvasId, fileName) {
       let canvas = document.getElementById(canvasId);
       if (!canvas) return;
@@ -1590,7 +1710,7 @@
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       showToast("Chart Exported", "success");
   }
- 
+
   function downloadCSV(tableId, filename) {
     let table = document.getElementById(tableId);
     if (!table) return;
@@ -1611,4 +1731,3 @@
 </script>
 </body>
 </html>
- 
