@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WeP Assessment Portal</title>
 
   <link rel="icon" type="image/png" id="favicon" href="">
@@ -14,7 +14,7 @@
     // ==========================================
 
     const API_TIMEOUT_MS = 40000;
-    const EXPECTED_API = 4.1;          // must match API_VERSION in Code.gs
+    const EXPECTED_API = 5.0;          // must match API_VERSION in Code.gs
     let SERVER_API = null;             // filled from the first successful reply
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -89,111 +89,236 @@
   </script>
 
   <style>
-    :root { --primary: #0f172a; --secondary: #1e3a8a; --accent: #2563eb; --accent-hover: #1d4ed8; --success: #059669; --danger: #dc2626; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
+    :root {
+      --primary:#0f172a; --secondary:#1e3a8a; --accent:#2563eb; --accent-hover:#1d4ed8;
+      --success:#059669; --danger:#dc2626; --warn:#f59e0b;
+      --bg:#eef2f7; --surface:#ffffff; --text:#334155; --text-muted:#64748b; --border:#e2e8f0;
+      --radius:16px; --shadow:0 10px 30px -12px rgba(15,23,42,0.22);
+    }
 
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; color: var(--text); font-size: 15px; line-height: 1.6; -webkit-text-size-adjust: 100%; }
+    * { box-sizing: border-box; }
+    body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:var(--bg); margin:0; padding:0;
+           min-height:100vh; color:var(--text); font-size:15px; line-height:1.6; -webkit-text-size-adjust:100%; }
 
-    .wep-logo { height: 50px !important; width: auto !important; max-width: 100% !important; object-fit: contain; background: white; padding: 8px 15px; border-radius: 8px; margin: 0 auto 15px auto; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .box { background:var(--surface); padding:30px; border-radius:var(--radius); box-shadow:var(--shadow);
+           margin-bottom:26px; border:1px solid var(--border); }
 
-    .header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 55px 20px 25px 20px; border-radius: 16px; margin-bottom: 25px; text-align: center; position: relative; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);}
-    .header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
-    .header p { margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1; font-weight: 500;}
-    .sync-icon { position: absolute; right: 15px; top: 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.3s; font-weight:600; display:flex; align-items:center; gap:5px; backdrop-filter: blur(4px);}
-    .sync-icon:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px);}
+    .form-group { margin-bottom:20px; text-align:left; }
+    .form-group label { display:block; margin-bottom:8px; font-weight:700; color:var(--primary); font-size:14px; letter-spacing:0.2px; }
+    .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="tel"],
+    .form-group input[type="email"], .form-group input[type="password"] {
+      width:100%; padding:15px 16px; border:1px solid var(--border); border-radius:12px; outline:none;
+      font-size:16px; transition:0.2s; background:#f8fafc; font-family:inherit; color:var(--text); }
+    .form-group input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,0.10); }
+    .hint { font-size:12px; color:var(--text-muted); margin:6px 2px 0 2px; font-weight:600; }
 
-    .box { background: var(--surface); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border); }
+    .btn { background:var(--accent); color:#fff; border:none; padding:16px 20px; border-radius:12px; cursor:pointer;
+           font-size:16px; font-weight:700; width:100%; transition:0.2s; display:inline-block; text-align:center;
+           letter-spacing:0.3px; font-family:inherit; }
+    .btn:hover { background:var(--accent-hover); transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(37,99,235,0.7); }
+    .btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+    .btn-secondary { background:#64748b; } .btn-secondary:hover { background:#475569; }
+    .btn-success { background:var(--success); } .btn-success:hover { background:#047857; }
+    .link-btn { background:none; border:none; color:var(--accent); font-weight:700; font-size:14px; cursor:pointer;
+                text-decoration:underline; padding:0; width:auto; font-family:inherit; }
+    .link-btn:hover { color:var(--accent-hover); }
 
-    .form-group { margin-bottom: 22px; text-align: left;}
-    .form-group label { display: block; margin-bottom: 10px; font-weight: 700; color: var(--primary); font-size: 15px;}
-    .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="tel"], .form-group input[type="email"] { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; transition: 0.3s; background: #f8fafc;}
-    .form-group input:focus { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    /* ================= LOGIN SHELL ================= */
+    .login-shell { min-height:100vh; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,430px);
+                   gap:30px; max-width:1100px; margin:0 auto; padding:32px 20px; align-items:center; }
+    .login-card { padding:38px 32px; margin:0; }
+    .login-brand { text-align:center; margin-bottom:26px; }
+    .login-brand img { height:54px; width:auto; max-width:220px; background:#fff; padding:6px 16px; border-radius:10px;
+                       box-shadow:0 6px 16px -8px rgba(15,23,42,0.45); }
+    .login-title { margin:0; color:var(--primary); text-align:center; font-size:25px; font-weight:800; letter-spacing:-0.3px; }
+    .login-sub { text-align:center; color:var(--text-muted); font-size:14px; margin:8px 0 28px 0; }
 
-    .btn { background: var(--accent); color: white; border: none; padding: 16px 20px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 700; width: 100%; transition: 0.3s; display:inline-block; text-align:center; letter-spacing: 0.5px;}
-    .btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37,99,235,0.25);}
-    .btn-secondary { background: #64748b; box-shadow:none; } .btn-secondary:hover { background: #475569; }
-    .btn-success { background: var(--success); } .btn-success:hover { background: #047857; }
+    /* ---- searchable name combobox ---- */
+    .combo { position:relative; }
+    .combo-input { width:100%; padding:15px 46px 15px 16px; border:1px solid var(--border); border-radius:12px;
+                   outline:none; font-size:16px; background:#f8fafc; font-family:inherit; color:var(--text); transition:0.2s; }
+    .combo-input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,0.10); }
+    .combo-caret { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none;
+                   color:var(--text-muted); font-size:15px; cursor:pointer; padding:6px 8px; width:auto; }
+    .combo-list { position:absolute; z-index:50; left:0; right:0; top:calc(100% + 6px); background:#fff;
+                  border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 38px -14px rgba(15,23,42,0.4);
+                  max-height:260px; overflow-y:auto; display:none; }
+    .combo.open .combo-list { display:block; }
+    .combo-item { padding:12px 16px; font-size:15px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-weight:600; color:var(--primary); }
+    .combo-item:last-child { border-bottom:none; }
+    .combo-item:hover, .combo-item.active { background:#eff6ff; }
+    .combo-item mark { background:#dbeafe; color:#1d4ed8; padding:0 1px; border-radius:3px; }
+    .combo-empty { padding:16px; font-size:13px; color:var(--text-muted); text-align:center; }
 
-    .link-btn { background:none; border:none; color:var(--accent); font-weight:700; font-size:14px; cursor:pointer; text-decoration:underline; padding:0; width:auto; }
-    .link-btn:hover { color: var(--accent-hover); }
+    .pwd-wrap { position:relative; }
+    .pwd-wrap input { padding-right:62px !important; letter-spacing:2px; }
+    .pwd-toggle { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:#f1f5f9; border:none;
+                  color:#475569; font-size:12px; font-weight:800; cursor:pointer; padding:8px 10px; border-radius:8px; width:auto; }
+    .pwd-toggle:hover { background:#e2e8f0; }
 
-    .top-nav { display: flex; background: #e2e8f0; border-radius: 12px; margin-bottom: 30px; padding: 6px; }
-    .nav-item { flex: 1; text-align: center; color: var(--text-muted); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; padding: 14px; border-radius: 8px; }
-    .nav-item.active { color: var(--primary); background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: 800;}
+    .tnc-box { display:flex; align-items:flex-start; gap:12px; margin-bottom:22px; background:#f8fafc; padding:14px;
+               border-radius:10px; border:1px solid var(--border); }
+    .tnc-box input { width:20px; height:20px; margin-top:2px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+    .tnc-box label { font-size:12.5px; color:var(--text-muted); line-height:1.6; font-weight:500; margin:0; }
 
-    .section-title { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 15px; letter-spacing: 0.3px; border-bottom: 2px solid var(--bg); padding-bottom:10px;}
-    table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
-    th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); }
-    th { background: #f8fafc; color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight:700; letter-spacing: 0.5px;}
-    .badge-pending { background:#fef08a; color:#854d0e; padding:6px 12px; border-radius:20px; font-weight:700; font-size: 12px; text-transform: uppercase;}
-    .badge-score { background:#dcfce7; color:#166534; padding:6px 14px; border-radius:20px; font-weight:800; font-size: 15px;}
+    /* ================= TRAINING PANEL ================= */
+    .t-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+               box-shadow:var(--shadow); padding:26px 26px 22px 26px; }
+    .t-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+    .t-chip { display:inline-flex; align-items:center; gap:7px; background:#eff6ff; color:#1d4ed8; font-size:11px;
+              font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:6px 12px; border-radius:20px; }
+    .t-chip .dot { width:7px; height:7px; border-radius:50%; background:#2563eb; animation:pulse 1.6s infinite; }
+    .t-head h2 { margin:0; font-size:20px; color:var(--primary); font-weight:800; letter-spacing:-0.3px; }
 
-    .timer-bar { background: #fff1f2; color: #be123c; padding: 18px 25px; border-radius: 12px; font-weight: 800; text-align: center; margin-bottom: 25px; border: 1px solid #fecdd3; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(225, 29, 72, 0.05);}
-    .timer-bar.warning { background:#fee2e2; border-color:#f87171; animation: pulse 1.2s infinite; }
-    .status-bar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background: white; padding: 16px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 14px; color: var(--text-muted); font-weight: 700; }
+    .t-next { background:linear-gradient(135deg,#0f172a,#1e3a8a); color:#fff; border-radius:14px; padding:22px;
+              position:relative; overflow:hidden; }
+    .t-next::after { content:""; position:absolute; width:180px; height:180px; border-radius:50%;
+                     background:rgba(255,255,255,0.07); right:-60px; top:-70px; }
+    .t-next-top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+                  position:relative; z-index:1; margin-bottom:12px; }
+    .t-count { background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.22); color:#fff; font-size:11px;
+               font-weight:800; letter-spacing:0.6px; text-transform:uppercase; padding:5px 11px; border-radius:20px; }
+    .t-count.soon { background:#f59e0b; border-color:#f59e0b; color:#1f2937; }
+    .t-count.today { background:#059669; border-color:#059669; }
+    .t-when { font-size:12.5px; color:#cbd5e1; font-weight:700; }
+    .t-topic { margin:0 0 14px 0; font-size:21px; font-weight:800; line-height:1.35; position:relative; z-index:1; }
+    .t-person { display:flex; align-items:center; gap:12px; position:relative; z-index:1;
+                border-top:1px dashed rgba(255,255,255,0.22); padding-top:14px; }
+    .t-avatar { width:40px; height:40px; border-radius:50%; background:#fff; color:#1e3a8a; font-weight:800;
+                display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .t-person b { display:block; font-size:15px; }
+    .t-person small { color:#cbd5e1; font-size:12px; }
 
-    .q-title { font-size: 20px; font-weight: 700; color: var(--primary); line-height: 1.5; margin-bottom: 25px; padding-bottom:15px; border-bottom: 1px solid var(--border);}
-    .option-label { display: flex; align-items:center; padding: 20px 18px; border: 1px solid var(--border); margin-bottom: 15px; border-radius: 10px; cursor: pointer; background: #f8fafc; transition: all 0.2s; font-size: 17px; font-weight: 600; color:var(--text); word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4;}
-    .option-label:hover { border-color: var(--accent); background: #eff6ff; }
-    .option-label.selected { border-color: var(--accent); background: #eff6ff; box-shadow: 0 2px 8px rgba(37,99,235,0.15);}
-    input[type="radio"] { margin-right: 18px; transform: scale(1.4); accent-color: var(--accent); flex-shrink: 0;}
+    .t-sub { font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted);
+             margin:20px 0 10px 0; display:flex; align-items:center; gap:8px; }
+    .t-sub.red { color:var(--danger); }
+    .t-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    .t-row { display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid var(--border);
+             border-radius:10px; padding:11px 13px; }
+    .t-row.late { background:#fff1f2; border-color:#fecdd3; }
+    .t-row .t-date-pill { font-size:11px; font-weight:800; color:#475569; background:#fff; border:1px solid var(--border);
+                          padding:5px 9px; border-radius:7px; white-space:nowrap; }
+    .t-row.late .t-date-pill { color:#be123c; border-color:#fecdd3; }
+    .t-row .t-info { min-width:0; flex:1; }
+    .t-row .t-info b { display:block; font-size:13.5px; color:var(--primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .t-row .t-info span { font-size:12px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+    .t-empty { background:#f8fafc; border:1px dashed var(--border); border-radius:12px; padding:26px; text-align:center;
+               color:var(--text-muted); font-size:14px; font-weight:600; }
+    .t-foot { margin-top:18px; font-size:11.5px; color:#94a3b8; text-align:center; font-weight:600; }
 
-    .progress-bar-bg { width: 100%; background: var(--border); height: 8px; border-radius: 4px; margin-bottom: 25px; overflow: hidden;}
-    .progress-bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    /* ================= APP SHELL ================= */
+    .app-container { max-width:900px; padding:22px; margin:0 auto; width:100%; }
+    .wep-logo { height:48px; width:auto; max-width:100%; object-fit:contain; background:#fff; padding:7px 14px;
+                border-radius:9px; margin:0 auto 14px auto; display:block; box-shadow:0 6px 14px -8px rgba(0,0,0,0.5); }
+    .header { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; padding:28px 20px;
+              border-radius:var(--radius); margin-bottom:22px; text-align:center; position:relative;
+              box-shadow:0 14px 30px -16px rgba(15,23,42,0.8); }
+    .header h1 { margin:0; font-size:21px; font-weight:800; letter-spacing:0.3px; }
+    .header p { margin:7px 0 0 0; font-size:13px; color:#cbd5e1; font-weight:500; }
+    .sync-icon { position:absolute; right:14px; top:14px; background:rgba(255,255,255,0.12); color:#fff;
+                 border:1px solid rgba(255,255,255,0.22); padding:8px 12px; border-radius:9px; font-size:12px;
+                 cursor:pointer; transition:0.2s; font-weight:700; display:flex; align-items:center; gap:5px; }
+    .sync-icon:hover { background:rgba(255,255,255,0.26); }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 9999; animation: fadeIn 0.2s ease-out; }
-    .modal-box { background: white; padding: 35px 30px; border-radius: 16px; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .top-nav { display:flex; background:#e2e8f0; border-radius:12px; margin-bottom:24px; padding:6px; }
+    .nav-item { flex:1; text-align:center; color:var(--text-muted); font-size:15px; font-weight:700; cursor:pointer;
+                display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s; padding:13px; border-radius:9px; }
+    .nav-item.active { color:var(--primary); background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.08); font-weight:800; }
 
-    /* ===== BRANDED DIALOG (replaces every native alert / confirm) ===== */
-    #wepDialog { position: fixed; inset: 0; background: rgba(15,23,42,0.88); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box; animation: fadeIn 0.18s ease-out; }
-    #wepDialog .dlg { background: #fff; border-radius: 18px; width: 100%; max-width: 430px; box-shadow: 0 25px 55px rgba(0,0,0,0.35); animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow: hidden; }
-    #wepDialog .dlg-head { padding: 28px 28px 0 28px; text-align: center; }
-    #wepDialog .dlg-icon { font-size: 44px; line-height: 1; margin-bottom: 14px; display: block; }
-    #wepDialog .dlg-title { margin: 0; font-size: 21px; font-weight: 800; color: var(--primary); }
-    #wepDialog .dlg-msg { padding: 14px 28px 26px 28px; text-align: center; font-size: 15px; color: var(--text); line-height: 1.65; }
-    #wepDialog .dlg-actions { display: flex; gap: 12px; padding: 0 28px 28px 28px; }
-    #wepDialog .dlg-actions button { flex: 1; padding: 15px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
-    #wepDialog .dlg-cancel { background: #e2e8f0; color: #475569; } #wepDialog .dlg-cancel:hover { background: #cbd5e1; }
-    #wepDialog .dlg-ok { background: var(--accent); color: #fff; } #wepDialog .dlg-ok:hover { background: var(--accent-hover); }
-    #wepDialog.danger .dlg-ok { background: var(--danger); } #wepDialog.danger .dlg-ok:hover { background: #b91c1c; }
-    #wepDialog.success .dlg-ok { background: var(--success); } #wepDialog.success .dlg-ok:hover { background: #047857; }
-    #wepDialog .dlg-bar { height: 7px; width: 100%; background: var(--accent); }
-    #wepDialog.danger .dlg-bar { background: var(--danger); }
-    #wepDialog.success .dlg-bar { background: var(--success); }
-    #wepDialog.warn .dlg-bar { background: #f59e0b; } #wepDialog.warn .dlg-ok { background: #f59e0b; }
+    .section-title { font-size:17px; font-weight:800; color:var(--primary); margin-bottom:14px; letter-spacing:0.2px;
+                     border-bottom:2px solid var(--bg); padding-bottom:10px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; text-align:left; }
+    th, td { padding:15px 13px; border-bottom:1px solid var(--border); }
+    th { background:#f8fafc; color:var(--text-muted); text-transform:uppercase; font-size:11.5px; font-weight:800; letter-spacing:0.5px; }
+    .badge-pending { background:#fef08a; color:#854d0e; padding:5px 11px; border-radius:20px; font-weight:800; font-size:11.5px; text-transform:uppercase; }
+    .badge-score { background:#dcfce7; color:#166534; padding:5px 13px; border-radius:20px; font-weight:800; font-size:14px; }
+    .rank-pill { display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; border-radius:50%;
+                 background:#e2e8f0; color:#475569; font-size:11px; font-weight:800; margin-right:8px; }
+    .rank-pill.top { background:#fde68a; color:#92400e; }
 
-    /* ===== CAMERA PROCTORING WIDGET ===== */
-    #cam-box { position: fixed; right: 16px; bottom: 16px; width: 150px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 2px solid var(--success); background: #000; z-index: 9500; display: none; }
-    #cam-box video { width: 100%; height: auto; display: block; transform: scaleX(-1); }
-    #cam-status { font-size: 10px; font-weight: 800; color: #fff; background: var(--success); padding: 4px 6px; text-align: center; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 5px; }
-    #cam-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: pulse 1.2s infinite; }
-    #cam-box.denied { border-color: var(--danger); } #cam-box.denied #cam-status { background: var(--danger); }
+    .timer-bar { background:#fff1f2; color:#be123c; padding:16px 22px; border-radius:12px; font-weight:800; text-align:center;
+                 margin-bottom:22px; border:1px solid #fecdd3; display:flex; justify-content:space-between; align-items:center; }
+    .timer-bar.warning { background:#fee2e2; border-color:#f87171; animation:pulse 1.2s infinite; }
+    .status-bar { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; background:#fff;
+                  padding:15px; border-radius:12px; border:1px solid #bfdbfe; font-size:14px; color:var(--text-muted); font-weight:700; }
 
-    .tnc-box { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .tnc-box input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;}
-    .tnc-box label { font-size: 13px; color: var(--text-muted); line-height: 1.6; font-weight: 500; text-transform: none; margin:0;}
+    .q-title { font-size:19px; font-weight:700; color:var(--primary); line-height:1.5; margin-bottom:22px;
+               padding-bottom:14px; border-bottom:1px solid var(--border); }
+    .option-label { display:flex; align-items:center; padding:18px 16px; border:1px solid var(--border); margin-bottom:13px;
+                    border-radius:11px; cursor:pointer; background:#f8fafc; transition:0.15s; font-size:16px; font-weight:600;
+                    color:var(--text); overflow-wrap:anywhere; line-height:1.45; }
+    .option-label:hover { border-color:var(--accent); background:#eff6ff; }
+    .option-label.selected { border-color:var(--accent); background:#eff6ff; box-shadow:0 2px 8px rgba(37,99,235,0.14); }
+    input[type="radio"] { margin-right:16px; transform:scale(1.35); accent-color:var(--accent); flex-shrink:0; }
+    .opt-key { width:26px; height:26px; border-radius:7px; background:#e2e8f0; color:#475569; font-size:12px; font-weight:800;
+               display:flex; align-items:center; justify-content:center; margin-right:12px; flex-shrink:0; }
+    .option-label.selected .opt-key { background:var(--accent); color:#fff; }
 
-    .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+    .progress-bar-bg { width:100%; background:var(--border); height:8px; border-radius:4px; margin-bottom:22px; overflow:hidden; }
+    .progress-bar-fill { background:var(--accent); height:100%; width:0%; transition:width 0.4s cubic-bezier(0.4,0,0.2,1); }
 
-    .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 22px; overflow: hidden; position: relative; margin-top: 15px; display: none; }
-    .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s linear; }
-    .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 22px; font-size: 12px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(5px); display:flex;
+                     justify-content:center; align-items:center; z-index:9999; animation:fadeIn 0.2s ease-out; padding:18px; }
+    .modal-box { background:#fff; padding:34px 28px; border-radius:16px; text-align:center; max-width:420px; width:100%;
+                 box-shadow:0 20px 40px rgba(0,0,0,0.3); animation:popIn 0.3s cubic-bezier(0.175,0.885,0.32,1.2); }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    @keyframes popIn { 0%{transform:scale(0.92);opacity:0;} 100%{transform:scale(1);opacity:1;} }
 
-    .app-container { max-width: 850px; padding: 20px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    /* ===== BRANDED DIALOG ===== */
+    #wepDialog { position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(6px); display:none;
+                 justify-content:center; align-items:center; z-index:100000; padding:20px; animation:fadeIn 0.18s ease-out; }
+    #wepDialog .dlg { background:#fff; border-radius:18px; width:100%; max-width:430px;
+                      box-shadow:0 25px 55px rgba(0,0,0,0.35); animation:popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow:hidden; }
+    #wepDialog .dlg-head { padding:28px 28px 0 28px; text-align:center; }
+    #wepDialog .dlg-icon { font-size:42px; line-height:1; margin-bottom:12px; display:block; }
+    #wepDialog .dlg-title { margin:0; font-size:20px; font-weight:800; color:var(--primary); }
+    #wepDialog .dlg-msg { padding:14px 28px 24px 28px; text-align:center; font-size:15px; color:var(--text); line-height:1.65; }
+    #wepDialog .dlg-actions { display:flex; gap:12px; padding:0 28px 28px 28px; }
+    #wepDialog .dlg-actions button { flex:1; padding:14px 16px; border-radius:10px; border:none; font-size:15px;
+                                     font-weight:700; cursor:pointer; transition:0.2s; font-family:inherit; }
+    #wepDialog .dlg-cancel { background:#e2e8f0; color:#475569; } #wepDialog .dlg-cancel:hover { background:#cbd5e1; }
+    #wepDialog .dlg-ok { background:var(--accent); color:#fff; } #wepDialog .dlg-ok:hover { background:var(--accent-hover); }
+    #wepDialog.danger .dlg-ok { background:var(--danger); } #wepDialog.danger .dlg-ok:hover { background:#b91c1c; }
+    #wepDialog.success .dlg-ok { background:var(--success); } #wepDialog.success .dlg-ok:hover { background:#047857; }
+    #wepDialog .dlg-bar { height:7px; width:100%; background:var(--accent); }
+    #wepDialog.danger .dlg-bar { background:var(--danger); }
+    #wepDialog.success .dlg-bar { background:var(--success); }
+    #wepDialog.warn .dlg-bar { background:var(--warn); } #wepDialog.warn .dlg-ok { background:var(--warn); }
 
+    /* ===== CAMERA WIDGET ===== */
+    #cam-box { position:fixed; right:16px; bottom:16px; width:150px; border-radius:12px; overflow:hidden;
+               box-shadow:0 10px 25px rgba(0,0,0,0.3); border:2px solid var(--success); background:#000; z-index:9500; display:none; }
+    #cam-box video { width:100%; height:auto; display:block; transform:scaleX(-1); }
+    #cam-status { font-size:10px; font-weight:800; color:#fff; background:var(--success); padding:4px 6px; text-align:center;
+                  letter-spacing:0.5px; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:5px; }
+    #cam-status .dot { width:7px; height:7px; border-radius:50%; background:#fff; animation:pulse 1.2s infinite; }
+    #cam-box.denied { border-color:var(--danger); } #cam-box.denied #cam-status { background:var(--danger); }
+
+    .skeleton { background:#e2e8f0; border-radius:8px; animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%{opacity:0.5;} 50%{opacity:1;} 100%{opacity:0.5;} }
+
+    .load-container { width:100%; background:#e2e8f0; border-radius:10px; height:22px; overflow:hidden; position:relative;
+                      margin-top:15px; display:none; }
+    .load-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent)); width:0%; transition:width 0.3s linear; }
+    .load-text { position:absolute; width:100%; text-align:center; top:0; left:0; line-height:22px; font-size:12px;
+                 font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+
+    @media (max-width: 920px) {
+      .login-shell { grid-template-columns:1fr; gap:20px; padding:18px 14px; align-items:start; }
+      .login-col { order:1; } .train-col { order:2; }
+      .login-card { padding:30px 22px; }
+      .t-panel { padding:22px 18px; }
+    }
     @media (max-width: 600px) {
-      .top-nav { flex-direction: column; gap: 8px; }
-      .status-bar { flex-direction: column; align-items: flex-start; }
-      .timer-bar { flex-direction: column; gap: 10px; }
-      .header h1 { font-size: 20px; }
-      .header { padding: 50px 15px 20px 15px; }
-      .box { padding: 22px 18px; }
-      .q-title { font-size: 18px; }
-      .option-label { font-size: 16px; padding: 16px 14px; }
-      .app-container { padding: 12px; }
-      #cam-box { width: 108px; right: 10px; bottom: 10px; }
+      .top-nav { flex-direction:column; gap:8px; }
+      .status-bar, .timer-bar { flex-direction:column; align-items:flex-start; gap:8px; }
+      .timer-bar { align-items:center; }
+      .header h1 { font-size:19px; }
+      .box { padding:22px 18px; }
+      .q-title { font-size:17px; }
+      .option-label { font-size:15px; padding:15px 13px; }
+      .app-container { padding:12px; }
+      #cam-box { width:108px; right:10px; bottom:10px; }
     }
   </style>
 </head>
@@ -222,185 +347,237 @@
 </div>
 <canvas id="cam-canvas" width="320" height="240" style="display:none;"></canvas>
 
+<!-- ===== STRICT MODE WARNING ===== -->
 <div class="modal-overlay" id="strictModal" style="display:none;">
-  <div class="modal-box" style="border-top: 8px solid #dc2626;">
-    <div style="font-size: 45px; margin-bottom: 15px;">⚠️</div>
-    <h2 style="color: #dc2626; margin-top: 0; font-size:24px;">Security Violation</h2>
-    <p style="color: #475569; font-size: 16px; line-height: 1.6;">Changing tabs, minimizing the window, or opening other apps is strictly prohibited during the assessment.</p>
-    <div style="background:#fee2e2; border:1px solid #f87171; padding:12px; border-radius:8px; margin: 25px 0;">
-      <h3 id="strict-count-text" style="color: #991b1b; margin: 0; font-size:18px;">Warning 1 of 3</h3>
+  <div class="modal-box" style="border-top:8px solid #dc2626;">
+    <div style="font-size:42px; margin-bottom:12px;">⚠️</div>
+    <h2 style="color:#dc2626; margin-top:0; font-size:23px;">Security Violation</h2>
+    <p style="color:#475569; font-size:15px;">Changing tabs, minimizing the window, or opening other apps is strictly prohibited during the assessment.</p>
+    <div style="background:#fee2e2; border:1px solid #f87171; padding:12px; border-radius:8px; margin:22px 0;">
+      <h3 id="strict-count-text" style="color:#991b1b; margin:0; font-size:17px;">Warning 1 of 3</h3>
     </div>
     <p style="color:#dc2626; font-size:13px; font-weight:800;">Your test will be auto-submitted on the 4th violation.</p>
-    <button class="btn" style="background:#dc2626; padding:16px;" onclick="closeStrictModal()">I Understand &amp; Agree</button>
+    <button class="btn" style="background:#dc2626;" onclick="closeStrictModal()">I Understand &amp; Agree</button>
   </div>
 </div>
 
-<div class="modal-overlay" id="trainingModal" style="display:none; align-items:center; padding: 15px; z-index: 9000; overflow-y:auto;">
-  <div style="width: 100%; max-width: 420px; margin: auto;">
-      <div id="training-announcement" style="display:none; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; position: relative; overflow: hidden; margin-bottom:15px;">
-         <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
-         <div style="position:absolute; bottom:-30px; right:40px; width:80px; height:80px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
-         <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; position:relative; z-index:1;">
-            <span style="background: #f8fafc; color: #1e3a8a; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">📢 Next Training</span>
-         </div>
-         <h2 id="t-topic" style="margin:0 0 5px 0; font-size: 24px; font-weight: 800; position:relative; z-index:1;">Topic</h2>
-         <p style="margin:0 0 15px 0; font-size: 15px; opacity: 0.9; position:relative; z-index:1;">Presenter: <b id="t-presenter" style="font-size:17px;">Name</b></p>
-         <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(0,0,0,0.2); padding: 12px 15px; border-radius: 10px; position:relative; z-index:1;">
-            <span style="font-size: 14px; font-weight:600;">📅 Date: <span id="t-date" style="color:#bae6fd;">Date</span></span>
-         </div>
-         <div id="t-next" style="margin-top:15px; font-size: 13px; color: #e2e8f0; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 12px; position:relative; z-index:1;"></div>
+<!-- ===================================================================
+     LOGIN SCREEN
+     =================================================================== -->
+<div id="login-container" class="login-shell">
+
+  <!-- ---------- TRAINING PANEL ---------- -->
+  <div class="train-col">
+    <section class="t-panel" id="training-panel">
+      <div class="t-head">
+        <div>
+          <span class="t-chip"><span class="dot"></span>Training Calendar</span>
+          <h2 style="margin-top:10px;">Next Knowledge Session</h2>
+        </div>
+        <span id="t-updated" style="font-size:11px; color:#94a3b8; font-weight:700;"></span>
       </div>
-      <div id="defaulter-list" class="box" style="display:none; padding: 20px; border-left: 5px solid var(--danger); margin-bottom:15px;">
-          <h3 style="margin:0 0 10px 0; color:var(--danger); font-size:16px; display:flex; align-items:center; gap:6px;">⚠️ Overdue / Pending Presentations</h3>
-          <p style="margin:0 0 15px 0; font-size:13px; color:var(--text-muted);">The following trainers have missed their scheduled presentation date.</p>
-          <div id="defaulter-items" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+      <div id="t-empty" class="t-empty">No training sessions are scheduled right now.</div>
+
+      <div id="t-next-card" class="t-next" style="display:none;">
+        <div class="t-next-top">
+          <span class="t-count" id="t-count">Scheduled</span>
+          <span class="t-when" id="t-when">—</span>
+        </div>
+        <h3 class="t-topic" id="t-topic">Topic</h3>
+        <div class="t-person">
+          <span class="t-avatar" id="t-avatar">--</span>
+          <div style="min-width:0;">
+            <b id="t-presenter">Presenter</b>
+            <small id="t-segment"></small>
+          </div>
+        </div>
       </div>
-      <button onclick="closeTrainingModal()" class="btn" style="background: white; color: var(--primary); font-weight: 800; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); padding:16px;">Proceed to Login ➡️</button>
+
+      <div id="t-upcoming-wrap" style="display:none;">
+        <div class="t-sub">📅 Following Sessions</div>
+        <ul class="t-list" id="t-upcoming"></ul>
+      </div>
+
+      <div id="t-overdue-wrap" style="display:none;">
+        <div class="t-sub red">⚠️ Pending / Overdue Presentations</div>
+        <ul class="t-list" id="t-overdue"></ul>
+      </div>
+
+      <div class="t-foot">WeP Solutions · Learning &amp; Development</div>
+    </section>
+  </div>
+
+  <!-- ---------- LOGIN CARD ---------- -->
+  <div class="login-col">
+    <div id="login-section" class="box login-card">
+      <div class="login-brand">
+        <div id="login-logo-skeleton" class="skeleton" style="height:52px; width:160px; margin:0 auto;"></div>
+        <img id="login-logo" src="" alt="WeP Logo" style="display:none;">
+      </div>
+      <h2 class="login-title">Wepsol Quiz Portal</h2>
+      <p class="login-sub">Select your name and enter your registered mobile number.</p>
+
+      <div class="form-group">
+        <label for="uName">Your Name</label>
+        <div class="combo" id="nameCombo">
+          <input type="text" id="uName" class="combo-input" autocomplete="off" role="combobox"
+                 aria-autocomplete="list" aria-expanded="false" placeholder="Select your name">
+          <button type="button" class="combo-caret" id="comboCaret" tabindex="-1" aria-label="Show list">▼</button>
+          <div class="combo-list" id="comboList"></div>
+        </div>
+        <p class="hint" id="nameHint">Start typing to search the list.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="uPhone">Password (Registered Mobile Number)</label>
+        <div class="pwd-wrap">
+          <input type="password" id="uPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10"
+                 autocomplete="current-password" placeholder="10-digit mobile number">
+          <button type="button" class="pwd-toggle" id="pwdToggle" onclick="togglePwd()">SHOW</button>
+        </div>
+        <p class="hint">Your 10-digit mobile number is your password.</p>
+      </div>
+
+      <div class="tnc-box">
+        <input type="checkbox" id="tnc">
+        <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms &amp; Conditions</b>. I understand that my assessment is monitored, including <b style="color:var(--primary);">camera proctoring</b>, and that tab-switching, minimizing or any malpractice may lead to auto-submission.</label>
+      </div>
+
+      <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:17px;">Access Platform</button>
+
+      <div id="login-progress-container" class="load-container">
+        <div id="login-progress-fill" class="load-fill"></div>
+        <div id="login-progress-text" class="load-text">0%</div>
+      </div>
+      <p id="login-stage-text" style="display:none; text-align:center; font-size:12px; color:var(--text-muted); margin:10px 0 0 0; font-weight:600;"></p>
+
+      <div style="text-align:center; margin-top:26px; padding-top:20px; border-top:1px dashed var(--border);">
+        <p style="font-size:13.5px; color:var(--text-muted); margin:0 0 10px 0;">Name not in the list?</p>
+        <button type="button" class="link-btn" onclick="showRegister()">🆕 New User Registration</button>
+      </div>
+    </div>
+
+    <!-- ---------- REGISTRATION CARD ---------- -->
+    <div id="register-section" class="box login-card" style="display:none;">
+      <div class="login-brand">
+        <img id="reg-logo" src="" alt="WeP Logo" style="display:none;">
+      </div>
+      <h2 class="login-title">New User Registration</h2>
+      <p class="login-sub">Submit your details. You can login once the WeP Admin approves your request.</p>
+
+      <div class="form-group">
+        <label for="rName">Full Name <span style="color:var(--danger);">*</span></label>
+        <input type="text" id="rName" autocomplete="name" placeholder="e.g. Saurabh Gupta">
+      </div>
+      <div class="form-group">
+        <label for="rPhone">Mobile Number <span style="color:var(--danger);">*</span></label>
+        <input type="tel" id="rPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-Digit Mobile No.">
+      </div>
+      <div class="form-group">
+        <label for="rEmail">Official Email</label>
+        <input type="email" id="rEmail" autocomplete="email" placeholder="name@wepsol.com">
+      </div>
+      <div class="form-group">
+        <label for="rDept">Department / Branch</label>
+        <input type="text" id="rDept" placeholder="e.g. Sales - Baddi">
+      </div>
+
+      <button class="btn btn-success" id="registerBtn" onclick="submitRegistration()">Submit Registration</button>
+      <div id="reg-progress-container" class="load-container">
+        <div id="reg-progress-fill" class="load-fill"></div>
+        <div id="reg-progress-text" class="load-text">0%</div>
+      </div>
+
+      <div style="text-align:center; margin-top:22px; padding-top:18px; border-top:1px dashed var(--border);">
+        <button type="button" class="link-btn" onclick="showLogin()">⬅️ Back to Login</button>
+      </div>
+    </div>
   </div>
 </div>
 
-<div id="login-container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; width: 100%; box-sizing: border-box;">
-
-  <!-- ===== LOGIN CARD ===== -->
-  <div id="login-section" class="box" style="width: 100%; max-width: 420px; padding: 45px 30px; margin: 0;">
-    <div id="login-logo-skeleton" class="skeleton" style="height: 50px; width: 160px; margin: 0 auto 20px auto;"></div>
-    <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-    <h2 style="margin-top:0; color:var(--primary); text-align:center; font-size:26px;">Wepsol Quiz Portal</h2>
-    <p style="text-align:center; color:var(--text-muted); font-size:15px; margin-bottom:35px; line-height:1.6;">Please login with your Name &amp; Registered Number.</p>
-    <div class="form-group">
-      <label for="uName">Full Name</label>
-      <input type="text" id="uName" autocomplete="name" placeholder="e.g. Saurabh Gupta">
-    </div>
-    <div class="form-group">
-      <label for="uPhone">Registered Mobile Number</label>
-      <input type="tel" id="uPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-Digit Mobile No.">
-    </div>
-    <div class="tnc-box">
-      <input type="checkbox" id="tnc">
-      <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms &amp; Conditions</b>. I understand that my assessment is monitored, including <b style="color:var(--primary);">camera proctoring</b>. Strict action or auto-submission will be taken against tab-switching, minimizing, or any malpractices.</label>
-    </div>
-    <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:18px;">Access Platform</button>
-    <div id="login-progress-container" class="load-container">
-       <div id="login-progress-fill" class="load-fill"></div>
-       <div id="login-progress-text" class="load-text">0%</div>
-    </div>
-    <p id="login-stage-text" style="display:none; text-align:center; font-size:12px; color:var(--text-muted); margin:10px 0 0 0; font-weight:600;"></p>
-
-    <div style="text-align:center; margin-top:28px; padding-top:22px; border-top:1px dashed var(--border);">
-      <p style="font-size:14px; color:var(--text-muted); margin:0 0 10px 0;">Don't have access yet?</p>
-      <button type="button" class="link-btn" onclick="showRegister()">🆕 New User Registration</button>
-    </div>
-  </div>
-
-  <!-- ===== REGISTRATION CARD ===== -->
-  <div id="register-section" class="box" style="display:none; width: 100%; max-width: 420px; padding: 40px 30px; margin: 0;">
-    <img id="reg-logo" src="" alt="WeP Logo" style="display:none; height: 50px; width: auto; max-width: 200px; margin: 0 auto 18px auto; border-radius:8px; padding: 6px 16px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
-    <h2 style="margin-top:0; color:var(--primary); text-align:center; font-size:24px;">New User Registration</h2>
-    <p style="text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:28px; line-height:1.6;">Submit your details. You can login once the WeP Admin approves your request.</p>
-
-    <div class="form-group">
-      <label for="rName">Full Name <span style="color:var(--danger);">*</span></label>
-      <input type="text" id="rName" autocomplete="name" placeholder="e.g. Saurabh Gupta">
-    </div>
-    <div class="form-group">
-      <label for="rPhone">Mobile Number <span style="color:var(--danger);">*</span></label>
-      <input type="tel" id="rPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-Digit Mobile No.">
-    </div>
-    <div class="form-group">
-      <label for="rEmail">Official Email</label>
-      <input type="email" id="rEmail" autocomplete="email" placeholder="name@wepsol.com">
-    </div>
-    <div class="form-group">
-      <label for="rDept">Department / Branch</label>
-      <input type="text" id="rDept" placeholder="e.g. Sales - Baddi">
-    </div>
-
-    <button class="btn btn-success" id="registerBtn" onclick="submitRegistration()" style="font-size:16px; padding:17px;">Submit Registration</button>
-    <div id="reg-progress-container" class="load-container">
-       <div id="reg-progress-fill" class="load-fill"></div>
-       <div id="reg-progress-text" class="load-text">0%</div>
-    </div>
-
-    <div style="text-align:center; margin-top:24px; padding-top:20px; border-top:1px dashed var(--border);">
-      <button type="button" class="link-btn" onclick="showLogin()">⬅️ Back to Login</button>
-    </div>
-  </div>
-</div>
-
+<!-- ===================================================================
+     MAIN APP
+     =================================================================== -->
 <div id="main-app" class="app-container" style="display:none;">
-    <div id="sync-strip" style="display:none; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; margin-bottom:16px;">
-      <span style="width:9px; height:9px; border-radius:50%; background:#2563eb; animation:pulse 1s infinite; display:inline-block; flex-shrink:0;"></span>
-      <span id="sync-strip-text">Fetching the latest data…</span>
-    </div>
-    <div class="header">
-      <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="margin-bottom: 15px; display:none;">
-      <h1>WeP Solutions Assessment</h1>
-      <p>Sales Team &amp; Student Evaluation Platform</p>
-      <button class="sync-icon" id="syncBtn" onclick="silentSync()" style="display:none;">🔄 Sync Node</button>
-    </div>
+  <div id="sync-strip" style="display:none; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe;
+       color:#1d4ed8; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; margin-bottom:14px;">
+    <span style="width:9px; height:9px; border-radius:50%; background:#2563eb; animation:pulse 1s infinite; display:inline-block; flex-shrink:0;"></span>
+    <span id="sync-strip-text">Fetching the latest data…</span>
+  </div>
 
-    <div class="top-nav" id="top-nav">
-      <div class="nav-item active" id="tab-results" onclick="switchView('results')">
-        <span class="nav-icon">📊</span> Assessment Results
-      </div>
-      <div class="nav-item" id="tab-assessment" onclick="switchView('assessment')">
-        <span class="nav-icon">📝</span> Attend Quiz
-      </div>
-    </div>
+  <div class="header">
+    <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="display:none;">
+    <h1>WeP Solutions Assessment</h1>
+    <p>Sales Team &amp; Student Evaluation Platform</p>
+    <button class="sync-icon" id="syncBtn" onclick="silentSync()" style="display:none;">🔄 Sync</button>
+  </div>
 
-    <div id="view-results">
-      <div class="box" style="background: linear-gradient(to right bottom, #ffffff, #f8fafc);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
-           <h2 style="color:var(--primary); margin-top:0; font-size:24px; margin-bottom:0;">Welcome, <span id="display-name" style="color:var(--accent);"></span></h2>
-           <a href="YOUR_DRIVE_PPT_LINK_HERE" target="_blank" rel="noopener noreferrer" style="background:var(--accent); color:white; padding:10px 15px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; display:flex; align-items:center; gap:5px; box-shadow: 0 4px 6px rgba(37,99,235,0.2); transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-              📥 Download PPT Template
-           </a>
-        </div>
-        <div class="section-title" style="margin-top:30px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">🏆 WeP Team Leaderboard <span id="lb-mod-name" style="font-size:13px; background:#e2e8f0; padding:4px 10px; border-radius:6px; color:#475569;"></span></div>
-        <p style="font-size:14px; color:var(--text-muted); margin-top:-10px; margin-bottom:20px;">Results will be visible here once published by the Admin. <span id="last-sync-label" style="font-weight:700;"></span></p>
-        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;">
-          <table id="leaderboard-table"></table>
-        </div>
+  <div class="top-nav" id="top-nav">
+    <div class="nav-item active" id="tab-results" onclick="switchView('results')"><span>📊</span> Assessment Results</div>
+    <div class="nav-item" id="tab-assessment" onclick="switchView('assessment')"><span>📝</span> Attend Quiz</div>
+  </div>
+
+  <div id="view-results">
+    <div class="box">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+        <h2 style="color:var(--primary); margin:0; font-size:22px;">Welcome, <span id="display-name" style="color:var(--accent);"></span></h2>
+        <a href="YOUR_DRIVE_PPT_LINK_HERE" target="_blank" rel="noopener noreferrer"
+           style="background:var(--accent); color:#fff; padding:10px 15px; border-radius:9px; text-decoration:none;
+                  font-weight:700; font-size:13px; display:flex; align-items:center; gap:6px;">📥 Download PPT Template</a>
       </div>
 
-      <div class="box">
-        <div class="section-title">📊 My Assessment History</div>
-        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 10px;">
-          <table id="history-table"></table>
-        </div>
+      <div class="section-title" style="margin-top:26px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        🏆 WeP Team Leaderboard
+        <span id="lb-mod-name" style="font-size:12px; background:#e2e8f0; padding:4px 10px; border-radius:6px; color:#475569;"></span>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin:-8px 0 16px 0;">
+        Results appear here once published by the Admin. <span id="last-sync-label" style="font-weight:700;"></span>
+      </p>
+      <div style="overflow-x:auto; border:1px solid var(--border); border-radius:10px;">
+        <table id="leaderboard-table"></table>
       </div>
     </div>
 
-    <div id="view-assessment" style="display:none;">
-      <div class="box" id="assessment-intro">
-        <h2 style="margin-top:0; color:var(--primary); font-size:22px;">Active Assessment Module</h2>
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 30px; border-radius: 14px; margin-top: 20px;">
-          <h3 style="margin-top:0; color:#1d4ed8; font-size: 20px;"><span id="active-mod-name"></span></h3>
-          <p id="quiz-status-msg" style="font-size:16px; color:#334155; font-weight:600; line-height: 1.6; margin-bottom:25px;"></p>
-          <div class="status-bar">
-            <span style="display:flex; align-items:center; gap:8px;">⏱️ Timer limit: <span id="display-time-limit" style="color:var(--primary);"></span> Mins</span>
-            <span style="display:flex; align-items:center; gap:8px;">📋 Status: <span id="display-mod-status" style="color:var(--success);"></span></span>
-          </div>
-          <div id="camera-warning" style="display:none; margin-top:20px; background:#fef3c7; border:1px solid #fcd34d; color:#92400e; padding:14px 16px; border-radius:10px; font-size:14px; font-weight:600; line-height:1.6;"></div>
-          <button id="start-btn" class="btn" style="display:none; margin-top: 30px; font-size:18px; padding:18px;" onclick="startQuiz()">Start Assessment Now</button>
-        </div>
-      </div>
-
-      <div id="quiz-wizard" style="display:none;">
-        <div class="timer-bar" id="timer-bar">
-          <span style="font-size:16px; display:flex; align-items:center; gap:8px;">⏳ Time Remaining</span>
-          <span id="countdown-timer" style="font-size:28px; font-variant-numeric: tabular-nums;">00:00</span>
-        </div>
-
-        <div class="box" style="padding:40px 30px;">
-          <div style="display:flex; justify-content:space-between; font-size:15px; color:var(--text-muted); font-weight:800; margin-bottom:15px; text-transform:uppercase;">
-            <span id="q-counter">Question 1 of 10</span><span id="q-percent">0% Done</span>
-          </div>
-          <div class="progress-bar-bg"><div id="q-progress" class="progress-bar-fill"></div></div>
-          <div id="questions-container"></div>
-        </div>
+    <div class="box">
+      <div class="section-title">📊 My Assessment History</div>
+      <div style="overflow-x:auto; border:1px solid var(--border); border-radius:10px;">
+        <table id="history-table"></table>
       </div>
     </div>
+  </div>
+
+  <div id="view-assessment" style="display:none;">
+    <div class="box" id="assessment-intro">
+      <h2 style="margin-top:0; color:var(--primary); font-size:21px;">Active Assessment Module</h2>
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:26px; border-radius:14px; margin-top:18px;">
+        <h3 style="margin-top:0; color:#1d4ed8; font-size:19px;"><span id="active-mod-name"></span></h3>
+        <p id="quiz-status-msg" style="font-size:15px; color:#334155; font-weight:600; margin-bottom:22px;"></p>
+        <div class="status-bar">
+          <span style="display:flex; align-items:center; gap:8px;">⏱️ Timer limit: <span id="display-time-limit" style="color:var(--primary);"></span> Mins</span>
+          <span style="display:flex; align-items:center; gap:8px;">📋 Status: <span id="display-mod-status" style="color:var(--success);"></span></span>
+        </div>
+        <div id="camera-warning" style="display:none; margin-top:18px; background:#fef3c7; border:1px solid #fcd34d;
+             color:#92400e; padding:13px 15px; border-radius:10px; font-size:13.5px; font-weight:600;"></div>
+        <button id="start-btn" class="btn" style="display:none; margin-top:26px; font-size:17px; padding:17px;" onclick="startQuiz()">Start Assessment Now</button>
+      </div>
+    </div>
+
+    <div id="quiz-wizard" style="display:none;">
+      <div class="timer-bar" id="timer-bar">
+        <span style="font-size:15px; display:flex; align-items:center; gap:8px;">⏳ Time Remaining</span>
+        <span id="countdown-timer" style="font-size:26px; font-variant-numeric:tabular-nums;">00:00</span>
+      </div>
+      <div class="box" style="padding:34px 26px;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); font-weight:800;
+             margin-bottom:12px; text-transform:uppercase;">
+          <span id="q-counter">Question 1 of 10</span><span id="q-percent">0% Complete</span>
+        </div>
+        <div class="progress-bar-bg"><div id="q-progress" class="progress-bar-fill"></div></div>
+        <div id="questions-container"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -415,8 +592,11 @@
 
   // Camera proctoring state
   let camStream = null, camReady = false, camMode = "OPTIONAL", camSnapTimer = null, camAsked = false;
-  // Admin-controlled: SHOW = little preview box visible, HIDE = capture silently.
-  let camWidget = "SHOW";
+  let camWidget = "SHOW";                 // admin-controlled: SHOW preview / HIDE (capture silently)
+  const CAM_INTERVAL_MS = 90000;          // one frame every 90 seconds during the quiz
+
+  // Login name list
+  let USER_NAMES = [], userListMode = "ON", comboIndex = -1;
 
   /* ==========================================================
      BRANDED DIALOG - replaces every native alert() / confirm()
@@ -451,25 +631,15 @@
   }
 
   function wepAlert(message, title, tone, icon) {
-    return wepDialog({
-      message: message,
-      title: title || "Notice",
+    return wepDialog({ message: message, title: title || "Notice",
       icon: icon || (tone === "danger" ? "⚠️" : tone === "success" ? "✅" : "ℹ️"),
-      tone: tone || "",
-      okText: "Got it",
-      cancelText: null
-    });
+      tone: tone || "", okText: "Got it", cancelText: null });
   }
 
   function wepConfirm(message, title, tone, okText) {
-    return wepDialog({
-      message: message,
-      title: title || "Please Confirm",
-      icon: tone === "danger" ? "🚨" : "❓",
-      tone: tone || "",
-      okText: okText || "Yes, Continue",
-      cancelText: "Cancel"
-    });
+    return wepDialog({ message: message, title: title || "Please Confirm",
+      icon: tone === "danger" ? "🚨" : "❓", tone: tone || "",
+      okText: okText || "Yes, Continue", cancelText: "Cancel" });
   }
 
   document.getElementById('dlg-ok').addEventListener('click', function () { closeWepDialog(true); });
@@ -492,21 +662,36 @@
   function safeGet(id) { return document.getElementById(id); }
   function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+  function lsDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
+  function tidy(s) { return String(s === null || s === undefined ? "" : s).trim().replace(/\s+/g, " "); }
 
   function parseDate(dateStr) {
-      if (!dateStr) return new Date(9999, 11, 31);
-      let p = String(dateStr).trim().split("/");
-      if (p.length !== 3) return new Date(9999, 11, 31);
+      if (!dateStr) return null;
+      let raw = String(dateStr).trim();
+      if (!raw) return null;
+      let p = raw.split(/[\/\-\s]+/);
+      if (p.length < 3) { let d0 = new Date(raw); return isNaN(d0.getTime()) ? null : stripTime(d0); }
       let m = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
       let key = String(p[1]).trim().toLowerCase().slice(0, 3);
       let month = (m[key] !== undefined) ? m[key] : (parseInt(p[1], 10) - 1);
-      if (isNaN(month) || month < 0 || month > 11) month = 0;
+      if (isNaN(month) || month < 0 || month > 11) return null;
       let year = parseInt(p[2], 10), day = parseInt(p[0], 10);
-      if (isNaN(year) || isNaN(day)) return new Date(9999, 11, 31);
+      if (isNaN(year) || isNaN(day)) return null;
       if (year < 100) year += 2000;
-      let d = new Date(year, month, day);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      return stripTime(new Date(year, month, day));
+  }
+  function stripTime(d) { d.setHours(0,0,0,0); return d; }
+  function today0() { return stripTime(new Date()); }
+  function daysBetween(a, b) { return Math.round((a.getTime() - b.getTime()) / 86400000); }
+  function fmtDate(d) {
+    const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return d.getDate() + " " + M[d.getMonth()] + " " + d.getFullYear();
+  }
+  function initials(name) {
+    let parts = tidy(name).split(" ").filter(Boolean);
+    if (parts.length === 0) return "--";
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   /* ==========================================================
@@ -526,8 +711,7 @@
 
     try {
       camStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
-        audio: false
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }, audio: false
       });
       let vid = safeGet('cam-video');
       vid.srcObject = camStream;
@@ -536,8 +720,7 @@
       safeGet('cam-box').classList.remove('denied');
       safeGet('cam-status-text').innerText = "Proctoring Active";
       camReady = true;
-      // Give the sensor a moment to expose before the first frame.
-      setTimeout(function () { captureSnapshot("Login"); }, 1800);
+      setTimeout(function () { captureSnapshot("Login"); }, 1800);   // let the sensor expose first
     } catch (err) {
       camReady = false;
       safeGet('cam-box').style.display = (camWidget === "HIDE") ? "none" : "block";
@@ -545,7 +728,7 @@
       safeGet('cam-status-text').innerText = "Camera Blocked";
       logCameraEvent("Camera Denied");
       if (camMode === "REQUIRED") {
-        wepAlert("Camera access is mandatory for this assessment.\n\nPlease click the 🔒 lock icon in your browser's address bar, set Camera to 'Allow', and reload this page.",
+        wepAlert("Camera access is mandatory for this assessment.\n\nClick the 🔒 lock icon in your browser's address bar, set Camera to 'Allow', then reload this page.",
                  "Camera Permission Required", "danger", "📷");
       }
     }
@@ -563,14 +746,13 @@
   }
 
   function logCameraEvent(eventName) {
-    // No image - just records the status against this user's single row.
+    if (!userData.phone) return;
     apiCall("saveLoginPhoto", { name: userData.name, phone: userData.phone, event: eventName, image: "" });
   }
 
   /**
    * Captures one frame and OVERWRITES this user's single row on the server.
-   * Nothing is stored in Google Drive and the sheet never grows: one row per
-   * user, always holding their most recent frame.
+   * Nothing is stored in Google Drive and the sheet never grows.
    */
   function captureSnapshot(eventName) {
     if (!camReady || !camStream) return;
@@ -585,10 +767,8 @@
       if (dataUrl.length > 47000) dataUrl = canvas.toDataURL('image/jpeg', 0.35);
 
       apiCall("saveLoginPhoto", {
-        name: userData.name, phone: userData.phone,
-        event: eventName || "Snapshot", image: dataUrl
+        name: userData.name, phone: userData.phone, event: eventName || "Snapshot", image: dataUrl
       }).then(function (res) {
-        // Visible confirmation, so a silent server-side failure is never a mystery.
         let txt = safeGet('cam-status-text');
         if (camWidget === "HIDE") { if (res && res.error) console.warn("WeP camera upload failed:", res.error); return; }
         if (res && res.error) {
@@ -606,17 +786,16 @@
 
   function updateCameraNotice() {
     let el = safeGet('camera-warning');
-    // HIDE means the learner sees no camera UI at all - capture is unchanged.
     if (camMode === "OFF" || camWidget === "HIDE") { el.style.display = "none"; return; }
 
     if (camReady) {
       el.style.display = "block";
       el.style.background = "#ecfdf5"; el.style.borderColor = "#6ee7b7"; el.style.color = "#065f46";
-      el.innerHTML = "📷 <b>Camera proctoring is active.</b> Your photo will be captured at the start and periodically during the assessment.";
+      el.innerHTML = "📷 <b>Camera proctoring is active.</b> Your photo is captured at the start and periodically during the assessment.";
     } else if (camMode === "REQUIRED") {
       el.style.display = "block";
       el.style.background = "#fee2e2"; el.style.borderColor = "#fca5a5"; el.style.color = "#991b1b";
-      el.innerHTML = "🚫 <b>Camera is blocked.</b> This assessment cannot be started without camera access. Allow the camera from your browser's address bar and reload. " +
+      el.innerHTML = "🚫 <b>Camera is blocked.</b> This assessment cannot be started without camera access. Allow the camera from your browser's address bar. " +
                      '<button type="button" class="link-btn" style="color:#991b1b;" onclick="retryCamera()">Retry camera</button>';
     } else {
       el.style.display = "block";
@@ -629,85 +808,173 @@
   function retryCamera() { camAsked = false; initCamera(); }
 
   /* ==========================================================
-     TRAINING ANNOUNCEMENT
+     TRAINING PANEL  (professional, non-blocking)
      ========================================================== */
 
-  let trainingDismissed = false;
+  function renderTraining(res) {
+    let panel = safeGet('training-panel');
+    let rows = (res && res.trainingPlan) ? res.trainingPlan : [];
 
-  function closeTrainingModal() {
-      trainingDismissed = true;
-      safeGet('trainingModal').style.display = 'none';
+    safeGet('t-next-card').style.display = 'none';
+    safeGet('t-upcoming-wrap').style.display = 'none';
+    safeGet('t-overdue-wrap').style.display = 'none';
+    safeGet('t-upcoming').innerHTML = '';
+    safeGet('t-overdue').innerHTML = '';
+    safeGet('t-empty').style.display = 'block';
+    if (!panel) return;
+
+    if (!rows || rows.length <= 1) return;
+
+    let now = today0();
+    let pending = [];
+    for (let i = 1; i < rows.length; i++) {
+      let r = rows[i] || [];
+      let status = tidy(r[8]).toLowerCase();
+      if (status !== 'pending') continue;
+      let d = parseDate(r[4]);
+      if (!d) continue;
+      pending.push({
+        date: d, month: tidy(r[0]), week: tidy(r[1]), segment: tidy(r[2]),
+        presenter: tidy(r[5]) || 'To be announced', topic: tidy(r[7]) || 'Topic to be announced'
+      });
+    }
+    if (pending.length === 0) return;
+
+    pending.sort(function (a, b) { return a.date - b.date; });
+    let upcoming = pending.filter(function (t) { return t.date >= now; });
+    let overdue  = pending.filter(function (t) { return t.date <  now; });
+
+    if (upcoming.length > 0) {
+      safeGet('t-empty').style.display = 'none';
+      let n = upcoming[0];
+      let diff = daysBetween(n.date, now);
+      let pill = safeGet('t-count');
+      pill.className = "t-count";
+      if (diff === 0)      { pill.innerText = "Today"; pill.classList.add('today'); }
+      else if (diff === 1) { pill.innerText = "Tomorrow"; pill.classList.add('soon'); }
+      else if (diff <= 3)  { pill.innerText = "In " + diff + " days"; pill.classList.add('soon'); }
+      else                 { pill.innerText = "In " + diff + " days"; }
+
+      safeGet('t-when').innerText = fmtDate(n.date) + (n.week ? " · " + n.week : "");
+      safeGet('t-topic').innerText = n.topic;
+      safeGet('t-presenter').innerText = n.presenter;
+      safeGet('t-avatar').innerText = initials(n.presenter);
+      safeGet('t-segment').innerText = [n.segment, n.month].filter(Boolean).join(" · ");
+      safeGet('t-next-card').style.display = 'block';
+
+      let rest = upcoming.slice(1, 4);
+      if (rest.length > 0) {
+        safeGet('t-upcoming').innerHTML = rest.map(function (t) {
+          return '<li class="t-row"><span class="t-date-pill">' + escapeHtml(fmtDate(t.date)) + '</span>' +
+                 '<span class="t-info"><b>' + escapeHtml(t.presenter) + '</b><span>' + escapeHtml(t.topic) + '</span></span></li>';
+        }).join("");
+        safeGet('t-upcoming-wrap').style.display = 'block';
+      }
+    }
+
+    if (overdue.length > 0) {
+      safeGet('t-empty').style.display = 'none';
+      safeGet('t-overdue').innerHTML = overdue.slice(0, 5).map(function (t) {
+        let late = daysBetween(now, t.date);
+        return '<li class="t-row late"><span class="t-date-pill">' + late + 'd late</span>' +
+               '<span class="t-info"><b>' + escapeHtml(t.presenter) + '</b><span>' + escapeHtml(t.topic) + ' · ' + escapeHtml(fmtDate(t.date)) + '</span></span></li>';
+      }).join("");
+      safeGet('t-overdue-wrap').style.display = 'block';
+    }
+
+    let now2 = new Date();
+    safeGet('t-updated').innerText = "Updated " + ("0" + now2.getHours()).slice(-2) + ":" + ("0" + now2.getMinutes()).slice(-2);
   }
 
-  function renderTraining(res) {
-      let modal = safeGet('trainingModal');
-      let wasOpen = (modal.style.display === 'flex');
+  /* ==========================================================
+     NAME COMBOBOX
+     ========================================================== */
 
-      // FIX: the old version only ADDED content, so a second (fresh) render
-      // could never replace or remove what the stale cached copy had drawn.
-      safeGet('training-announcement').style.display = 'none';
-      safeGet('defaulter-list').style.display = 'none';
-      safeGet('defaulter-items').innerHTML = '';
-      safeGet('t-next').innerHTML = '';
+  function comboEl() { return safeGet('nameCombo'); }
 
-      if (!res || !res.trainingPlan || res.trainingPlan.length <= 1) { modal.style.display = 'none'; return; }
-      let now = new Date(); now.setHours(0, 0, 0, 0);
+  function openCombo(filterNow) {
+    if (userListMode !== "ON" || USER_NAMES.length === 0) return;
+    renderNameOptions(filterNow ? safeGet('uName').value : "");
+    comboEl().classList.add('open');
+    safeGet('uName').setAttribute('aria-expanded', 'true');
+  }
 
-      let pendingRows = res.trainingPlan.slice(1).filter(function (r) {
-          return r && r[8] && r[8].toString().trim().toLowerCase() === 'pending';
-      });
-      if (pendingRows.length === 0) { modal.style.display = 'none'; return; }
+  function closeCombo() {
+    comboEl().classList.remove('open');
+    safeGet('uName').setAttribute('aria-expanded', 'false');
+    comboIndex = -1;
+  }
 
-      let sortedPendings = pendingRows
-        .map(function (r) { return { row: r, date: parseDate(r[4]) }; })
-        .sort(function (a, b) { return a.date - b.date; });
+  function highlightMatch(name, f) {
+    if (!f) return escapeHtml(name);
+    let i = name.toLowerCase().indexOf(f);
+    if (i === -1) return escapeHtml(name);
+    return escapeHtml(name.substring(0, i)) + "<mark>" + escapeHtml(name.substr(i, f.length)) + "</mark>" + escapeHtml(name.substring(i + f.length));
+  }
 
-      let upcoming = sortedPendings.filter(function (tr) { return tr.date >= now; });
-      let overdue  = sortedPendings.filter(function (tr) { return tr.date <  now; });
+  function renderNameOptions(filter) {
+    let list = safeGet('comboList');
+    let f = tidy(filter).toLowerCase();
+    let items = USER_NAMES.filter(function (n) { return !f || n.toLowerCase().indexOf(f) !== -1; });
+    comboIndex = -1;
 
-      let nextTrain = upcoming.length > 0 ? upcoming[0].row : null;
-      let followingTrain = upcoming.length > 1 ? upcoming[1].row : null;
+    if (items.length === 0) {
+      list.innerHTML = '<div class="combo-empty">No matching name found.<br>Use <b>New User Registration</b> if you are new.</div>';
+      return;
+    }
+    list.innerHTML = items.slice(0, 400).map(function (n) {
+      return '<div class="combo-item" data-name="' + escapeHtml(n) + '">' + highlightMatch(n, f) + '</div>';
+    }).join("");
+  }
 
-      if (nextTrain) {
-          safeGet('t-topic').innerText = nextTrain[7] || 'TBA';
-          safeGet('t-presenter').innerText = nextTrain[5] || 'TBA';
-          safeGet('t-date').innerText = nextTrain[4] || 'TBA';
-          safeGet('t-next').innerHTML = followingTrain
-            ? "<b>⏭️ Upcoming Next:</b> " + escapeHtml(followingTrain[5] || 'TBA') + " (" + escapeHtml(followingTrain[0] || '') + " " + escapeHtml(followingTrain[1] || '') + ")"
-            : "";
-          safeGet('training-announcement').style.display = 'block';
-      }
+  function selectComboName(name) {
+    safeGet('uName').value = name;
+    closeCombo();
+    safeGet('nameHint').innerText = "Now enter your registered mobile number.";
+    setTimeout(function () { safeGet('uPhone').focus(); }, 40);
+  }
 
-      let defaultersHtml = "";
-      for (let i = 0; i < overdue.length; i++) {
-          let tr = overdue[i];
-          defaultersHtml +=
-            '<div style="display:flex; justify-content:space-between; align-items:center; background:#fee2e2; padding:10px 12px; border-radius:6px; border:1px solid #fca5a5; margin-bottom: 8px;">' +
-              '<div><b style="color:#991b1b; display:block; font-size:14px;">' + escapeHtml(tr.row[5]) + '</b>' +
-              '<span style="font-size:12px; color:#b91c1c;">' + escapeHtml(tr.row[7]) + '</span></div>' +
-              '<div style="font-size:12px; color:#991b1b; font-weight:bold;">' + escapeHtml(tr.row[4]) + '</div>' +
-            '</div>';
-      }
-      if (defaultersHtml !== "") {
-          safeGet('defaulter-items').innerHTML = defaultersHtml;
-          safeGet('defaulter-list').style.display = 'block';
-      }
-      // Re-open only if the learner has not already dismissed it.
-      if (nextTrain || defaultersHtml !== "") {
-          if (!trainingDismissed || wasOpen) modal.style.display = 'flex';
-      } else {
-          modal.style.display = 'none';
-      }
+  function moveCombo(step) {
+    let items = safeGet('comboList').querySelectorAll('.combo-item');
+    if (items.length === 0) return;
+    comboIndex += step;
+    if (comboIndex < 0) comboIndex = items.length - 1;
+    if (comboIndex >= items.length) comboIndex = 0;
+    for (let i = 0; i < items.length; i++) items[i].classList.toggle('active', i === comboIndex);
+    items[comboIndex].scrollIntoView({ block: "nearest" });
+  }
+
+  function applyUserList(list, mode) {
+    userListMode = (mode || "ON").toUpperCase();
+    USER_NAMES = Array.isArray(list) ? list.filter(Boolean) : [];
+    let input = safeGet('uName'), hint = safeGet('nameHint'), caret = safeGet('comboCaret');
+
+    if (userListMode !== "ON" || USER_NAMES.length === 0) {
+      input.placeholder = "Type your full name";
+      caret.style.display = "none";
+      hint.innerText = "Type your full name exactly as registered.";
+    } else {
+      input.placeholder = "Select your name";
+      caret.style.display = "block";
+      hint.innerText = USER_NAMES.length + " registered users · start typing to search.";
+    }
+  }
+
+  function togglePwd() {
+    let f = safeGet('uPhone'), b = safeGet('pwdToggle');
+    if (f.type === "password") { f.type = "text"; b.innerText = "HIDE"; }
+    else { f.type = "password"; b.innerText = "SHOW"; }
   }
 
   /* ==========================================================
      BOOT
      ========================================================== */
 
-  document.addEventListener("DOMContentLoaded", async function () {
+  document.addEventListener("DOMContentLoaded", function () {
+      // ---- instant paint from the last known public payload ----
       let cachedLogo = lsGet("wep_logo");
-      let cachedFav = lsGet("wep_favicon");
-      let cachedTraining = lsGet("wep_training");
+      let cachedFav  = lsGet("wep_favicon");
+      let cachedPub  = lsGet("wep_public");
 
       if (cachedLogo) {
           safeGet('login-logo-skeleton').style.display = 'none';
@@ -717,15 +984,50 @@
       }
       if (cachedFav) safeGet('favicon').href = cachedFav;
 
-      if (cachedTraining) {
-          try { renderTraining(JSON.parse(cachedTraining)); }
-          catch (e) { try { localStorage.removeItem("wep_training"); } catch (e2) {} }
+      if (cachedPub) {
+          try {
+            let p = JSON.parse(cachedPub);
+            applyUserList(p.users, p.userListMode);
+            renderTraining(p);
+          } catch (e) { lsDel("wep_public"); }
       }
 
-      ["uName", "uPhone"].forEach(function (id) {
-          safeGet(id).addEventListener("keydown", function (ev) {
-              if (ev.key === "Enter") { ev.preventDefault(); loginUser(); }
-          });
+      // remember the last person who logged in on this device
+      let lastName = lsGet("wep_last_name");
+      if (lastName) safeGet('uName').value = lastName;
+
+      /* ---- combobox wiring ---- */
+      let nameInput = safeGet('uName');
+      nameInput.addEventListener('focus', function () { openCombo(false); });
+      nameInput.addEventListener('click', function () { openCombo(false); });
+      nameInput.addEventListener('input', function () { openCombo(true); });
+      nameInput.addEventListener('blur', function () { setTimeout(closeCombo, 160); });
+      nameInput.addEventListener('keydown', function (ev) {
+          let isOpen = comboEl().classList.contains('open');
+          if (ev.key === "ArrowDown") { ev.preventDefault(); if (!isOpen) openCombo(true); else moveCombo(1); return; }
+          if (ev.key === "ArrowUp")   { ev.preventDefault(); if (isOpen) moveCombo(-1); return; }
+          if (ev.key === "Escape")    { closeCombo(); return; }
+          if (ev.key === "Enter") {
+              ev.preventDefault();
+              let items = safeGet('comboList').querySelectorAll('.combo-item');
+              if (isOpen && comboIndex >= 0 && items[comboIndex]) selectComboName(items[comboIndex].getAttribute('data-name'));
+              else { closeCombo(); safeGet('uPhone').focus(); }
+          }
+      });
+      safeGet('comboList').addEventListener('mousedown', function (ev) {
+          let item = ev.target.closest('.combo-item');
+          if (!item) return;
+          ev.preventDefault();
+          selectComboName(item.getAttribute('data-name'));
+      });
+      safeGet('comboCaret').addEventListener('mousedown', function (ev) {
+          ev.preventDefault();
+          if (comboEl().classList.contains('open')) closeCombo();
+          else { nameInput.focus(); openCombo(false); }
+      });
+
+      safeGet('uPhone').addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") { ev.preventDefault(); loginUser(); }
       });
       ["rName", "rPhone", "rEmail", "rDept"].forEach(function (id) {
           safeGet(id).addEventListener("keydown", function (ev) {
@@ -738,9 +1040,8 @@
           });
       });
 
-      // SPEED: the moment the user touches the form, send a no-op request that
-      // reads nothing. It wakes a cold Apps Script container while they are
-      // still typing, so the real login lands on a warm instance. Fired once.
+      // SPEED: the moment the user touches the form, wake a cold Apps Script
+      // container while they are still typing. Fired once.
       let warmed = false;
       ["uName", "uPhone", "tnc"].forEach(function (id) {
           safeGet(id).addEventListener("focus", function () {
@@ -750,14 +1051,11 @@
           });
       });
 
-      // The cached copy is painted instantly above, then ALWAYS refreshed from
-      // the server in the background and re-rendered when it arrives.
-      // FIX: deferring this until after login is what made the training banner
-      // show a stale presenter name even after the admin had changed it.
       if (cachedLogo) safeGet('login-logo-skeleton').style.display = 'none';
-      refreshPublicData();
+      refreshPublicData();           // always verify against the server
   });
 
+  /** ONE call brings logo + favicon + training plan + the login name list. */
   async function refreshPublicData() {
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { safeGet('login-logo-skeleton').style.display = 'none'; return; }
@@ -773,10 +1071,14 @@
           } else { safeGet('login-logo-skeleton').style.display = 'none'; }
       } else { safeGet('login-logo-skeleton').style.display = 'none'; }
 
-      if (res.trainingPlan) {
-          lsSet("wep_training", JSON.stringify(res));
-          if (!isLoggedIn) renderTraining(res);   // fresh data always wins over the cached paint
-      }
+      applyUserList(res.users, res.userListMode);
+      if (!isLoggedIn) renderTraining(res);      // fresh data always wins over the cached paint
+
+      try {
+        lsSet("wep_public", JSON.stringify({
+          users: res.users || [], userListMode: res.userListMode || "ON", trainingPlan: res.trainingPlan || []
+        }));
+      } catch (e) {}
   }
 
   /* ==========================================================
@@ -798,15 +1100,12 @@
     window.scrollTo(0, 0);
   }
 
-  function startBar(fillId, textId, containerId, btnId, stateRef) {
+  function startBar(fillId, textId, containerId, btnId) {
     safeGet(btnId).style.display = "none";
     safeGet(containerId).style.display = "block";
     let fill = safeGet(fillId), txt = safeGet(textId), w = 0;
     return setInterval(function () {
-      if (w < 97) {
-        w += Math.max(1, Math.round((97 - w) * 0.12));
-        fill.style.width = w + "%"; txt.innerText = w + "%";
-      }
+      if (w < 97) { w += Math.max(1, Math.round((97 - w) * 0.12)); fill.style.width = w + "%"; txt.innerText = w + "%"; }
     }, 250);
   }
 
@@ -819,7 +1118,7 @@
   }
 
   async function submitRegistration() {
-    let name  = safeGet('rName').value.trim().replace(/\s+/g, " ");
+    let name  = tidy(safeGet('rName').value);
     let phone = safeGet('rPhone').value.trim();
     let email = safeGet('rEmail').value.trim();
     let dept  = safeGet('rDept').value.trim();
@@ -829,7 +1128,6 @@
     if (email && email.indexOf("@") === -1) { await wepAlert("Please enter a valid email address, or leave the field blank.", "Invalid Email", "warn", "✉️"); return; }
 
     regProgressInterval = startBar('reg-progress-fill', 'reg-progress-text', 'reg-progress-container', 'registerBtn');
-
     let res = await apiCall("registerUser", { name: name, phone: phone, email: email, dept: dept });
     stopBar(regProgressInterval, 'reg-progress-fill', 'reg-progress-text', 'reg-progress-container', 'registerBtn');
 
@@ -838,9 +1136,8 @@
       return;
     }
 
-    await wepAlert(
-      (res.message || "Registration submitted successfully.") +
-      "\n\nOnce approved, login with the same Name and Mobile Number.",
+    await wepAlert((res.message || "Registration submitted successfully.") +
+      "\n\nOnce approved, your name will appear in the login list. Your password is your mobile number.",
       "Registration Submitted", "success", "🎉");
 
     ['rName','rPhone','rEmail','rDept'].forEach(function (id) { safeGet(id).value = ""; });
@@ -872,12 +1169,8 @@
 
   function startLoginProgress() {
       safeGet('loginBtn').style.display = "none";
-      let container = safeGet('login-progress-container');
-      let fill = safeGet('login-progress-fill');
-      let txt = safeGet('login-progress-text');
-      let stage = safeGet('login-stage-text');
-
-      container.style.display = "block";
+      let fill = safeGet('login-progress-fill'), txt = safeGet('login-progress-text'), stage = safeGet('login-stage-text');
+      safeGet('login-progress-container').style.display = "block";
       stage.style.display = "block";
       stage.innerText = "Connecting to WeP server...";
 
@@ -885,11 +1178,8 @@
       clearInterval(loginProgressInterval);
       loginProgressInterval = setInterval(function () {
           ticks++;
-          if (w < 97) {
-              w += Math.max(1, Math.round((97 - w) * 0.12));
-              fill.style.width = w + "%"; txt.innerText = w + "%";
-          }
-          if (ticks === 8)  stage.innerText = "Verifying your registration...";
+          if (w < 97) { w += Math.max(1, Math.round((97 - w) * 0.12)); fill.style.width = w + "%"; txt.innerText = w + "%"; }
+          if (ticks === 8)  stage.innerText = "Verifying your credentials...";
           if (ticks === 16) stage.innerText = "Loading leaderboard & history...";
           if (ticks === 32) stage.innerText = "Server is waking up, almost there...";
       }, 250);
@@ -950,26 +1240,30 @@
 
     let leaderboard = res.leaderboard || [];
     let lbRows = ["<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>"];
-    leaderboard.forEach(function (lb) {
-      let displayScore = lb.isPublished ? '<span class="badge-score">' + escapeHtml(lb.score) + '</span>' : '<span class="badge-pending">Evaluating</span>';
+    leaderboard.forEach(function (lb, idx) {
+      let displayScore = lb.isPublished ? '<span class="badge-score">' + escapeHtml(lb.score) + '</span>'
+                                        : '<span class="badge-pending">Evaluating</span>';
       let detailsText = lb.isPublished ? '<span style="font-weight:800; color:var(--text-muted);">' + escapeHtml(lb.correct) + ' / ' + escapeHtml(lb.total) + ' Right</span>' : '-';
-      let boldName = lb.isMe ? '<b style="color:var(--accent); font-size:14px;">' + escapeHtml(lb.name) + ' (You)</b>' : '<span style="font-size:13px;">' + escapeHtml(lb.name) + '</span>';
-      lbRows.push('<tr><td>' + boldName + '</td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
+      let rank = '<span class="rank-pill' + (lb.isPublished && idx < 3 ? ' top' : '') + '">' + (idx + 1) + '</span>';
+      let boldName = lb.isMe ? '<b style="color:var(--accent);">' + escapeHtml(lb.name) + ' (You)</b>'
+                             : '<span>' + escapeHtml(lb.name) + '</span>';
+      lbRows.push('<tr><td>' + rank + boldName + '</td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
     });
-    if (leaderboard.length === 0) lbRows.push('<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No team data found for the active week.</td></tr>');
+    if (leaderboard.length === 0) lbRows.push('<tr><td colspan="3" style="text-align:center; padding:22px; color:var(--text-muted);">No team data found for the active week.</td></tr>');
     safeGet("leaderboard-table").innerHTML = lbRows.join("");
 
     let history = res.history || [];
     let hRows = ["<tr><th>Assessment Date</th><th>Training Module</th><th>Score %</th><th>Right / Wrong</th></tr>"];
     history.forEach(function (h) {
-      let displayScore = h.isPublished ? '<span class="badge-score">' + escapeHtml(h.score) + '</span>' : '<span class="badge-pending">Evaluating</span>';
+      let displayScore = h.isPublished ? '<span class="badge-score">' + escapeHtml(h.score) + '</span>'
+                                       : '<span class="badge-pending">Evaluating</span>';
       let detailsText = h.isPublished
         ? '<span style="color:#059669; font-weight:800;">' + escapeHtml(h.correct) + ' Right</span><br><span style="color:#dc2626; font-weight:800;">' + escapeHtml(h.wrong) + ' Wrong</span>'
         : '-';
       hRows.push('<tr><td style="font-weight:600;">' + escapeHtml(h.date) + '</td><td><b style="color:var(--primary); font-size:13px;">' +
         escapeHtml(h.month) + ' - ' + escapeHtml(h.week) + '</b></td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
     });
-    if (history.length === 0) hRows.push('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assessment history found.</td></tr>');
+    if (history.length === 0) hRows.push('<tr><td colspan="4" style="text-align:center; padding:22px; color:var(--text-muted);">No assessment history found.</td></tr>');
     safeGet("history-table").innerHTML = hRows.join("");
 
     // SAFETY: a cached payload never unlocks the quiz. The Start button and the
@@ -984,13 +1278,17 @@
     if (res.hasAttempted) {
       safeGet("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score will update once the Admin publishes the results.";
       safeGet("start-btn").style.display = "none";
+      currentQuestions = [];
+      clearQuizState();
     } else if (serverQuestions.length === 0) {
       safeGet("quiz-status-msg").innerHTML = "⏳ Admin has not added questions for this module yet. Please check back later.";
       safeGet("start-btn").style.display = "none";
+      currentQuestions = [];
     } else if (quizGlobalState === "PAUSED") {
       safeGet("quiz-status-msg").innerHTML = "🛑 The Admin has temporarily paused this assessment. You cannot start the quiz right now.";
       safeGet("start-btn").style.display = "none";
       safeGet("display-mod-status").style.color = "#dc2626";
+      currentQuestions = [];
     } else {
       let strictAlert = strictModeEnabled
         ? '<br><br><span style="color:#dc2626; display:inline-block; background:#fee2e2; padding:10px; border-radius:8px;">🛡️ <b>Strict Mode ON:</b> Tab switching or opening new apps is restricted.</span>'
@@ -1002,17 +1300,38 @@
     }
   }
 
+  function resolveSelectedName(typed) {
+    let t = tidy(typed);
+    if (!t) return "";
+    for (let i = 0; i < USER_NAMES.length; i++) {
+      if (USER_NAMES[i].toLowerCase() === t.toLowerCase()) return USER_NAMES[i];  // normalise casing
+    }
+    return t;
+  }
+
   async function loginUser(isSilent) {
     isSilent = (isSilent === true);
     let usedCache = false;
 
     if (!isSilent) {
-      userData.name = safeGet("uName").value.trim().replace(/\s+/g, " ");
+      let typedName = resolveSelectedName(safeGet("uName").value);
+      userData.name = typedName;
       userData.phone = safeGet("uPhone").value.trim();
 
-      if (!userData.name || !userData.phone) { await wepAlert("Please provide both your Name and Mobile Number.", "Details Required", "warn", "✏️"); return; }
-      if (!/^[0-9]{10}$/.test(userData.phone)) { await wepAlert("Please enter a valid 10-digit mobile number.", "Invalid Number", "warn", "📱"); return; }
+      if (!userData.name) { await wepAlert("Please select your name from the list.", "Name Required", "warn", "👤"); safeGet('uName').focus(); return; }
+
+      if (userListMode === "ON" && USER_NAMES.length > 0) {
+        let known = USER_NAMES.some(function (n) { return n.toLowerCase() === userData.name.toLowerCase(); });
+        if (!known) {
+          await wepAlert("Please pick your name from the dropdown list. If your name is not there, use 'New User Registration'.",
+                         "Name Not In List", "warn", "👤");
+          safeGet('uName').focus(); openCombo(true); return;
+        }
+      }
+      if (!/^[0-9]{10}$/.test(userData.phone)) { await wepAlert("Your password is your 10-digit registered mobile number.", "Invalid Password", "warn", "🔑"); safeGet('uPhone').focus(); return; }
       if (!safeGet("tnc").checked) { await wepAlert("Please read and accept the Terms & Conditions before logging in.", "Terms Not Accepted", "warn", "📜"); return; }
+
+      lsSet("wep_last_name", userData.name);
 
       // INSTANT LOGIN: if this same person logged in successfully on this device
       // before, paint their dashboard from the saved copy right away and refresh
@@ -1028,8 +1347,7 @@
       } catch (e) {}
 
       if (saved) {
-        usedCache = true;
-        isLoggedIn = true;
+        usedCache = true; isLoggedIn = true;
         showAppShell();
         applyDashboard(saved, true);
         setSyncStrip(true, "Verifying your login and fetching the latest results…");
@@ -1043,12 +1361,11 @@
     if (!res || res.error) {
        if (!isSilent) {
          if (usedCache) {
-           // The saved copy was not good enough - fall back to the login screen.
            setSyncStrip(false);
            isLoggedIn = false;
            safeGet("main-app").style.display = "none";
-           safeGet("login-container").style.display = "flex";
-           try { localStorage.removeItem("wep_dash_" + userData.phone); } catch (e) {}
+           safeGet("login-container").style.display = "grid";
+           lsDel("wep_dash_" + userData.phone);
          } else {
            resetLoginProgress();
          }
@@ -1068,17 +1385,17 @@
     if (!isSilent && !usedCache) {
       completeLoginProgress();
       isLoggedIn = true;
-      setTimeout(showAppShell, 250);
+      setTimeout(showAppShell, 220);
     }
 
     applyDashboard(res, false);
     setSyncStrip(false);
 
-    // Save a copy for the next instant login on this device.
+    // Save a copy for the next instant login on this device (never the paper).
     if (!isSilent) {
       try {
         let slim = JSON.parse(JSON.stringify(res));
-        delete slim.questions;                       // never cache the paper
+        delete slim.questions;
         lsSet("wep_dash_" + userData.phone, JSON.stringify({ name: userData.name, data: slim, at: Date.now() }));
       } catch (e) {}
     }
@@ -1090,9 +1407,7 @@
                  "Server Version Mismatch", "warn", "🔧");
       }
       initCamera();
-      // Branding / training banner is refreshed only AFTER login now, so it can
-      // never sit in front of the login request.
-      refreshPublicData();
+      maybeResumeQuiz();
     } else {
       updateCameraNotice();
     }
@@ -1123,7 +1438,7 @@
     if (!isQuizActive || !strictModeEnabled || isSubmitting) return;
     if (cheatTriggered) return;
     if (safeGet('strictModal').style.display === 'flex') return;
-    if (document.getElementById('wepDialog').style.display === 'flex') return;
+    if (safeGet('wepDialog').style.display === 'flex') return;
     if (document.visibilityState !== "hidden" && document.hasFocus()) return;
 
     cheatTriggered = true;
@@ -1150,10 +1465,65 @@
   });
 
   /* ==========================================================
+     QUIZ STATE PERSISTENCE
+     A refresh (or an accidental close) no longer resets the timer or wipes
+     the answers - the deadline is stored, so reloading buys no extra time.
+     ========================================================== */
+
+  function quizKey() { return "wep_quiz_" + userData.phone; }
+
+  function saveQuizState() {
+    if (!userData.phone || !isQuizActive) return;
+    lsSet(quizKey(), JSON.stringify({
+      m: activeModuleObj.month, w: activeModuleObj.week,
+      d: quizDeadline, a: userAnswers, v: tabSwitchCount
+    }));
+  }
+  function clearQuizState() { if (userData.phone) lsDel(quizKey()); }
+
+  function readQuizState() {
+    try {
+      let raw = lsGet(quizKey());
+      if (!raw) return null;
+      let o = JSON.parse(raw);
+      if (!o || o.m !== activeModuleObj.month || o.w !== activeModuleObj.week) { clearQuizState(); return null; }
+      return o;
+    } catch (e) { return null; }
+  }
+
+  async function maybeResumeQuiz() {
+    if (!currentQuestions || currentQuestions.length === 0) return;
+    let st = readQuizState();
+    if (!st || !st.d) return;
+
+    let remaining = Math.round((st.d - Date.now()) / 1000);
+    switchView('assessment');
+
+    if (remaining <= 0) {
+      // Time ran out while the page was closed - submit what was answered.
+      userAnswers = st.a || {};
+      tabSwitchCount = st.v || 0;
+      isQuizActive = false;
+      await wepAlert("Your previous attempt's time limit had expired. The answers saved on this device are being submitted now.",
+                     "Time Expired", "warn", "⏰");
+      safeGet("assessment-intro").style.display = "none";
+      safeGet("quiz-wizard").style.display = "block";
+      submitQuiz(true, "Timeout");
+      return;
+    }
+
+    let go = await wepConfirm("An unfinished assessment was found on this device with " +
+      Math.ceil(remaining / 60) + " minute(s) left.\n\nYour saved answers will be restored.",
+      "Resume Assessment?", "warn", "Resume Now");
+    if (!go) return;
+    startQuiz(st);
+  }
+
+  /* ==========================================================
      QUIZ FLOW
      ========================================================== */
 
-  async function startQuiz() {
+  async function startQuiz(resumeState) {
     if (!currentQuestions || currentQuestions.length === 0) {
       await wepAlert("No questions are available for this module right now.", "Nothing to Attempt", "warn", "📭");
       return;
@@ -1167,23 +1537,33 @@
     clearInterval(autoSyncTimer); autoSyncTimer = null;
 
     isQuizActive = true; isSubmitting = false;
-    tabSwitchCount = 0; cheatTriggered = false;
+    cheatTriggered = false;
+
+    let seconds = quizTimeLimit * 60;
+    if (resumeState && resumeState.d) {
+      userAnswers = resumeState.a || {};
+      tabSwitchCount = resumeState.v || 0;
+      seconds = Math.max(1, Math.round((resumeState.d - Date.now()) / 1000));
+    } else {
+      userAnswers = {};
+      tabSwitchCount = 0;
+    }
 
     safeGet("syncBtn").style.display = "none";
     safeGet("assessment-intro").style.display = "none";
     safeGet("top-nav").style.display = "none";
     safeGet("quiz-wizard").style.display = "block";
 
-    currentQIndex = 0; userAnswers = {};
+    currentQIndex = 0;
     renderSingleQuestion();
-    startTimer(quizTimeLimit * 60);
+    startTimer(seconds);
+    saveQuizState();
 
-    // Proctoring: one frame at start, then every 45 seconds.
-    // Each capture replaces the previous one, so the admin's view stays current
-    // without the sheet ever growing.
+    // Proctoring: one frame at start, then every 90 seconds. Each capture
+    // replaces the previous one, so the sheet never grows.
     captureSnapshot("Quiz Start");
     clearInterval(camSnapTimer);
-    camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, 90000);
+    camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, CAM_INTERVAL_MS);
 
     window.scrollTo(0, 0);
   }
@@ -1191,8 +1571,7 @@
   function startTimer(durationInSeconds) {
     clearInterval(countdownInterval);
     quizDeadline = Date.now() + (durationInSeconds * 1000);
-    let display = safeGet('countdown-timer');
-    let bar = safeGet('timer-bar');
+    let display = safeGet('countdown-timer'), bar = safeGet('timer-bar');
 
     function tick() {
       let remaining = Math.round((quizDeadline - Date.now()) / 1000);
@@ -1218,6 +1597,8 @@
      document.querySelectorAll('#questions-container .option-label').forEach(function (l) { l.classList.remove('selected'); });
      let parent = elem.closest('.option-label');
      if (parent) parent.classList.add('selected');
+     saveCurrentSelection();
+     saveQuizState();
   }
 
   function renderSingleQuestion() {
@@ -1240,17 +1621,19 @@
       let L = letters[i];
       html += '<label class="option-label ' + (savedAns === L ? 'selected' : '') + '">' +
                 '<input type="radio" name="q_current" value="' + L + '" onchange="handleRadioClick(this)" ' +
-                (savedAns === L ? 'checked' : '') + '> <span style="flex:1;">' + escapeHtml(optText) + '</span>' +
+                (savedAns === L ? 'checked' : '') + '>' +
+                '<span class="opt-key">' + L + '</span>' +
+                '<span style="flex:1;">' + escapeHtml(optText) + '</span>' +
               '</label>';
     }
 
-    let btns = '<div style="display:flex; justify-content:space-between; margin-top:40px; gap:20px;">';
+    let btns = '<div style="display:flex; justify-content:space-between; margin-top:34px; gap:16px;">';
     btns += (currentQIndex > 0)
-      ? '<button type="button" class="btn btn-secondary" style="flex:1; padding:18px;" onclick="prevQuestion()">⬅️ Previous</button>'
+      ? '<button type="button" class="btn btn-secondary" style="flex:1;" onclick="prevQuestion()">⬅️ Previous</button>'
       : '<div style="flex:1;"></div>';
     btns += (currentQIndex < total - 1)
-      ? '<button type="button" class="btn" style="flex:1; padding:18px;" onclick="nextQuestion()">Next ➡️</button>'
-      : '<button type="button" class="btn btn-success" style="flex:1; padding:18px;" onclick="submitQuiz()">Submit Assessment ✅</button>';
+      ? '<button type="button" class="btn" style="flex:1;" onclick="nextQuestion()">Next ➡️</button>'
+      : '<button type="button" class="btn btn-success" style="flex:1;" onclick="submitQuiz()">Submit Assessment ✅</button>';
     btns += '</div>';
 
     safeGet("questions-container").innerHTML = html + btns;
@@ -1262,13 +1645,13 @@
   }
 
   function nextQuestion() {
-    saveCurrentSelection();
+    saveCurrentSelection(); saveQuizState();
     if (currentQIndex < currentQuestions.length - 1) currentQIndex++;
     renderSingleQuestion(); window.scrollTo(0, 0);
   }
 
   function prevQuestion() {
-    saveCurrentSelection();
+    saveCurrentSelection(); saveQuizState();
     if (currentQIndex > 0) currentQIndex--;
     renderSingleQuestion(); window.scrollTo(0, 0);
   }
@@ -1296,15 +1679,15 @@
     captureSnapshot(forceReason === "Disqualified" ? "Disqualified" : "Quiz Submit");
     clearInterval(camSnapTimer); camSnapTimer = null;
 
-    let spinnerIcon = forceReason === "Disqualified" ? "🚨" : "⚙️";
-    let spinnerText = forceReason === "Disqualified" ? "Disqualified. Submitting..." : "Saving Assessment Data...";
+    let spinnerIcon  = forceReason === "Disqualified" ? "🚨" : "⚙️";
+    let spinnerText  = forceReason === "Disqualified" ? "Disqualified. Submitting..." : "Saving Assessment Data...";
     let spinnerColor = forceReason === "Disqualified" ? "#dc2626" : "var(--primary)";
 
     safeGet("quiz-wizard").innerHTML =
       "<div style='text-align:center; padding:50px 0;'>" +
-        '<div style="font-size:45px; margin-bottom:20px; animation: spin 2s linear infinite;">' + spinnerIcon + '</div>' +
-        "<h2 style='color:" + spinnerColor + "; margin:0; font-size:22px;'>" + spinnerText + "</h2>" +
-        "<p style='color:var(--text-muted); font-size:14px; margin-top:15px; line-height:1.6;'>Please wait while your answers are submitted to the WeP server.</p>" +
+        '<div style="font-size:42px; margin-bottom:18px; animation:spin 2s linear infinite;">' + spinnerIcon + '</div>' +
+        "<h2 style='color:" + spinnerColor + "; margin:0; font-size:21px;'>" + spinnerText + "</h2>" +
+        "<p style='color:var(--text-muted); font-size:14px; margin-top:14px;'>Please wait while your answers are submitted to the WeP server.</p>" +
         "<style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>" +
       "</div>";
 
@@ -1327,8 +1710,6 @@
       };
     });
 
-    // "flag" goes into its own light column so the admin dashboard can show a
-    // Disqualified badge without loading the heavy detailed-log column.
     let resultPayload = {
       total: currentQuestions.length, correct: correct, detailedLogs: detailedLogs,
       flag: (forceReason === "Disqualified") ? "Disqualified" : (forceReason === "Timeout" ? "Timeout" : "")
@@ -1342,18 +1723,23 @@
 
     if (!submitRes || submitRes.error) {
       let msg = (submitRes && submitRes.error) ? submitRes.error : "Submission failed.";
+      let alreadyDone = msg.indexOf("already submitted") !== -1;
+      if (alreadyDone) clearQuizState();
       safeGet("quiz-wizard").innerHTML =
         "<div style='text-align:center; padding:50px 20px;'>" +
-          '<div style="font-size:45px; margin-bottom:20px;">⚠️</div>' +
-          "<h2 style='color:#dc2626; margin:0; font-size:22px;'>Submission Failed</h2>" +
-          "<p style='color:var(--text-muted); font-size:14px; margin:15px 0 25px 0;'>" + escapeHtml(msg) +
-          "<br>Your answers are still saved in this browser. Please do not close this page.</p>" +
-          '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="retrySubmit(&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>' +
+          '<div style="font-size:42px; margin-bottom:18px;">⚠️</div>' +
+          "<h2 style='color:#dc2626; margin:0; font-size:21px;'>Submission " + (alreadyDone ? "Blocked" : "Failed") + "</h2>" +
+          "<p style='color:var(--text-muted); font-size:14px; margin:14px 0 24px 0;'>" + escapeHtml(msg) +
+          (alreadyDone ? "" : "<br>Your answers are still saved in this browser. Please do not close this page.") + "</p>" +
+          (alreadyDone
+            ? '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="location.reload()">Back to Dashboard</button>'
+            : '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="retrySubmit(&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>') +
         "</div>";
       isSubmitting = false;
       return;
     }
 
+    clearQuizState();
     stopCamera();
 
     if (forceReason === "Disqualified") {
