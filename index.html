@@ -11,11 +11,11 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycby00vRY-KVmesgk0bia4Zy8w0QM_ZlYveoiJCfq8lKJk6Xr-aBZiuTEpE_3OkRmNYIq/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyb9iycbUFlDQqK_k53kttmKYWsqi0MGSdxBC3R3odIeJDZHSabyBrIZ9P6E19VS7ZO/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 40000;
-    const EXPECTED_API = 5.1;          // must match API_VERSION in Code.gs
+    const EXPECTED_API = 5.2;          // must match API_VERSION in Code.gs
     let SERVER_API = null;             // filled from the first successful reply
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -724,7 +724,8 @@
   // Camera proctoring state
   let camStream = null, camReady = false, camMode = "OPTIONAL", camSnapTimer = null, camBusy = false;
   let camWidget = "SHOW", camState = "idle";          // idle | starting | live | denied | unsupported | error
-  const CAM_INTERVAL_MS = 90000;
+  let camIntervalMs = 60000;                          // admin-controlled (Settings -> CameraInterval)
+  let camLabel = "Live";
 
   // Login name list
   let USER_NAMES = [], userListMode = "ON", comboIndex = -1, nameListState = "loading";
@@ -889,7 +890,8 @@
       let ok = await waitForVideo(vid, 7000);
       camReady = true;
       setCamUI("live", ok ? "Proctoring Active" : "Warming up…");
-      captureSnapshot("Login");
+      captureSnapshot(isQuizActive ? "In-Quiz" : "Login");
+      startCamHeartbeat(isQuizActive ? "In-Quiz" : "Live");
     } catch (err) {
       camReady = false;
       let name = (err && err.name) ? err.name : "";
@@ -909,6 +911,22 @@
           "Camera Permission Required", "danger", "📷");
       }
     } finally { camBusy = false; }
+  }
+
+  /**
+   * LIVE FEED: once the camera is up we keep sending a frame on a heartbeat for
+   * as long as the learner is logged in - not only during the quiz. Each upload
+   * OVERWRITES the same row, so the sheet never grows and the admin's Live
+   * Camera tab always shows a recent frame.
+   */
+  function startCamHeartbeat(label) {
+    camLabel = label || camLabel || "Live";
+    clearInterval(camSnapTimer);
+    if (!camReady || camMode === "OFF") return;
+    camSnapTimer = setInterval(function () {
+      if (document.hidden) return;        // a hidden tab cannot produce frames anyway
+      captureSnapshot(camLabel);
+    }, Math.max(10000, camIntervalMs));
   }
 
   function stopCamera() {
@@ -970,7 +988,8 @@
 
     if (camState === "live") {
       el.className = "cam-note on good";
-      el.innerHTML = "📷 <b>Camera proctoring is active.</b> Your photo is captured when you log in and periodically during the assessment.";
+      el.innerHTML = "📷 <b>Camera proctoring is active.</b> A photo is sent to the WeP admin every " +
+                     Math.round(camIntervalMs / 1000) + " seconds while you are logged in.";
     } else if (camState === "starting") {
       el.className = "cam-note on warn";
       el.innerHTML = "⏳ <b>Starting your camera…</b> Please allow the permission prompt if your browser asks.";
@@ -1505,6 +1524,8 @@
     strictModeEnabled = (String(res.strictMode).toUpperCase() === "ON");
     camMode = (res.cameraMode || "OPTIONAL").toUpperCase();
     camWidget = (res.cameraWidget || "SHOW").toUpperCase();
+    let newInterval = Math.max(10, parseInt(res.cameraInterval, 10) || 60) * 1000;
+    if (newInterval !== camIntervalMs) { camIntervalMs = newInterval; if (camReady) startCamHeartbeat(); }
 
     safeGet("display-time-limit").innerText = quizTimeLimit;
     safeGet("display-mod-status").innerText = quizGlobalState;
@@ -1714,6 +1735,9 @@
     }
   }
 
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && camReady && isLoggedIn) setTimeout(function () { captureSnapshot(camLabel); }, 400);
+  });
   document.addEventListener("visibilitychange", handleCheatEvent);
   window.addEventListener("blur", handleCheatEvent);
   window.addEventListener("beforeunload", function (e) {
@@ -1801,8 +1825,7 @@
     saveQuizState();
 
     captureSnapshot("Quiz Start");
-    clearInterval(camSnapTimer);
-    camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, CAM_INTERVAL_MS);
+    startCamHeartbeat("In-Quiz");
 
     window.scrollTo(0,0);
   }
