@@ -16,7 +16,7 @@
     // ==========================================
 
     const API_TIMEOUT_MS = 55000;
-    const EXPECTED_API = 4.1;          // must match API_VERSION in Code.gs
+    const EXPECTED_API = 5.0;          // must match API_VERSION in Code.gs
     let SERVER_API = null;
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -73,7 +73,7 @@
       return { error: lastErr };
     }
 
-    /** All calls run one at a time - overlapping requests are what trigger the flaky redirect. */
+    /** All calls run one at a time - overlapping requests trigger the flaky redirect. */
     let _apiChain = Promise.resolve();
     function apiCall(actionName, payloadData) {
       let run = function () { return rawApiCall(actionName, payloadData); };
@@ -86,123 +86,151 @@
   </script>
 
   <style>
-    :root { --primary: #0f172a; --secondary: #1e293b; --accent: #2563eb; --success: #059669; --danger: #dc2626; --warn: #f59e0b; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --text-muted: #64748b; --border: #e2e8f0; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); overflow: hidden; font-size: 15px;}
+    :root { --primary:#0f172a; --secondary:#1e293b; --accent:#2563eb; --success:#059669; --danger:#dc2626;
+            --warn:#f59e0b; --bg:#f1f5f9; --surface:#ffffff; --text:#334155; --text-muted:#64748b; --border:#e2e8f0; }
+    * { box-sizing: border-box; }
+    body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:var(--bg); margin:0; padding:0;
+           color:var(--text); overflow:hidden; font-size:15px; }
 
-    .layout-wrapper { display: flex; height: 100vh; width: 100%; }
-    .sidebar { width: 270px; background: var(--primary); color: #cbd5e1; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0;}
-    .main-content { flex: 1; overflow-y: auto; background: var(--bg); padding: 35px; position: relative; min-width: 0;}
+    .layout-wrapper { display:flex; height:100vh; width:100%; }
+    .sidebar { width:268px; background:var(--primary); color:#cbd5e1; display:flex; flex-direction:column;
+               box-shadow:4px 0 10px rgba(0,0,0,0.1); z-index:10; flex-shrink:0; }
+    .main-content { flex:1; overflow-y:auto; background:var(--bg); padding:32px; position:relative; min-width:0; }
 
-    .brand { padding: 30px 20px; font-size: 22px; font-weight: 800; color: white; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; margin-bottom: 15px;}
-    .brand img { height: 45px !important; width: auto !important; max-width: 100% !important; object-fit: contain; background: white; padding: 4px 8px; border-radius: 8px; flex-shrink: 0; }
+    .brand { padding:26px 20px; font-size:21px; font-weight:800; color:#fff; display:flex; align-items:center; gap:12px;
+             border-bottom:1px solid #334155; margin-bottom:12px; }
+    .brand img { height:44px; width:auto; max-width:100%; object-fit:contain; background:#fff; padding:4px 8px;
+                 border-radius:8px; flex-shrink:0; }
 
-    .nav-item { padding: 16px 20px; cursor: pointer; transition: 0.2s; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; border-left: 4px solid transparent;}
-    .nav-item:hover { background: var(--secondary); color: white;}
-    .nav-item.active { background: var(--secondary); color: white; border-left-color: var(--accent); }
-    .nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 20px; display: none; }
-    .role-badge { margin: auto 20px 20px 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600;}
+    .nav-item { padding:15px 20px; cursor:pointer; transition:0.2s; font-size:14.5px; font-weight:600; display:flex;
+                align-items:center; gap:12px; border-left:4px solid transparent; }
+    .nav-item:hover { background:var(--secondary); color:#fff; }
+    .nav-item.active { background:var(--secondary); color:#fff; border-left-color:var(--accent); }
+    .nav-badge { margin-left:auto; background:var(--danger); color:#fff; font-size:11px; font-weight:800; padding:2px 8px;
+                 border-radius:20px; display:none; }
+    .role-badge { margin:auto 20px 20px 20px; padding:12px; background:rgba(255,255,255,0.1); border-radius:8px;
+                  font-size:13px; text-align:center; font-weight:600; }
 
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 15px; flex-wrap: wrap;}
-    .page-header h1 { margin: 0; font-size: 26px; color: var(--primary); font-weight: 800;}
-    .header-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .refresh-btn { background: white; color: var(--text); border: 1px solid var(--border); font-size: 15px; cursor: pointer; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 8px; width: auto; margin:0;}
-    .refresh-btn:hover { background: #f1f5f9; transform: translateY(-1px);}
-    .live-pill { display:flex; align-items:center; gap:8px; background:#ecfdf5; border:1px solid #6ee7b7; color:#065f46; padding:8px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; user-select:none;}
-    .live-pill .dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation: pulse 1.4s infinite;}
-    .live-pill.off { background:#f1f5f9; border-color:var(--border); color:var(--text-muted);}
-    .live-pill.off .dot { background:#94a3b8; animation:none;}
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:26px; gap:15px; flex-wrap:wrap; }
+    .page-header h1 { margin:0; font-size:25px; color:var(--primary); font-weight:800; }
+    .header-tools { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .refresh-btn { background:#fff; color:var(--text); border:1px solid var(--border); font-size:14px; cursor:pointer;
+                   padding:10px 18px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.05); transition:0.2s;
+                   font-weight:600; display:flex; align-items:center; gap:8px; width:auto; margin:0; }
+    .refresh-btn:hover { background:#f1f5f9; }
+    .live-pill { display:flex; align-items:center; gap:8px; background:#ecfdf5; border:1px solid #6ee7b7; color:#065f46;
+                 padding:8px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; user-select:none; }
+    .live-pill .dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation:pulse 1.4s infinite; }
+    .live-pill.off { background:#f1f5f9; border-color:var(--border); color:var(--text-muted); }
+    .live-pill.off .dot { background:#94a3b8; animation:none; }
 
-    .box { background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid var(--border); }
-    input, select, textarea, button { padding: 12px 16px; margin: 6px 0 16px 0; border-radius: 8px; border: 1px solid var(--border); outline:none; font-size: 15px; width: 100%; box-sizing: border-box; font-family:inherit; transition: 0.2s;}
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-    button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: 600; }
-    button:hover { background: #1d4ed8; }
-    .btn-green { background: var(--success); } .btn-green:hover{ background: #047857; }
-    .btn-export { background: #0f766e; width: auto; padding: 10px 18px; font-size: 14px; margin:0;}
-    .btn-export-sm { background: #0f766e; color: white; border: none; padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 600; width: auto; margin: 0;}
-    .btn-export-sm:hover { background: #115e59; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .box { background:var(--surface); padding:28px; border-radius:12px; box-shadow:0 4px 10px -1px rgba(0,0,0,0.05);
+           margin-bottom:24px; border:1px solid var(--border); }
+    input, select, textarea, button { padding:12px 15px; margin:6px 0 15px 0; border-radius:8px; border:1px solid var(--border);
+            outline:none; font-size:15px; width:100%; box-sizing:border-box; font-family:inherit; transition:0.2s; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+    button { background:var(--accent); color:#fff; border:none; cursor:pointer; font-weight:600; }
+    button:hover { background:#1d4ed8; }
+    label { font-size:14px; font-weight:600; }
+    .btn-green { background:var(--success); } .btn-green:hover { background:#047857; }
+    .btn-export { background:#0f766e; width:auto; padding:10px 18px; font-size:14px; margin:0; }
+    .btn-export-sm { background:#0f766e; color:#fff; border:none; padding:6px 12px; font-size:12px; border-radius:6px;
+                     cursor:pointer; transition:0.2s; font-weight:600; width:auto; margin:0; }
+    .btn-export-sm:hover { background:#115e59; }
     .btn-mini { width:auto; margin:0; padding:6px 12px; font-size:12px; border-radius:6px; font-weight:700; }
     .btn-cam { background:#7c3aed; } .btn-cam:hover { background:#6d28d9; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
-    th, td { padding: 16px 14px; border-bottom: 1px solid var(--border); text-align: left; }
-    th { background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: 0.5px;}
+    table { width:100%; border-collapse:collapse; font-size:14px; margin-top:14px; }
+    th, td { padding:15px 13px; border-bottom:1px solid var(--border); text-align:left; }
+    th { background:#f8fafc; color:#475569; text-transform:uppercase; font-size:11.5px; font-weight:800; letter-spacing:0.5px; }
 
-    .pill { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px;}
+    .pill { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; }
     .pill-pending { background:#fef08a; color:#854d0e; }
     .pill-approved { background:#dcfce7; color:#166534; }
     .pill-rejected { background:#fee2e2; color:#991b1b; }
 
-    .flex-row { display: flex; gap: 18px; margin-bottom: 10px; align-items:flex-start; flex-wrap: wrap;}
-    .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 25px;}
-    .chart-box { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.02); min-width: 0;}
-    .chart-container { position: relative; height: 280px; width: 100%; margin-top: 15px;}
-    .large-chart-container { position: relative; height: 400px; width: 100%; margin-top: 15px;}
+    .flex-row { display:flex; gap:18px; margin-bottom:10px; align-items:flex-start; flex-wrap:wrap; }
+    .chart-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(350px,1fr)); gap:24px; margin-bottom:24px; }
+    .chart-box { background:#fff; padding:24px; border-radius:12px; border:1px solid var(--border);
+                 box-shadow:0 2px 6px rgba(0,0,0,0.02); min-width:0; }
+    .chart-container { position:relative; height:280px; width:100%; margin-top:14px; }
+    .large-chart-container { position:relative; height:400px; width:100%; margin-top:14px; }
 
-    #toast-container { position: fixed; top: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; gap: 10px;}
-    .toast { background: var(--primary); color: white; padding: 14px 24px; border-radius: 8px; font-size: 15px; font-weight:500; box-shadow: 0 10px 20px rgba(0,0,0,0.2); border-left: 5px solid var(--accent); animation: slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards;}
-    .toast.error { border-left-color: var(--danger); }
-    @keyframes slideIn { from{ transform: translateX(100%); } to { transform: translateX(0); } }
-    @keyframes fadeOut { to { opacity: 0; } }
+    #toast-container { position:fixed; top:25px; right:25px; z-index:99999; display:flex; flex-direction:column; gap:10px; }
+    .toast { background:var(--primary); color:#fff; padding:14px 24px; border-radius:8px; font-size:15px; font-weight:500;
+             box-shadow:0 10px 20px rgba(0,0,0,0.2); border-left:5px solid var(--accent);
+             animation:slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards; }
+    .toast.error { border-left-color:var(--danger); }
+    @keyframes slideIn { from{transform:translateX(100%);} to{transform:translateX(0);} }
+    @keyframes fadeOut { to { opacity:0; } }
 
-    .training-input { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 0; }
-    .training-select { padding: 8px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; margin:0;}
+    .training-input { padding:8px; font-size:13px; border:1px solid var(--border); border-radius:4px; width:100%; margin:0; }
+    .training-select { padding:8px; font-size:13px; border:1px solid var(--border); border-radius:4px; margin:0; }
 
-    .skeleton { background: #e2e8f0; border-radius: 8px; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-    .load-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 24px; overflow: hidden; position: relative; margin-top: 15px; }
-    .load-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.2s linear; }
-    .load-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; line-height: 24px; font-size: 13px; font-weight: 800; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .skeleton { background:#e2e8f0; border-radius:8px; animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%{opacity:0.5;} 50%{opacity:1;} 100%{opacity:0.5;} }
+    .load-container { width:100%; background:#e2e8f0; border-radius:10px; height:24px; overflow:hidden; position:relative; margin-top:14px; }
+    .load-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent)); width:0%; transition:width 0.2s linear; }
+    .load-text { position:absolute; width:100%; text-align:center; top:0; left:0; line-height:24px; font-size:13px;
+                 font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 99999; animation: fadeIn 0.2s ease-out; overflow-y: auto; padding: 20px; box-sizing: border-box;}
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-    .modal-box { background: white; padding: 35px 30px; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2); margin: auto;}
+    .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(5px); display:none;
+                     justify-content:center; align-items:center; z-index:99999; animation:fadeIn 0.2s ease-out;
+                     overflow-y:auto; padding:20px; }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    @keyframes popIn { 0%{transform:scale(0.9);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+    .modal-box { background:#fff; padding:34px 28px; border-radius:16px; width:90%; max-width:600px;
+                 box-shadow:0 20px 40px rgba(0,0,0,0.3); animation:popIn 0.3s cubic-bezier(0.175,0.885,0.32,1.2); margin:auto; }
 
-    /* ===== BRANDED DIALOG (replaces every native alert / confirm) ===== */
-    #wepDialog { position: fixed; inset: 0; background: rgba(15,23,42,0.88); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box; animation: fadeIn 0.18s ease-out; }
-    #wepDialog .dlg { background: #fff; border-radius: 18px; width: 100%; max-width: 430px; box-shadow: 0 25px 55px rgba(0,0,0,0.35); animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow: hidden; }
-    #wepDialog .dlg-head { padding: 28px 28px 0 28px; text-align: center; }
-    #wepDialog .dlg-icon { font-size: 44px; line-height: 1; margin-bottom: 14px; display: block; }
-    #wepDialog .dlg-title { margin: 0; font-size: 21px; font-weight: 800; color: var(--primary); }
-    #wepDialog .dlg-msg { padding: 14px 28px 26px 28px; text-align: center; font-size: 15px; color: var(--text); line-height: 1.65; }
-    #wepDialog .dlg-actions { display: flex; gap: 12px; padding: 0 28px 28px 28px; }
-    #wepDialog .dlg-actions button { flex: 1; padding: 15px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; margin: 0; width: auto;}
-    #wepDialog .dlg-cancel { background: #e2e8f0; color: #475569; } #wepDialog .dlg-cancel:hover { background: #cbd5e1; }
-    #wepDialog .dlg-ok { background: var(--accent); color: #fff; } #wepDialog .dlg-ok:hover { background: #1d4ed8; }
-    #wepDialog.danger .dlg-ok { background: var(--danger); } #wepDialog.danger .dlg-ok:hover { background: #b91c1c; }
-    #wepDialog.success .dlg-ok { background: var(--success); } #wepDialog.success .dlg-ok:hover { background: #047857; }
-    #wepDialog.warn .dlg-ok { background: var(--warn); } #wepDialog.warn .dlg-ok:hover { background: #d97706; }
-    #wepDialog .dlg-bar { height: 7px; width: 100%; background: var(--accent); }
-    #wepDialog.danger .dlg-bar { background: var(--danger); }
-    #wepDialog.success .dlg-bar { background: var(--success); }
-    #wepDialog.warn .dlg-bar { background: var(--warn); }
+    /* ===== BRANDED DIALOG ===== */
+    #wepDialog { position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(6px); display:none;
+                 justify-content:center; align-items:center; z-index:100000; padding:20px; animation:fadeIn 0.18s ease-out; }
+    #wepDialog .dlg { background:#fff; border-radius:18px; width:100%; max-width:430px;
+                      box-shadow:0 25px 55px rgba(0,0,0,0.35); animation:popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow:hidden; }
+    #wepDialog .dlg-head { padding:28px 28px 0 28px; text-align:center; }
+    #wepDialog .dlg-icon { font-size:42px; line-height:1; margin-bottom:12px; display:block; }
+    #wepDialog .dlg-title { margin:0; font-size:20px; font-weight:800; color:var(--primary); }
+    #wepDialog .dlg-msg { padding:14px 28px 24px 28px; text-align:center; font-size:15px; color:var(--text); line-height:1.65; }
+    #wepDialog .dlg-actions { display:flex; gap:12px; padding:0 28px 28px 28px; }
+    #wepDialog .dlg-actions button { flex:1; padding:14px 16px; border-radius:10px; border:none; font-size:15px;
+                                     font-weight:700; cursor:pointer; transition:0.2s; font-family:inherit; margin:0; width:auto; }
+    #wepDialog .dlg-cancel { background:#e2e8f0; color:#475569; } #wepDialog .dlg-cancel:hover { background:#cbd5e1; }
+    #wepDialog .dlg-ok { background:var(--accent); color:#fff; } #wepDialog .dlg-ok:hover { background:#1d4ed8; }
+    #wepDialog.danger .dlg-ok { background:var(--danger); } #wepDialog.danger .dlg-ok:hover { background:#b91c1c; }
+    #wepDialog.success .dlg-ok { background:var(--success); } #wepDialog.success .dlg-ok:hover { background:#047857; }
+    #wepDialog.warn .dlg-ok { background:var(--warn); } #wepDialog.warn .dlg-ok:hover { background:#d97706; }
+    #wepDialog .dlg-bar { height:7px; width:100%; background:var(--accent); }
+    #wepDialog.danger .dlg-bar { background:var(--danger); }
+    #wepDialog.success .dlg-bar { background:var(--success); }
+    #wepDialog.warn .dlg-bar { background:var(--warn); }
 
     /* ===== SNAPSHOT GALLERY ===== */
-    .snap-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:14px; margin-top:18px; }
-    .snap-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#f8fafc; text-decoration:none; display:block; transition:0.2s; }
-    .snap-card:hover { transform: translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,0.12); border-color:var(--accent); }
+    .snap-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:14px; margin-top:18px; }
+    .snap-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#f8fafc;
+                 text-decoration:none; display:block; transition:0.2s; }
+    .snap-card:hover { transform:translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,0.12); border-color:var(--accent); }
     .snap-card img { width:100%; height:112px; object-fit:cover; display:block; background:#0f172a; }
     .snap-meta { padding:8px 10px; font-size:11px; color:var(--text-muted); font-weight:700; line-height:1.4; }
     .snap-meta b { display:block; color:var(--primary); font-size:11px; }
-    .snap-noimg { height:112px; display:flex; align-items:center; justify-content:center; background:#1e293b; color:#fca5a5; font-size:11px; font-weight:800; text-align:center; padding:8px; }
+    .snap-noimg { height:112px; display:flex; align-items:center; justify-content:center; background:#1e293b; color:#fca5a5;
+                  font-size:11px; font-weight:800; text-align:center; padding:8px; }
 
     @media (max-width: 768px) {
-      body { overflow-y: auto; }
-      .layout-wrapper { flex-direction: column; height: auto; }
-      .sidebar { width: 100%; flex-direction: row; overflow-x: auto; white-space: nowrap; align-items: center; padding: 10px; }
-      .brand { margin-bottom: 0; border-bottom: none; border-right: 1px solid #334155; padding: 10px 15px; }
-      .brand img { height: 35px !important; }
-      .nav-item { border-left: none; border-bottom: 4px solid transparent; padding: 10px 15px; font-size: 14px; flex-shrink: 0; }
-      .nav-item.active { border-bottom-color: var(--accent); }
-      .nav-badge { margin-left: 8px; }
-      .role-badge { display: none; }
-      .main-content { padding: 20px; overflow-y: visible;}
-      .page-header h1 { font-size: 20px; }
-      .chart-grid { grid-template-columns: 1fr; }
-      .flex-row { flex-direction: column; gap: 10px; }
-      .flex-row > div { width: 100%; }
-      #toast-container { top: 10px; right: 10px; left: 10px; }
+      body { overflow-y:auto; }
+      .layout-wrapper { flex-direction:column; height:auto; }
+      .sidebar { width:100%; flex-direction:row; overflow-x:auto; white-space:nowrap; align-items:center; padding:10px; }
+      .brand { margin-bottom:0; border-bottom:none; border-right:1px solid #334155; padding:10px 15px; }
+      .brand img { height:34px; }
+      .nav-item { border-left:none; border-bottom:4px solid transparent; padding:10px 15px; font-size:14px; flex-shrink:0; }
+      .nav-item.active { border-bottom-color:var(--accent); }
+      .nav-badge { margin-left:8px; }
+      .role-badge { display:none; }
+      .main-content { padding:18px; overflow-y:visible; }
+      .page-header h1 { font-size:20px; }
+      .chart-grid { grid-template-columns:1fr; }
+      .flex-row { flex-direction:column; gap:10px; }
+      .flex-row > div { width:100%; }
+      #toast-container { top:10px; right:10px; left:10px; }
     }
   </style>
 </head>
@@ -211,7 +239,9 @@
 <div id="toast-container"></div>
 
 <!-- Lightweight inline loader used for per-tab data pulls (no blocking modal) -->
-<div id="tab-loading" style="display:none; position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:99998; background:var(--primary); color:#fff; padding:10px 20px; border-radius:22px; font-size:13px; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,0.28); align-items:center; gap:10px;">
+<div id="tab-loading" style="display:none; position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:99998;
+     background:var(--primary); color:#fff; padding:10px 20px; border-radius:22px; font-size:13px; font-weight:700;
+     box-shadow:0 8px 20px rgba(0,0,0,0.28); align-items:center; gap:10px;">
   <span style="width:9px; height:9px; border-radius:50%; background:#38bdf8; animation:pulse 1s infinite; display:inline-block;"></span>
   <span id="tab-loading-text">Loading…</span>
 </div>
@@ -235,9 +265,9 @@
 <!-- GLOBAL 0-100% LOADER MODAL -->
 <div class="modal-overlay" id="globalLoaderModal">
   <div class="modal-box" style="max-width:400px; text-align:center;">
-    <div style="font-size: 45px; margin-bottom: 15px; animation: pulse 1.5s infinite;">⏳</div>
-    <h2 id="loader-title" style="color:var(--primary); margin-top:0; font-size:22px;">Processing...</h2>
-    <p style="color:var(--text-muted); font-size:14px; margin-bottom:25px;">Please wait while we sync with the secure server.</p>
+    <div style="font-size:42px; margin-bottom:14px; animation:pulse 1.5s infinite;">⏳</div>
+    <h2 id="loader-title" style="color:var(--primary); margin-top:0; font-size:21px;">Processing...</h2>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:22px;">Please wait while we sync with the secure server.</p>
     <div class="load-container" style="display:block;">
        <div id="global-progress-fill" class="load-fill" style="width:0%;"></div>
        <div id="global-progress-text" class="load-text">0%</div>
@@ -248,9 +278,10 @@
 
 <!-- SNAPSHOT GALLERY MODAL -->
 <div class="modal-overlay" id="snapModal">
-  <div class="modal-box" style="max-width: 900px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px; gap:12px; flex-wrap:wrap;">
-      <h3 style="margin:0; color:var(--primary); font-size:20px;">📷 Live Frame — <span id="snap-user" style="color:var(--accent);"></span></h3>
+  <div class="modal-box" style="max-width:900px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);
+         padding-bottom:14px; gap:12px; flex-wrap:wrap;">
+      <h3 style="margin:0; color:var(--primary); font-size:19px;">📷 Live Frame — <span id="snap-user" style="color:var(--accent);"></span></h3>
       <button onclick="document.getElementById('snapModal').style.display='none'" class="btn-mini" style="background:#64748b;">Close</button>
     </div>
     <p style="font-size:13px; color:var(--text-muted); margin:14px 0 0 0;">The user's most recent camera frame, stored in the <b>LiveCamera</b> sheet. Use Refresh to pull the latest one.</p>
@@ -261,39 +292,41 @@
 <!-- EDIT QUESTION MODAL -->
 <div class="modal-overlay" id="editQModal">
   <div class="modal-box">
-    <h3 style="margin-top:0; color:var(--primary); font-size:22px; border-bottom:1px solid var(--border); padding-bottom:10px;">✏️ Edit Question</h3>
-    <div class="flex-row" style="margin-top:20px;">
-      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Month</label><input type="text" id="eq-month" style="padding:10px;"></div>
-      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Week</label><input type="text" id="eq-week" style="padding:10px;"></div>
+    <h3 style="margin-top:0; color:var(--primary); font-size:21px; border-bottom:1px solid var(--border); padding-bottom:10px;">✏️ Edit Question</h3>
+    <div class="flex-row" style="margin-top:18px;">
+      <div style="flex:1;"><label>Month</label><input type="text" id="eq-month" style="padding:10px;"></div>
+      <div style="flex:1;"><label>Week</label><input type="text" id="eq-week" style="padding:10px;"></div>
     </div>
-    <label style="font-weight:600; font-size:14px;">Question Statement</label>
+    <label>Question Statement</label>
     <textarea id="eq-q" rows="2" style="resize:vertical; padding:10px;"></textarea>
     <div class="flex-row">
-      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option A</label><input type="text" id="eq-a" style="padding:10px;"></div>
-      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option B</label><input type="text" id="eq-b" style="padding:10px;"></div>
+      <div style="flex:1;"><label>Option A</label><input type="text" id="eq-a" style="padding:10px;"></div>
+      <div style="flex:1;"><label>Option B</label><input type="text" id="eq-b" style="padding:10px;"></div>
     </div>
     <div class="flex-row">
-      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option C</label><input type="text" id="eq-c" style="padding:10px;"></div>
-      <div style="flex:1;"><label style="font-weight:600; font-size:14px;">Option D</label><input type="text" id="eq-d" style="padding:10px;"></div>
+      <div style="flex:1;"><label>Option C</label><input type="text" id="eq-c" style="padding:10px;"></div>
+      <div style="flex:1;"><label>Option D</label><input type="text" id="eq-d" style="padding:10px;"></div>
     </div>
-    <label style="font-weight:600; font-size:14px; color:var(--success);">Correct Answer (A/B/C/D)</label>
-    <select id="eq-ans" style="font-weight:bold; color:var(--success); font-size:15px; padding:10px;"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+    <label style="color:var(--success);">Correct Answer (A/B/C/D)</label>
+    <select id="eq-ans" style="font-weight:bold; color:var(--success); padding:10px;"><option>A</option><option>B</option><option>C</option><option>D</option></select>
 
-    <div style="display:flex; justify-content:space-between; gap:15px; margin-top:20px;">
+    <div style="display:flex; justify-content:space-between; gap:15px; margin-top:18px;">
       <button onclick="document.getElementById('editQModal').style.display='none'" style="background:#64748b; padding:12px; width:50%;">Cancel</button>
-      <button onclick="saveEditQ()" style="padding: 12px; width:50%;">💾 Save Changes</button>
+      <button onclick="saveEditQ()" style="padding:12px; width:50%;">💾 Save Changes</button>
     </div>
   </div>
 </div>
 
-<div id="login-screen" style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #e2e8f0; padding:20px; box-sizing:border-box;">
-  <div class="box" style="width: 100%; max-width: 420px; text-align:center; padding: 45px 30px; margin:0;">
-    <div id="login-logo-skeleton" class="skeleton" style="height: 55px; width: 160px; margin: 0 auto 20px auto;"></div>
-    <img id="login-logo" src="" alt="WeP Logo" style="display:none; height: 55px; width: auto; max-width: 220px; margin: 0 auto 20px auto; border-radius:8px; padding: 8px 20px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-    <h2 style="color: var(--primary); margin-top:0; font-size: 26px;">WeP Solutions</h2>
-    <p style="color: #64748b; font-size: 15px; margin-bottom: 35px; line-height:1.5;">Evaluation &amp; Training Command Center</p>
-    <input type="password" id="pin" placeholder="Enter Secure Passcode" autocomplete="current-password" style="text-align:center; letter-spacing: 2px; font-size:16px;">
-    <button id="authBtn" onclick="login()" style="padding: 16px; font-size: 17px; margin-top:10px; width:100%;">Authenticate Access</button>
+<div id="login-screen" style="display:flex; height:100vh; align-items:center; justify-content:center; background:#e2e8f0; padding:20px;">
+  <div class="box" style="width:100%; max-width:420px; text-align:center; padding:44px 30px; margin:0;">
+    <div id="login-logo-skeleton" class="skeleton" style="height:54px; width:160px; margin:0 auto 20px auto;"></div>
+    <img id="login-logo" src="" alt="WeP Logo" style="display:none; height:54px; width:auto; max-width:220px; margin:0 auto 20px auto;
+         border-radius:8px; padding:8px 20px; background:#fff; box-shadow:0 4px 10px rgba(0,0,0,0.15);">
+    <h2 style="color:var(--primary); margin-top:0; font-size:25px;">WeP Solutions</h2>
+    <p style="color:#64748b; font-size:15px; margin-bottom:32px;">Evaluation &amp; Training Command Center</p>
+    <input type="password" id="pin" placeholder="Enter Secure Passcode" autocomplete="current-password"
+           style="text-align:center; letter-spacing:2px; font-size:16px;">
+    <button id="authBtn" onclick="login()" style="padding:16px; font-size:17px; margin-top:8px;">Authenticate Access</button>
   </div>
 </div>
 
@@ -332,11 +365,11 @@
 
     <!-- TAB 0: ANALYTICS -->
     <div id="view-analytics" class="tab-content">
-      <div class="chart-box" style="margin-bottom: 25px;">
+      <div class="chart-box" style="margin-bottom:24px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h3 style="margin:0 0 5px 0; color:var(--primary);">User-Wise Execution Analytics</h3>
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <select id="user-chart-month" onchange="renderCharts()" style="margin:0; padding:6px; width:auto;"><option value="All">All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select>
+            <select id="user-chart-month" onchange="renderCharts()" style="margin:0; padding:6px; width:auto;"><option value="All">All Months</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select>
             <select id="user-chart-week" onchange="renderCharts()" style="margin:0; padding:6px; width:auto;"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select>
             <button onclick="exportChart('chartUserWise', 'User_Wise_Analytics')" class="btn-export-sm">💾 Export PNG</button>
           </div>
@@ -345,16 +378,16 @@
         <div class="large-chart-container"><canvas id="chartUserWise"></canvas></div>
       </div>
       <div class="chart-grid">
-        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Average Score Trend</h3><button onclick="exportChart('chartAverage', 'Average_Score')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartAverage"></canvas></div></div>
-        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Pass vs Fail Ratio</h3><button onclick="exportChart('chartPassFail', 'Pass_Fail')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartPassFail"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Average Score Trend</h3><button onclick="exportChart('chartAverage','Average_Score')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartAverage"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Pass vs Fail Ratio</h3><button onclick="exportChart('chartPassFail','Pass_Fail')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartPassFail"></canvas></div></div>
       </div>
       <div class="chart-grid">
-        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Top 5 Elite Performers</h3><button onclick="exportChart('chartTop5', 'Top_5')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartTop5"></canvas></div></div>
-        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Needs Improvement</h3><button onclick="exportChart('chartBottom5', 'Bottom_5')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartBottom5"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Top 5 Elite Performers</h3><button onclick="exportChart('chartTop5','Top_5')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartTop5"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Needs Improvement</h3><button onclick="exportChart('chartBottom5','Bottom_5')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartBottom5"></canvas></div></div>
       </div>
       <div class="chart-grid">
-        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Assessment Volume</h3><button onclick="exportChart('chartParticipation', 'Volume')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartParticipation"></canvas></div></div>
-        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Score Distribution</h3><button onclick="exportChart('chartDistribution', 'Distribution')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartDistribution"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Assessment Volume</h3><button onclick="exportChart('chartParticipation','Volume')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartParticipation"></canvas></div></div>
+        <div class="chart-box"><div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--primary);">Score Distribution</h3><button onclick="exportChart('chartDistribution','Distribution')" class="btn-export-sm">💾 PNG</button></div><div class="chart-container"><canvas id="chartDistribution"></canvas></div></div>
       </div>
     </div>
 
@@ -362,7 +395,10 @@
     <div id="view-approvals" class="tab-content" style="display:none;">
       <div class="box" style="background:#faf5ff; border-color:#e9d5ff;">
         <h3 style="margin-top:0; color:#6b21a8;">🧑‍💼 New User Registrations</h3>
-        <p style="font-size:14px; color:var(--text-muted); margin-top:0;">Users who register on the quiz portal appear here. They can only login after you approve them.</p>
+        <p style="font-size:14px; color:var(--text-muted); margin-top:0;">
+          Users who register on the quiz portal appear here. <b>Approve</b> adds their name to the login dropdown — they then log in
+          by selecting their name and typing their mobile number as the password.
+        </p>
         <div class="flex-row" style="align-items:flex-end;">
           <div style="flex:1;"><label>Filter Status</label>
             <select id="appr-filter" onchange="renderApprovals()"><option>Pending</option><option>Approved</option><option>Rejected</option><option>All</option></select>
@@ -371,7 +407,7 @@
           <div style="flex:1;"><label>Registration Requirement</label>
             <select id="ctrl-approval"><option value="ON">🔒 ON (approval needed)</option><option value="OFF">🔓 OFF (anyone can login)</option></select>
           </div>
-          <div style="flex:0.6; padding-bottom:16px;"><button onclick="updateApprovalMode()" style="margin:0; background:#6b21a8;">Apply</button></div>
+          <div style="flex:0.6; padding-bottom:15px;"><button onclick="updateApprovalMode()" style="margin:0; background:#6b21a8;">Apply</button></div>
         </div>
         <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin-top:10px;">
           <table id="approvals-table"></table>
@@ -381,14 +417,22 @@
 
     <!-- TAB 1: MASTER CONTROLS -->
     <div id="view-controls" class="tab-content" style="display:none;">
-      <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 1: Evaluation Module Activation</h3><div class="flex-row"><div style="flex:1;"><label>Target Month</label><select id="ctrl-month"><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Target Week</label><select id="ctrl-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div></div><button onclick="setLiveStatus()" style="width:auto; padding:12px 24px;">Deploy Active Module</button><p style="font-size:14px; color:#64748b; margin-top:15px; background: #f8fafc; padding:10px; border-radius:8px;">Currently Active Infrastructure: <b id="disp-live-status" style="color:var(--primary);"></b></p></div>
+      <div class="box">
+        <h3 style="margin-top:0; color:var(--primary);">Step 1: Evaluation Module Activation</h3>
+        <div class="flex-row">
+          <div style="flex:1;"><label>Target Month</label><select id="ctrl-month"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
+          <div style="flex:1;"><label>Target Week</label><select id="ctrl-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div>
+        </div>
+        <button onclick="setLiveStatus()" style="width:auto; padding:12px 24px;">Deploy Active Module</button>
+        <p style="font-size:14px; color:#64748b; margin-top:14px; background:#f8fafc; padding:10px; border-radius:8px;">Currently Active Infrastructure: <b id="disp-live-status" style="color:var(--primary);"></b></p>
+      </div>
 
       <div class="box"><h3 style="margin-top:0; color:var(--primary);">Step 2: Security &amp; Accessibility</h3>
-        <div class="flex-row" style="gap:25px;">
-          <div style="flex:1;"><label>Portal Access</label><select id="ctrl-status"><option value="LIVE">🟢 LIVE (Open)</option><option value="PAUSED">🛑 PAUSED (Closed)</option></select><button onclick="updateState()" class="btn-green">Apply Access</button></div>
-          <div style="flex:1;"><label>Timer (Mins)</label><input type="number" id="ctrl-timer" min="1" max="180" placeholder="10"><button onclick="updateTimer()" style="background:#475569;">Apply Timer</button></div>
-          <div style="flex:1;"><label style="color:var(--danger);">Strict Anti-Cheat</label><select id="ctrl-strict"><option value="ON">🛡️ ENABLED</option><option value="OFF">⚪ DISABLED</option></select><button onclick="updateStrict()" style="background:var(--danger);">Apply Security</button></div>
-          <div style="flex:1;"><label style="color:#7c3aed;">Camera Proctoring</label>
+        <div class="flex-row" style="gap:22px;">
+          <div style="flex:1; min-width:190px;"><label>Portal Access</label><select id="ctrl-status"><option value="LIVE">🟢 LIVE (Open)</option><option value="PAUSED">🛑 PAUSED (Closed)</option></select><button onclick="updateState()" class="btn-green">Apply Access</button></div>
+          <div style="flex:1; min-width:190px;"><label>Timer (Mins)</label><input type="number" id="ctrl-timer" min="1" max="180" placeholder="10"><button onclick="updateTimer()" style="background:#475569;">Apply Timer</button></div>
+          <div style="flex:1; min-width:190px;"><label style="color:var(--danger);">Strict Anti-Cheat</label><select id="ctrl-strict"><option value="ON">🛡️ ENABLED</option><option value="OFF">⚪ DISABLED</option></select><button onclick="updateStrict()" style="background:var(--danger);">Apply Security</button></div>
+          <div style="flex:1; min-width:190px;"><label style="color:#7c3aed;">Camera Proctoring</label>
             <select id="ctrl-camera">
               <option value="OFF">⚪ OFF (no camera)</option>
               <option value="OPTIONAL">📷 OPTIONAL (ask, don't block)</option>
@@ -396,45 +440,53 @@
             </select>
             <button onclick="updateCamera()" style="background:#7c3aed;">Apply Camera</button>
           </div>
-          <div style="flex:1;"><label style="color:#7c3aed;">Camera Icon on User Screen</label>
+          <div style="flex:1; min-width:190px;"><label style="color:#7c3aed;">Camera Icon on User Screen</label>
             <select id="ctrl-widget">
               <option value="SHOW">👁️ SHOW preview box</option>
               <option value="HIDE">🙈 HIDE (capture silently)</option>
             </select>
             <button onclick="updateWidget()" style="background:#6d28d9;">Apply Icon</button>
           </div>
+          <div style="flex:1; min-width:190px;"><label style="color:#0f766e;">Login Name List</label>
+            <select id="ctrl-userlist">
+              <option value="ON">📋 ON (pick name from list)</option>
+              <option value="OFF">⌨️ OFF (type name manually)</option>
+            </select>
+            <button onclick="updateUserList()" style="background:#0f766e;">Apply Name List</button>
+          </div>
         </div>
         <p style="font-size:13px; color:var(--text-muted); margin:0; background:#f8fafc; padding:10px 12px; border-radius:8px;">
           <b>OPTIONAL</b> shows the browser camera prompt to every user and captures snapshots if allowed — a denial is logged but the user can still continue.
           <b>REQUIRED</b> blocks the Start button until the camera is allowed.
-          <b>Camera Icon</b> only controls whether the little preview box is visible to the user — on HIDE, capture keeps working exactly the same, just invisibly.
+          <b>Camera Icon</b> only controls whether the little preview box is visible — on HIDE, capture keeps working, just invisibly.
+          <b>Login Name List ON</b> shows approved names in a searchable dropdown on the login page (names only — no mobile numbers are ever sent to the browser).
+          Switch it OFF if you do not want the staff list visible on the login page.
         </p>
       </div>
 
-      <div class="box" style="background: #eff6ff; border-color:#bfdbfe;"><h3 style="color:#1d4ed8; margin-top:0;">Step 3: Result Publication</h3><p style="font-size: 14px; color:#475569; margin-top:0; margin-bottom:15px;">End users see "Evaluating" until you declassify the results.</p><button onclick="publishResults()" style="width:auto; padding:12px 24px; background:#1d4ed8; font-size:15px;">✅ Publish Results to Trainees</button></div>
-      <div class="box" style="background: #fff1f2; border-color:#fecdd3;"><h3 style="color:#be123c; margin-top:0;">Step 4: Trainer/Uploader Security</h3><div class="flex-row" style="align-items: flex-end;"><div style="flex:1;"><label style="color:#be123c;">New Trainer Passcode</label><input type="text" id="ctrl-uploader-pass" placeholder="e.g. 9999" style="margin:0; border-color:#fda4af;"></div><button onclick="changeTrainerPass()" style="width:auto; margin:0; background:#be123c;">Update Trainer Passcode</button></div></div>
+      <div class="box" style="background:#eff6ff; border-color:#bfdbfe;"><h3 style="color:#1d4ed8; margin-top:0;">Step 3: Result Publication</h3><p style="font-size:14px; color:#475569; margin-top:0; margin-bottom:14px;">End users see "Evaluating" until you declassify the results.</p><button onclick="publishResults()" style="width:auto; padding:12px 24px; background:#1d4ed8; font-size:15px;">✅ Publish Results to Trainees</button></div>
+      <div class="box" style="background:#fff1f2; border-color:#fecdd3;"><h3 style="color:#be123c; margin-top:0;">Step 4: Trainer/Uploader Security</h3><div class="flex-row" style="align-items:flex-end;"><div style="flex:1;"><label style="color:#be123c;">New Trainer Passcode</label><input type="text" id="ctrl-uploader-pass" placeholder="e.g. 9999" style="margin:0; border-color:#fda4af;"></div><button onclick="changeTrainerPass()" style="width:auto; margin:0; background:#be123c;">Update Trainer Passcode</button></div></div>
     </div>
 
     <!-- TAB: LIVE CAMERA -->
     <div id="view-proctoring" class="tab-content" style="display:none;">
       <div class="box">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-          <h3 style="margin:0; color:var(--primary); font-size:20px;">📷 Live Camera</h3>
+          <h3 style="margin:0; color:var(--primary); font-size:19px;">📷 Live Camera</h3>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn-mini btn-cam" onclick="loadAllCameraFrames()">⚡ Load All Frames</button>
-            <button class="btn-export" onclick="downloadCSV('proctor-table', 'Camera_Log.csv')">Export Log CSV</button>
+            <button class="btn-export" onclick="downloadCSV('proctor-table','Camera_Log.csv')">Export Log CSV</button>
           </div>
         </div>
         <p style="font-size:14px; color:var(--text-muted);">
           Each user's latest camera frame is captured on login and refreshed every 90 seconds while they are taking the quiz.
-          Nothing is stored in Google Drive — one overwriting row per user keeps the sheet tiny.
-          Click a card to load that user's current frame.
+          Nothing is stored in Google Drive — one overwriting row per user keeps the sheet tiny. Click a card to load that user's current frame.
         </p>
         <div class="flex-row">
           <div style="flex:1;"><label>Search User</label><input type="text" id="proctor-search" oninput="renderProctoring()" placeholder="Name or mobile number..."></div>
         </div>
         <div id="proctor-grid" class="snap-grid"></div>
-        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin-top:25px; max-height:340px;">
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin-top:24px; max-height:340px;">
           <table id="proctor-table"></table>
         </div>
       </div>
@@ -443,16 +495,20 @@
     <!-- TAB: PLANNED TRAINING -->
     <div id="view-training" class="tab-content" style="display:none;">
       <div class="box">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px; gap:10px;">
-          <h3 style="margin:0; color:var(--primary); font-size:20px;">Master Training Schedule</h3>
-          <div>
-              <button onclick="addTrainingRow()" style="width:auto; padding:10px 15px; background:#475569; margin-right:10px;">➕ Add Row</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:14px; gap:10px;">
+          <h3 style="margin:0; color:var(--primary); font-size:19px;">Master Training Schedule <span id="training-count" style="font-size:12px; color:var(--text-muted); font-weight:600;"></span></h3>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button onclick="sortTrainingRows()" style="width:auto; padding:10px 15px; background:#0f766e; margin:0;">↕ Sort by Date</button>
+              <button onclick="addTrainingRow()" style="width:auto; padding:10px 15px; background:#475569; margin:0;">➕ Add Row</button>
               <button onclick="saveTrainingPlan()" class="btn-green" style="width:auto; padding:10px 15px; margin:0;">💾 Save Plan</button>
           </div>
         </div>
-        <p style="font-size:14px; color:var(--text-muted);">Manage upcoming presentations. This data reflects directly on the user login screen. Date format <b>DD/Mon/YYYY</b> (e.g. 26/Sep/2026).</p>
-        <div style="overflow-x: auto; border:1px solid var(--border); border-radius:8px; margin-top:15px;">
-          <table id="training-table" style="min-width: 1300px;">
+        <p style="font-size:14px; color:var(--text-muted);">
+          Rows with status <b>Pending</b> show on the user login page: the next one becomes the highlighted "Next Knowledge Session",
+          past-dated pending rows are listed as overdue. Date format <b>DD/Mon/YYYY</b> (e.g. 26/Oct/2026). Emails stay inside this sheet and are never sent to the login page.
+        </p>
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin-top:14px;">
+          <table id="training-table" style="min-width:1300px;">
             <thead>
               <tr><th>Month</th><th>Week</th><th>Segment</th><th>Assignment Date</th><th>Presentation Date</th><th>Presenter</th><th>Email</th><th>Topic</th><th>Status</th><th>Action</th></tr>
             </thead>
@@ -463,28 +519,28 @@
     </div>
 
     <!-- TAB 2: CURRENT WEEK DATA -->
-    <div id="view-current" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Active Batch Execution Roster</h3><button class="btn-export" onclick="downloadCSV('current-week-table', 'Active_Week.csv')">Export CSV</button></div><div style="overflow-x: auto;"><table id="current-week-table"></table></div></div></div>
+    <div id="view-current" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:19px;">Active Batch Execution Roster</h3><button class="btn-export" onclick="downloadCSV('current-week-table','Active_Week.csv')">Export CSV</button></div><div style="overflow-x:auto;"><table id="current-week-table"></table></div></div></div>
 
     <!-- TAB 3: ATTENDANCE -->
-    <div id="view-attendance" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Attendance Matrix</h3><button class="btn-export" onclick="downloadCSV('attendance-table', 'Attendance.csv')">Export CSV</button></div><label style="font-weight:600;">Filter by Cycle:</label><select id="att-month-filter" onchange="renderAttendancePivot()" style="max-width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto; margin-top:10px;"><table id="attendance-table"></table></div></div></div>
+    <div id="view-attendance" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:19px;">Master Attendance Matrix</h3><button class="btn-export" onclick="downloadCSV('attendance-table','Attendance.csv')">Export CSV</button></div><label>Filter by Cycle:</label><select id="att-month-filter" onchange="renderAttendancePivot()" style="max-width:250px;"><option>All Months</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x:auto; margin-top:10px;"><table id="attendance-table"></table></div></div></div>
 
     <!-- TAB 4: DETAILED ANSWER LOGS -->
-    <div id="view-userlogs" class="tab-content" style="display:none;"><div class="box"><h3 style="margin-top:0; color:var(--primary); font-size:20px;">Micro-Telemetry Audit Engine</h3><div class="flex-row"><div style="flex:1;"><label>Select User</label><select id="log-user-select" onchange="populateLogModules()"><option value="">-- Select Identity --</option></select></div><div style="flex:1;"><label>Select Assessment</label><select id="log-module-select" onchange="renderDetailedLogs()"><option value="">Select User First</option></select></div><div style="flex:0.6; padding-top:20px;"><button class="btn-cam" onclick="openSnapshotsForSelectedLog()" style="margin:0;">📷 View Camera</button></div></div><div style="overflow-x: auto;"><table id="detailed-log-table"><tr><th>Q. ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr></table></div></div></div>
+    <div id="view-userlogs" class="tab-content" style="display:none;"><div class="box"><h3 style="margin-top:0; color:var(--primary); font-size:19px;">Micro-Telemetry Audit Engine</h3><div class="flex-row"><div style="flex:1;"><label>Select User</label><select id="log-user-select" onchange="populateLogModules()"><option value="">-- Select Identity --</option></select></div><div style="flex:1;"><label>Select Assessment</label><select id="log-module-select" onchange="renderDetailedLogs()"><option value="">Select User First</option></select></div><div style="flex:0.6; padding-top:20px;"><button class="btn-cam" onclick="openSnapshotsForSelectedLog()" style="margin:0;">📷 View Camera</button></div></div><div style="overflow-x:auto;"><table id="detailed-log-table"><tr><th>Q. ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr></table></div></div></div>
 
     <!-- TAB 5: BULK DATA EXPORT -->
-    <div id="view-bulkexport" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Bulk Data Extraction</h3><button class="btn-export" onclick="downloadCSV('bulk-export-table', 'Bulk_Dump.csv')">Download Dataset</button></div><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="export-month"><option value="All">All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="export-week"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div><div style="flex:0.5; padding-top:20px;"><button class="btn-green" onclick="loadBulkExport()" style="margin:0;">Load Data</button></div></div><div style="overflow-x: auto; max-height: 400px; border:1px solid var(--border); border-radius:6px;"><table id="bulk-export-table"></table></div></div></div>
+    <div id="view-bulkexport" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:19px;">Bulk Data Extraction</h3><button class="btn-export" onclick="downloadCSV('bulk-export-table','Bulk_Dump.csv')">Download Dataset</button></div><div class="flex-row"><div style="flex:1;"><label>Filter Month</label><select id="export-month"><option value="All">All Months</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div style="flex:1;"><label>Filter Week</label><select id="export-week"><option value="All">All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div><div style="flex:0.5; padding-top:20px;"><button class="btn-green" onclick="loadBulkExport()" style="margin:0;">Load Data</button></div></div><div style="overflow-x:auto; max-height:400px; border:1px solid var(--border); border-radius:6px;"><table id="bulk-export-table"></table></div></div></div>
 
     <!-- TAB 6: SUMMARY -->
-    <div id="view-summary" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:20px;">Master Operations Summary</h3><button class="btn-export" onclick="downloadCSV('summary-table', 'Summary.csv')">Export CSV</button></div><label>Filter Month:</label><select id="sum-month-filter" onchange="renderSummaryPivot()" style="max-width:250px;"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x: auto;"><table id="summary-table"></table></div></div></div>
+    <div id="view-summary" class="tab-content" style="display:none;"><div class="box"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;"><h3 style="margin:0; color:var(--primary); font-size:19px;">Master Operations Summary</h3><button class="btn-export" onclick="downloadCSV('summary-table','Summary.csv')">Export CSV</button></div><label>Filter Month:</label><select id="sum-month-filter" onchange="renderSummaryPivot()" style="max-width:250px;"><option>All Months</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select><div style="overflow-x:auto;"><table id="summary-table"></table></div></div></div>
 
     <!-- TAB 7: QUESTION BANK -->
     <div id="view-qbank" class="tab-content" style="display:none;">
-      <div class="box" style="background:#f0fdf4; border-color:#bbf7d0; margin-bottom: 20px;">
+      <div class="box" style="background:#f0fdf4; border-color:#bbf7d0; margin-bottom:20px;">
         <h3 style="margin-top:0; color:var(--success);">📥 Bulk Upload Questions (CSV)</h3>
         <p style="font-size:13px; color:var(--text-muted);">Download the template, fill it with your questions, and upload it back here.</p>
-        <div class="flex-row" style="align-items:center; gap: 10px;">
+        <div class="flex-row" style="align-items:center; gap:10px;">
           <button onclick="downloadCSVTemplate()" style="width:auto; padding:10px 15px; background:#166534; margin:0;">1. Download Template</button>
-          <input type="file" id="csv-upload-file" accept=".csv" style="width:auto; margin:0; padding:8px; background:white;">
+          <input type="file" id="csv-upload-file" accept=".csv" style="width:auto; margin:0; padding:8px; background:#fff;">
           <button onclick="uploadCSV()" style="width:auto; padding:10px 15px; background:#059669; margin:0;">2. Upload CSV</button>
         </div>
       </div>
@@ -492,10 +548,10 @@
       <div class="box">
         <h3 style="margin-top:0;">Question Repository</h3>
         <div class="flex-row">
-          <div style="flex:1;"><label>Filter Month</label><select id="qb-month" onchange="renderQuestionBank()"><option>All Months</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
+          <div style="flex:1;"><label>Filter Month</label><select id="qb-month" onchange="renderQuestionBank()"><option>All Months</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
           <div style="flex:1;"><label>Filter Week</label><select id="qb-week" onchange="renderQuestionBank()"><option>All Weeks</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div>
         </div>
-        <div style="overflow-x: auto; margin-bottom: 20px; max-height:400px; border:1px solid var(--border); border-radius:8px;">
+        <div style="overflow-x:auto; margin-bottom:20px; max-height:400px; border:1px solid var(--border); border-radius:8px;">
            <table id="qb-table"></table>
         </div>
       </div>
@@ -503,7 +559,7 @@
       <div class="box" style="background:#f8fafc;">
         <h3 style="margin-top:0; color:var(--primary);">➕ Upload New Question (Single)</h3>
         <div class="flex-row">
-          <div style="flex:1;"><label>Target Month</label><select id="nq-month"><option>July</option><option>August</option><option selected>September</option><option>October</option><option>November</option><option>December</option></select></div>
+          <div style="flex:1;"><label>Target Month</label><select id="nq-month"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option selected>October</option><option>November</option><option>December</option></select></div>
           <div style="flex:1;"><label>Target Week</label><select id="nq-week"><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option></select></div>
         </div>
         <label>Question Statement</label>
@@ -518,7 +574,7 @@
         </div>
         <label>Correct Answer (A/B/C/D)</label>
         <select id="nq-ans" style="font-weight:bold; color:var(--success);"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-        <button onclick="addQ()" style="padding: 12px; margin-top:10px;">Upload to Repository</button>
+        <button onclick="addQ()" style="padding:12px; margin-top:8px;">Upload to Repository</button>
       </div>
     </div>
 
@@ -540,7 +596,7 @@
   if (CHARTS_AVAILABLE) {
     try {
       if (typeof ChartDataLabels !== "undefined") Chart.register(ChartDataLabels);
-      Chart.defaults.set('plugins.datalabels', { color: '#ffffff', font: { weight: 'bold', size: 11 } });
+      Chart.defaults.set('plugins.datalabels', { color:'#ffffff', font:{ weight:'bold', size:11 } });
     } catch (e) {}
   }
 
@@ -611,6 +667,19 @@
         || document.getElementById('snapModal').style.display === 'flex'
         || document.getElementById('globalLoaderModal').style.display === 'flex';
   }
+  function parsePlanDate(dateStr) {
+    if (!dateStr) return null;
+    let p = String(dateStr).trim().split(/[\/\-\s]+/);
+    if (p.length < 3) return null;
+    let m = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+    let key = String(p[1]).trim().toLowerCase().slice(0,3);
+    let month = (m[key] !== undefined) ? m[key] : (parseInt(p[1],10) - 1);
+    let year = parseInt(p[2],10), day = parseInt(p[0],10);
+    if (isNaN(month) || isNaN(year) || isNaN(day) || month < 0 || month > 11) return null;
+    if (year < 100) year += 2000;
+    let d = new Date(year, month, day); d.setHours(0,0,0,0);
+    return d;
+  }
 
   /* ---------- global loader ---------- */
   let globalProgressInterval = null;
@@ -637,7 +706,7 @@
       clearInterval(globalProgressInterval); globalProgressInterval = null;
       document.getElementById('global-progress-fill').style.width = "100%";
       document.getElementById('global-progress-text').innerText = "100%";
-      setTimeout(function () { document.getElementById('globalLoaderModal').style.display = "none"; }, 400);
+      setTimeout(function () { document.getElementById('globalLoaderModal').style.display = "none"; }, 350);
   }
   function failGlobalLoader() {
       clearInterval(globalProgressInterval); globalProgressInterval = null;
@@ -708,10 +777,6 @@
           apiCall("ping", {});
       });
 
-      // SPEED: getPublicData doubles as the warm-up call. A separate "ping" was
-      // removed on purpose - Apps Script queues concurrent executions for the
-      // same owner, so an extra request could make authentication wait behind it.
-
       let res = await apiCall("getPublicData", {});
       if (!res || res.error) { document.getElementById('login-logo-skeleton').style.display = 'none'; return; }
 
@@ -745,10 +810,10 @@
 
   // Which lazy table each tab needs.
   const TAB_NEEDS = {
-    analytics: "responses", current: "responses", attendance: "responses",
-    summary: "responses", userlogs: "responses", bulkexport: "responses",
-    qbank: "questions", training: "training",
-    approvals: null, controls: null, proctoring: null
+    analytics:"responses", current:"responses", attendance:"responses",
+    summary:"responses", userlogs:"responses", bulkexport:"responses",
+    qbank:"questions", training:"training",
+    approvals:null, controls:null, proctoring:null
   };
 
   function tabBusy(on, msg) {
@@ -862,7 +927,6 @@
     if (!res || res.error) {
         tabBusy(false);
         if (cached) {
-          // Saved core is no longer valid - back to the passcode screen.
           try { localStorage.removeItem(key); } catch (e) {}
           document.getElementById('dashboard').style.display = "none";
           document.getElementById('login-screen').style.display = "flex";
@@ -939,12 +1003,12 @@
   }
 
   /**
-   * SPEED: the heartbeat now asks only for counters, settings, users and the
-   * camera index - no tables. A table is re-downloaded ONLY if its row count
-   * changed, and even then only for the tab you are actually looking at.
+   * SPEED: the heartbeat asks only for counters, settings, users and the camera
+   * index - no tables. A table is re-downloaded ONLY if its row count changed,
+   * and even then only for the tab you are actually looking at.
    */
   async function liveRefresh() {
-    if (!liveEnabled || liveBusy || !sessionPin) return;
+    if (!liveEnabled || liveBusy || !sessionPin || !adminData) return;
     if (document.hidden) return;
     if (anyModalOpen()) return;
     if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].indexOf(document.activeElement.tagName) !== -1) return;
@@ -961,9 +1025,10 @@
 
     adminData.cameras = res.cameras || [];
     adminData.users = res.users || adminData.users;
+    adminData.settings = adminData.settings || {};
     if (res.settings) for (let k in res.settings) adminData.settings[k] = res.settings[k];
 
-    renderApprovals();
+    if (adminData.role === "MASTER_ADMIN") renderApprovals();
     if (activeTab === 'proctoring') renderProctoring();
 
     // Only re-pull + re-render when the data this tab uses actually changed.
@@ -1010,7 +1075,7 @@
     adminData.settings = adminData.settings || {};
 
     if (adminData.role === "MASTER_ADMIN") {
-      document.getElementById('disp-live-status').innerText = adminData.settings.month + " (" + adminData.settings.week + ")";
+      document.getElementById('disp-live-status').innerText = (adminData.settings.month || "-") + " (" + (adminData.settings.week || "-") + ")";
       if (!isSilent) {
         setSelectValue('ctrl-month', adminData.settings.month);
         setSelectValue('ctrl-week', adminData.settings.week);
@@ -1020,6 +1085,7 @@
         setSelectValue('ctrl-camera', adminData.settings.camera || "OPTIONAL");
         setSelectValue('ctrl-widget', adminData.settings.widget || "SHOW");
         setSelectValue('ctrl-approval', adminData.settings.requireApproval || "ON");
+        setSelectValue('ctrl-userlist', adminData.settings.userList || "ON");
       }
       renderApprovals();
       renderProctoring();
@@ -1038,10 +1104,11 @@
      SETTINGS ACTIONS
      ========================================================== */
 
-  function updateState()  { actionWithRefresh("updateAdminSettings", {type:"SET_STATE",  value1: document.getElementById('ctrl-status').value}, "Applying State...", "Status Updated!"); }
-  function updateStrict() { actionWithRefresh("updateAdminSettings", {type:"SET_STRICT", value1: document.getElementById('ctrl-strict').value}, "Applying Security...", "Strict Mode Updated!"); }
-  function updateCamera() { actionWithRefresh("updateAdminSettings", {type:"SET_CAMERA", value1: document.getElementById('ctrl-camera').value}, "Applying Camera Policy...", "Camera Proctoring Updated!"); }
-  function updateWidget() { actionWithRefresh("updateAdminSettings", {type:"SET_WIDGET", value1: document.getElementById('ctrl-widget').value}, "Updating Camera Icon...", "Camera Icon Setting Updated!"); }
+  function updateState()    { actionWithRefresh("updateAdminSettings", {type:"SET_STATE",    value1: document.getElementById('ctrl-status').value},   "Applying State...", "Status Updated!"); }
+  function updateStrict()   { actionWithRefresh("updateAdminSettings", {type:"SET_STRICT",   value1: document.getElementById('ctrl-strict').value},   "Applying Security...", "Strict Mode Updated!"); }
+  function updateCamera()   { actionWithRefresh("updateAdminSettings", {type:"SET_CAMERA",   value1: document.getElementById('ctrl-camera').value},   "Applying Camera Policy...", "Camera Proctoring Updated!"); }
+  function updateWidget()   { actionWithRefresh("updateAdminSettings", {type:"SET_WIDGET",   value1: document.getElementById('ctrl-widget').value},   "Updating Camera Icon...", "Camera Icon Setting Updated!"); }
+  function updateUserList() { actionWithRefresh("updateAdminSettings", {type:"SET_USERLIST", value1: document.getElementById('ctrl-userlist').value}, "Updating Login Name List...", "Login Name List Updated!"); }
   function updateApprovalMode() { actionWithRefresh("updateAdminSettings", {type:"SET_APPROVAL", value1: document.getElementById('ctrl-approval').value}, "Updating Registration Policy...", "Registration Policy Updated!"); }
   function setLiveStatus() {
     actionWithRefresh("updateAdminSettings",
@@ -1051,7 +1118,7 @@
 
   async function updateTimer() {
     let t = parseInt(document.getElementById('ctrl-timer').value, 10);
-    if (isNaN(t) || t < 1) { await wepAlert("Please enter a valid timer value in minutes (minimum 1).", "Invalid Timer", "warn", "⏱️"); return; }
+    if (isNaN(t) || t < 1 || t > 180) { await wepAlert("Please enter a valid timer value in minutes (1 to 180).", "Invalid Timer", "warn", "⏱️"); return; }
     actionWithRefresh("updateAdminSettings", {type:"SET_TIMER", value1: t}, "Updating Timer...", "Timer Updated!");
   }
 
@@ -1088,7 +1155,9 @@
 
   function renderApprovals() {
     if (!adminData) return;
-    let filter = document.getElementById('appr-filter').value.trim().toUpperCase();
+    let filterEl = document.getElementById('appr-filter');
+    if (!filterEl) return;
+    let filter = filterEl.value.trim().toUpperCase();
     let search = document.getElementById('appr-search').value.trim().toLowerCase();
     let table = document.getElementById('approvals-table');
     let rows = adminData.users || [];
@@ -1103,6 +1172,7 @@
 
     for (let i = 1; i < rows.length; i++) {
       let r = rows[i];
+      if (!cell(r,1) && !cell(r,2)) continue;
       let status = cell(r, 5).trim() || "Pending";
       if (filter !== "ALL" && status.toUpperCase() !== filter) continue;
 
@@ -1129,7 +1199,7 @@
       count++;
     }
 
-    if (count === 0) html.push('<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">No registrations match this filter.</td></tr>');
+    if (count === 0) html.push('<tr><td colspan="7" style="text-align:center; padding:28px; color:#94a3b8;">No registrations match this filter.</td></tr>');
     table.innerHTML = html.join("");
   }
 
@@ -1137,7 +1207,7 @@
     let verb = status === "Approved" ? "approve" : status === "Rejected" ? "reject" : "reset to pending";
     let ok = await wepConfirm(
       "Are you sure you want to " + verb + " the registration for mobile number " + phone + "?" +
-      (status === "Approved" ? "\n\nThey will be able to login immediately with their Name and this number." : ""),
+      (status === "Approved" ? "\n\nTheir name will appear in the login list and they can sign in with this number as the password." : ""),
       (status === "Approved" ? "Approve User?" : status === "Rejected" ? "Reject User?" : "Reset Status?"),
       status === "Rejected" ? "danger" : "",
       status === "Approved" ? "Yes, Approve" : status === "Rejected" ? "Yes, Reject" : "Yes, Reset");
@@ -1167,8 +1237,10 @@
 
   function renderProctoring() {
     if (!adminData) return;
+    let searchEl = document.getElementById('proctor-search');
+    if (!searchEl) return;
     let list = adminData.cameras || [];
-    let search = (document.getElementById('proctor-search').value || "").trim().toLowerCase();
+    let search = (searchEl.value || "").trim().toLowerCase();
 
     let cards = [], tbl = ["<tr><th>Name</th><th>Mobile</th><th>Last Event</th><th>Captured On</th><th style='text-align:center;'>Frame</th></tr>"];
     let shown = 0;
@@ -1260,61 +1332,90 @@
      TRAINING PLAN
      ========================================================== */
 
-  function renderTrainingPlan() {
-      let tbody = document.getElementById("training-tbody");
-      let tData = (dataStore.training || []) || [];
-      if (tData.length <= 1) { tbody.innerHTML = ""; return; }
-
-      let html = [];
-      for (let i = 1; i < tData.length; i++) {
-          let row = tData[i] || [], status = cell(row, 8);
-          html.push('<tr>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,0)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,1)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,2)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,3)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,4)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,5)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,6)) + '"></td>' +
-            '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,7)) + '"></td>' +
-            '<td><select class="training-select">' +
-              '<option ' + (status === 'Pending' ? 'selected' : '') + '>Pending</option>' +
-              '<option ' + (status === 'Done' ? 'selected' : '') + '>Done</option>' +
-            '</select></td>' +
-            '<td><button type="button" onclick="removeTrainingRow(this)" style="background:#dc2626; padding:6px 12px; margin:0; color:white; border:none; border-radius:4px; width:auto;">X</button></td>' +
-          '</tr>');
-      }
-      tbody.innerHTML = html.join("");
+  function trainingRowHtml(row) {
+      let status = cell(row, 8);
+      return '<tr>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,0)) + '" placeholder="October"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,1)) + '" placeholder="Week 2"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,2)) + '"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,3)) + '" placeholder="20/Oct/2026"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,4)) + '" placeholder="26/Oct/2026"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,5)) + '"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,6)) + '"></td>' +
+        '<td><input type="text" class="training-input" value="' + escapeHtml(cell(row,7)) + '"></td>' +
+        '<td><select class="training-select">' +
+          '<option ' + (status === 'Pending' ? 'selected' : '') + '>Pending</option>' +
+          '<option ' + (status === 'Done' ? 'selected' : '') + '>Done</option>' +
+        '</select></td>' +
+        '<td><button type="button" onclick="removeTrainingRow(this)" style="background:#dc2626; padding:6px 12px; margin:0; width:auto;">X</button></td>' +
+      '</tr>';
   }
 
-  function removeTrainingRow(btn) { let tr = btn.closest("tr"); if (tr) tr.remove(); }
+  function renderTrainingPlan() {
+      let tbody = document.getElementById("training-tbody");
+      let tData = dataStore.training || [];
+      if (tData.length <= 1) { tbody.innerHTML = ""; document.getElementById('training-count').innerText = "(0 rows)"; return; }
+
+      let html = [];
+      for (let i = 1; i < tData.length; i++) html.push(trainingRowHtml(tData[i] || []));
+      tbody.innerHTML = html.join("");
+      document.getElementById('training-count').innerText = "(" + (tData.length - 1) + " rows)";
+  }
+
+  function removeTrainingRow(btn) {
+    let tr = btn.closest("tr");
+    if (tr) tr.remove();
+    document.getElementById('training-count').innerText = "(" + document.getElementById("training-tbody").querySelectorAll("tr").length + " rows · unsaved)";
+  }
 
   function addTrainingRow() {
       let tbody = document.getElementById("training-tbody");
-      let tr = document.createElement("tr");
-      tr.innerHTML =
-        '<td><input type="text" class="training-input" placeholder="September"></td>' +
-        '<td><input type="text" class="training-input" placeholder="Week 2"></td>' +
-        '<td><input type="text" class="training-input"></td>' +
-        '<td><input type="text" class="training-input" placeholder="20/Sep/2026"></td>' +
-        '<td><input type="text" class="training-input" placeholder="26/Sep/2026"></td>' +
-        '<td><input type="text" class="training-input"></td>' +
-        '<td><input type="text" class="training-input"></td>' +
-        '<td><input type="text" class="training-input"></td>' +
-        '<td><select class="training-select"><option>Pending</option><option>Done</option></select></td>' +
-        '<td><button type="button" onclick="removeTrainingRow(this)" style="background:#dc2626; padding:6px 12px; margin:0; color:white; border:none; border-radius:4px; width:auto;">X</button></td>';
-      tbody.appendChild(tr);
+      // insertAdjacentHTML parses the string in table context, so the <tr> survives.
+      tbody.insertAdjacentHTML("beforeend", trainingRowHtml([]));
+      document.getElementById('training-count').innerText = "(" + tbody.querySelectorAll("tr").length + " rows · unsaved)";
+      let rows = tbody.querySelectorAll("tr");
+      let last = rows[rows.length - 1];
+      if (last) last.querySelector("input").focus();
   }
 
-  function saveTrainingPlan() {
+  /** Sorts the on-screen rows by presentation date (blank dates go last). */
+  function sortTrainingRows() {
+      let tbody = document.getElementById("training-tbody");
+      let rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+      rows.sort(function (a, b) {
+        let da = parsePlanDate(a.querySelectorAll("input")[4].value);
+        let db = parsePlanDate(b.querySelectorAll("input")[4].value);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da - db;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+      showToast("Sorted by presentation date — click Save Plan to keep it", "success");
+  }
+
+  async function saveTrainingPlan() {
       let rows = document.getElementById("training-tbody").querySelectorAll("tr");
       let data = [ ["Month","Week","Segment","Assignment Date","Presentation Date","Presenter Name","Email","Product/Topic Assigned","Status"] ];
+      let badDates = 0;
+
       rows.forEach(function (tr) {
           let rData = [];
-          tr.querySelectorAll("input, select").forEach(function (inp) { rData.push(inp.value); });
+          tr.querySelectorAll("input, select").forEach(function (inp) { rData.push(inp.value.trim()); });
           while (rData.length < 9) rData.push("");
-          data.push(rData.slice(0, 9));
+          rData = rData.slice(0, 9);
+          if (rData[4] && !parsePlanDate(rData[4])) badDates++;
+          // Skip fully blank rows so the sheet stays clean.
+          if (rData.slice(0, 8).join("") === "") return;
+          data.push(rData);
       });
+
+      if (badDates > 0) {
+        let go = await wepConfirm(badDates + " row(s) have a presentation date the portal cannot read.\n\nUse DD/Mon/YYYY (e.g. 26/Oct/2026). Rows with an unreadable date will NOT appear on the user login page.",
+                                  "Check Date Format", "warn", "Save Anyway");
+        if (!go) return;
+      }
+
       actionWithRefresh("saveTrainingPlan", { trainingData: data }, "Saving Training Plan...", "Training Plan Saved!");
   }
 
@@ -1325,22 +1426,22 @@
   function renderCurrentWeek() {
     let html = ["<tr><th>Identity Info</th><th>Final Score</th><th>Evaluation Details</th><th style='text-align:center;'>Proctoring</th></tr>"];
     let count = 0;
-    for (let i = 1; i < (dataStore.responses || []).length; i++) {
-      let r = (dataStore.responses || [])[i];
+    let resp = dataStore.responses || [], flags = dataStore.flags || [];
+    for (let i = 1; i < resp.length; i++) {
+      let r = resp[i];
       if (cell(r,3) === adminData.settings.month && cell(r,4) === adminData.settings.week) {
         let color = parseFloat(cell(r,8)) >= 40 ? '#059669' : '#dc2626';
-        // Flag comes from its own light column, so the heavy log column never loads.
-        let flag = ((dataStore.flags || []) && (dataStore.flags || [])[i]) ? String((dataStore.flags || [])[i]) : "";
+        let flag = flags[i] ? String(flags[i]) : "";
         let detailLog = flag ? '<span style="color:#dc2626; font-size:11px; display:block;">(' + escapeHtml(flag) + ')</span>' : "";
         let phone = digits(cell(r,2));
-        html.push('<tr><td><b style="font-size:15px;">' + escapeHtml(cell(r,1)) + '</b> <br><span style="color:#64748b; font-size:13px;">' + escapeHtml(cell(r,2)) + '</span> ' + detailLog +
+        html.push('<tr><td><b style="font-size:15px;">' + escapeHtml(cell(r,1)) + '</b><br><span style="color:#64748b; font-size:13px;">' + escapeHtml(cell(r,2)) + '</span> ' + detailLog +
           '</td><td><b style="color:' + color + '; font-size:16px;">' + escapeHtml(cell(r,8)) + '</b></td>' +
           '<td><span style="background:#f1f5f9; padding:5px 10px; border-radius:6px; font-weight:600;">' + escapeHtml(cell(r,6)) + ' Valid / ' + escapeHtml(cell(r,5)) + ' Total</span></td>' +
           '<td style="text-align:center;"><button class="btn-mini btn-cam" onclick="openSnapshots(\'' + phone + '\',\'' + escapeHtml(cell(r,1)).replace(/'/g, "") + '\')">📷 View</button></td></tr>');
         count++;
       }
     }
-    if (count === 0) html.push("<tr><td colspan='4' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for current batch.</td></tr>");
+    if (count === 0) html.push("<tr><td colspan='4' style='text-align:center; padding:28px; color:#94a3b8;'>No data available for current batch.</td></tr>");
     document.getElementById('current-week-table').innerHTML = html.join("");
   }
 
@@ -1354,8 +1455,9 @@
   function renderAttendancePivot() {
     let filterMonth = document.getElementById('att-month-filter').value.trim();
     let users = {}, weeksSet = {}, count = 0;
-    for (let i = 1; i < (dataStore.responses || []).length; i++) {
-      let r = (dataStore.responses || [])[i], rMonth = cell(r,3).trim();
+    let resp = dataStore.responses || [];
+    for (let i = 1; i < resp.length; i++) {
+      let r = resp[i], rMonth = cell(r,3).trim();
       if (filterMonth !== "All Months" && rMonth !== filterMonth) continue;
       let phone = cell(r,2), mw = rMonth + " " + cell(r,4).trim();
       weeksSet[mw] = true;
@@ -1365,7 +1467,7 @@
     }
     let weeksArray = sortWeeksChronologically(Object.keys(weeksSet));
     let table = document.getElementById('attendance-table');
-    if (count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
+    if (count === 0) { table.innerHTML = "<tr><td style='padding:28px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
 
     let html = ["<tr><th>Identity Name</th>"];
     weeksArray.forEach(function (w) { html.push("<th>" + escapeHtml(w) + "</th>"); });
@@ -1383,8 +1485,9 @@
   function renderSummaryPivot() {
     let filterMonth = document.getElementById('sum-month-filter').value.trim();
     let users = {}, weeksSet = {}, count = 0;
-    for (let i = 1; i < (dataStore.responses || []).length; i++) {
-      let r = (dataStore.responses || [])[i], rMonth = cell(r,3).trim();
+    let resp = dataStore.responses || [];
+    for (let i = 1; i < resp.length; i++) {
+      let r = resp[i], rMonth = cell(r,3).trim();
       if (filterMonth !== "All Months" && rMonth !== filterMonth) continue;
       let phone = cell(r,2), mw = rMonth + " " + cell(r,4).trim();
       weeksSet[mw] = true;
@@ -1394,7 +1497,7 @@
     }
     let weeksArray = sortWeeksChronologically(Object.keys(weeksSet));
     let table = document.getElementById('summary-table');
-    if (count === 0) { table.innerHTML = "<tr><td style='padding:30px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
+    if (count === 0) { table.innerHTML = "<tr><td style='padding:28px; color:#94a3b8; text-align:center;'>No execution records found.</td></tr>"; return; }
 
     let html = ["<tr><th>Identity Name</th>"];
     weeksArray.forEach(function (w) { html.push("<th>" + escapeHtml(w) + "</th>"); });
@@ -1409,8 +1512,8 @@
 
   function initDetailedLogsSystem() {
     let uSelect = document.getElementById('log-user-select');
-    let usersMap = {};
-    for (let i = 1; i < (dataStore.responses || []).length; i++) usersMap[cell((dataStore.responses || [])[i],2)] = cell((dataStore.responses || [])[i],1);
+    let usersMap = {}, resp = dataStore.responses || [];
+    for (let i = 1; i < resp.length; i++) usersMap[cell(resp[i],2)] = cell(resp[i],1);
     let currentVal = uSelect.value;
     let html = ["<option value=''>-- Select Identity --</option>"];
     for (let phone in usersMap) html.push('<option value="' + escapeHtml(phone) + '">' + escapeHtml(usersMap[phone]) + '</option>');
@@ -1421,11 +1524,12 @@
   function populateLogModules() {
     let phone = document.getElementById('log-user-select').value;
     let mSelect = document.getElementById('log-module-select');
+    let resp = dataStore.responses || [];
     let html = ["<option value=''>-- Select Module --</option>"];
     if (phone) {
-      for (let i = 1; i < (dataStore.responses || []).length; i++) {
-        if (cell((dataStore.responses || [])[i],2) === String(phone)) {
-          html.push('<option value="' + i + '">' + escapeHtml(cell((dataStore.responses || [])[i],3)) + ' - ' + escapeHtml(cell((dataStore.responses || [])[i],4)) + ' (Final: ' + escapeHtml(cell((dataStore.responses || [])[i],8)) + ')</option>');
+      for (let i = 1; i < resp.length; i++) {
+        if (cell(resp[i],2) === String(phone)) {
+          html.push('<option value="' + i + '">' + escapeHtml(cell(resp[i],3)) + ' - ' + escapeHtml(cell(resp[i],4)) + ' (Final: ' + escapeHtml(cell(resp[i],8)) + ')</option>');
         }
       }
     }
@@ -1434,8 +1538,8 @@
   }
 
   /**
-   * SPEED: detailed answer logs are NOT part of the dashboard payload any more
-   * (they were megabytes of JSON). They are fetched for one row, on demand.
+   * SPEED: detailed answer logs are NOT part of the dashboard payload (they
+   * were megabytes of JSON). They are fetched for one row, on demand.
    */
   async function renderDetailedLogs() {
     let rowIndex = document.getElementById('log-module-select').value;
@@ -1443,21 +1547,23 @@
     let html = ["<tr><th>ID</th><th>Question</th><th>User Selection</th><th>System Key</th></tr>"];
     if (!rowIndex) { table.innerHTML = html.join(""); return; }
 
-    table.innerHTML = html.join("") + '<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">Loading answer log…</td></tr>';
+    table.innerHTML = html.join("") + '<tr><td colspan="4" style="text-align:center; padding:28px; color:#94a3b8;">Loading answer log…</td></tr>';
 
     // Sheet rows are 1-based and include the header, so array index + 1 = sheet row.
     let res = await apiCall("getResponseLog", { pin: sessionPin, row: parseInt(rowIndex, 10) + 1 });
     if (!res || res.error) {
-      html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#dc2626;">' + escapeHtml((res && res.error) || "Could not load the log.") + '</td></tr>');
+      html.push('<tr><td colspan="4" style="text-align:center; padding:28px; color:#dc2626;">' + escapeHtml((res && res.error) || "Could not load the log.") + '</td></tr>');
       table.innerHTML = html.join(""); return;
     }
 
     let jsonStr = res.log || "";
-    if (!jsonStr) { html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">No detailed logs found.</td></tr>'); table.innerHTML = html.join(""); return; }
-    if (jsonStr.indexOf("Disqualified") !== -1) { html.push('<tr><td colspan="4" style="color:#dc2626; padding:20px; font-weight:bold;">🚨 Disqualified - Cheating</td></tr>'); table.innerHTML = html.join(""); return; }
+    if (!jsonStr) { html.push('<tr><td colspan="4" style="text-align:center; padding:28px; color:#94a3b8;">No detailed logs found.</td></tr>'); table.innerHTML = html.join(""); return; }
 
     try {
       let logsObj = JSON.parse(jsonStr);
+      if (logsObj.Status) {
+        html.push('<tr><td colspan="4" style="color:#dc2626; padding:18px; font-weight:bold;">🚨 ' + escapeHtml(logsObj.Status) + '</td></tr>');
+      }
       Object.keys(logsObj).forEach(function (qKey) {
         let d = logsObj[qKey];
         if (!d || typeof d !== "object") return;
@@ -1467,7 +1573,7 @@
           '</td><td style="color:#065f46;">' + escapeHtml(d.correctAnswerText || d.correctAnswerLetter || d.correctAnswer) + '</td></tr>');
       });
     } catch (e) {
-      html.push('<tr><td colspan="4" style="text-align:center; padding:30px; color:#dc2626;">Log data is corrupted and could not be parsed.</td></tr>');
+      html.push('<tr><td colspan="4" style="text-align:center; padding:28px; color:#dc2626;">Log data is corrupted and could not be parsed.</td></tr>');
     }
     table.innerHTML = html.join("");
   }
@@ -1475,7 +1581,6 @@
   /**
    * SPEED: like Telemetry, bulk logs are fetched on demand for the chosen
    * month/week instead of riding along with every dashboard sync.
-   * Click "Load Data" to pull them.
    */
   let bulkLoaded = false;
   function renderBulkExport(force) {
@@ -1483,7 +1588,7 @@
     if (force) { loadBulkExport(); return; }
     if (!bulkLoaded) {
       table.innerHTML = "<tr><th>User Name</th><th>Q. ID</th><th>Question</th><th>User Ans</th><th>Correct Ans</th><th>Status</th></tr>" +
-        "<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>Choose a filter and click <b>Load Data</b> to pull the answer logs.</td></tr>";
+        "<tr><td colspan='6' style='text-align:center; padding:28px; color:#94a3b8;'>Choose a filter and click <b>Load Data</b> to pull the answer logs.</td></tr>";
     }
     // Already loaded: leave the table alone so a background sync never re-fetches it.
   }
@@ -1494,11 +1599,11 @@
     let table = document.getElementById('bulk-export-table');
     let head = "<tr><th>User Name</th><th>Q. ID</th><th>Question</th><th>User Ans</th><th>Correct Ans</th><th>Status</th></tr>";
 
-    table.innerHTML = head + "<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>Loading answer logs…</td></tr>";
+    table.innerHTML = head + "<tr><td colspan='6' style='text-align:center; padding:28px; color:#94a3b8;'>Loading answer logs…</td></tr>";
 
     let res = await apiCall("getBulkLogs", { pin: sessionPin, month: fMonth, week: fWeek });
     if (!res || res.error) {
-      table.innerHTML = head + "<tr><td colspan='6' style='text-align:center; padding:30px; color:#dc2626;'>" + escapeHtml((res && res.error) || "Could not load logs.") + "</td></tr>";
+      table.innerHTML = head + "<tr><td colspan='6' style='text-align:center; padding:28px; color:#dc2626;'>" + escapeHtml((res && res.error) || "Could not load logs.") + "</td></tr>";
       return;
     }
 
@@ -1506,7 +1611,7 @@
     let html = [head], count = 0;
     (res.rows || []).forEach(function (row) {
       let jsonStr = row.log || "";
-      if (!jsonStr || jsonStr.indexOf("Disqualified") !== -1) return;
+      if (!jsonStr) return;
       try {
         let logsObj = JSON.parse(jsonStr);
         Object.keys(logsObj).forEach(function (k) {
@@ -1521,7 +1626,7 @@
       } catch (e) {}
     });
 
-    if (count === 0) html.push("<tr><td colspan='6' style='text-align:center; padding:30px; color:#94a3b8;'>No data available for selected filter.</td></tr>");
+    if (count === 0) html.push("<tr><td colspan='6' style='text-align:center; padding:28px; color:#94a3b8;'>No data available for selected filter.</td></tr>");
     table.innerHTML = html.join("");
   }
 
@@ -1531,9 +1636,10 @@
     let fWeek = document.getElementById('qb-week').value.trim();
     let html = ["<tr><th>ID</th><th>Module Target</th><th>Question Statement</th><th>Correct Key</th><th style='text-align:center;'>Actions</th></tr>"];
     let count = 0;
+    let qs = dataStore.questions || [];
 
-    for (let i = 1; i < (dataStore.questions || []).length; i++) {
-      let q = (dataStore.questions || [])[i];
+    for (let i = 1; i < qs.length; i++) {
+      let q = qs[i];
       let qMonth = cell(q,1).trim(), qWeek = cell(q,2).trim();
       if ((fMonth === "All Months" || qMonth === fMonth) && (fWeek === "All Weeks" || qWeek === fWeek)) {
         let ansLetter = cell(q,8).trim().toUpperCase();
@@ -1546,13 +1652,13 @@
             '<td>' + escapeHtml(cell(q,3)) + '</td>' +
             '<td><b>' + escapeHtml(ansLetter) + ')</b> ' + escapeHtml(realAnsText) + '</td>' +
             "<td style='text-align:center; min-width:90px;'>" +
-               '<button type="button" onclick="openEditQ(' + i + ')" style="background:#f59e0b; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:4px; margin:0 0 5px 0; width:100%; cursor:pointer;">✏️ Edit</button>' +
-               '<button type="button" onclick="deleteQ(' + i + ')" style="background:#dc2626; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:4px; margin:0; width:100%; cursor:pointer;">🗑️ Delete</button>' +
+               '<button type="button" onclick="openEditQ(' + i + ')" style="background:#f59e0b; padding:6px 12px; font-size:12px; border-radius:4px; margin:0 0 5px 0; width:100%;">✏️ Edit</button>' +
+               '<button type="button" onclick="deleteQ(' + i + ')" style="background:#dc2626; padding:6px 12px; font-size:12px; border-radius:4px; margin:0; width:100%;">🗑️ Delete</button>' +
             '</td></tr>');
         count++;
       }
     }
-    if (count === 0) html.push('<tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">No questions found.</td></tr>');
+    if (count === 0) html.push('<tr><td colspan="5" style="text-align:center; padding:28px; color:#94a3b8;">No questions found.</td></tr>');
     document.getElementById('qb-table').innerHTML = html.join("");
   }
 
@@ -1561,8 +1667,8 @@
      ========================================================== */
 
   function downloadCSVTemplate() {
-    let csvContent = "Month,Week,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nSeptember,Week 1,What is WeP?,Company,Brand,Fruit,Animal,A\n";
-    let blob = new Blob(["﻿" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    let csvContent = "Month,Week,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nOctober,Week 1,What is WeP?,Company,Brand,Fruit,Animal,A\n";
+    let blob = new Blob(["\ufeff" + csvContent], { type:'text/csv;charset=utf-8;' });
     let link = document.createElement("a"), url = URL.createObjectURL(blob);
     link.href = url; link.download = "WeP_Questions_Template.csv";
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -1595,9 +1701,9 @@
     let reader = new FileReader();
     reader.onerror = function () { wepAlert("The selected file could not be read.", "Read Error", "danger", "🚫"); };
     reader.onload = async function (e) {
-      let text = String(e.target.result).replace(/^﻿/, "");
+      let text = String(e.target.result).replace(/^\ufeff/, "");
       let lines = text.split(/\r\n|\n|\r/);
-      let dataArr = [];
+      let dataArr = [], skipped = 0;
       for (let i = 1; i < lines.length; i++) {
         let line = lines[i];
         if (!line || !line.trim()) continue;
@@ -1608,12 +1714,14 @@
             a:(parts[3]||"").trim(), b:(parts[4]||"").trim(), c:(parts[5]||"").trim(), d:(parts[6]||"").trim(),
             ans:(parts[7]||"").trim().toUpperCase()
           };
-          if (row.q && row.a && ["A","B","C","D"].indexOf(row.ans) !== -1) dataArr.push(row);
-        }
+          if (row.q && row.a && ["A","B","C","D"].indexOf(row.ans) !== -1) dataArr.push(row); else skipped++;
+        } else skipped++;
       }
       if (dataArr.length === 0) { await wepAlert("No valid rows were found. Please check the template format.", "Nothing to Upload", "warn", "📄"); return; }
 
-      let ok = await wepConfirm(dataArr.length + " question(s) will be added to the repository.", "Confirm Bulk Upload", "", "Yes, Upload");
+      let ok = await wepConfirm(dataArr.length + " question(s) will be added to the repository." +
+        (skipped > 0 ? "\n\n" + skipped + " row(s) will be skipped (missing question/option A or an invalid answer key)." : ""),
+        "Confirm Bulk Upload", "", "Yes, Upload");
       if (!ok) return;
 
       await actionWithRefresh("bulkUploadQuestions", { questionsData: dataArr }, "Uploading CSV...", dataArr.length + " questions uploaded!");
@@ -1690,9 +1798,10 @@
     let filterMonth = document.getElementById('user-chart-month').value;
     let filterWeek = document.getElementById('user-chart-week').value;
     let userWiseGraphData = {};
+    let resp = dataStore.responses || [];
 
-    for (let i = 1; i < (dataStore.responses || []).length; i++) {
-      let r = (dataStore.responses || [])[i];
+    for (let i = 1; i < resp.length; i++) {
+      let r = resp[i];
       let phone = cell(r,2), name = cell(r,1), score = parseFloat(cell(r,8)) || 0;
       if (!phone && !name) continue;
 
@@ -1719,10 +1828,10 @@
     let sortedWeeks = sortWeeksChronologically(Object.keys(weeksMap));
     let trendScores = sortedWeeks.map(function (w) { return Math.round(weeksMap[w].sum / weeksMap[w].count); });
 
-    let barDL   = { datalabels: { color:'#ffffff', font:{weight:'bold',size:10}, formatter:function(v){return v>0?v+'%':'';} } };
-    let lineDL  = { datalabels: { color:'#1e3a8a', align:'top', anchor:'end', font:{weight:'bold',size:11}, formatter:function(v){return v>0?v+'%':'';} } };
-    let countDL = { datalabels: { color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v){return v>0?v:'';} } };
-    let pieDL   = { datalabels: { color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v,ctx){ let sum=0; ctx.chart.data.datasets[0].data.forEach(function(d){sum+=d;}); return (v>0&&sum>0)?Math.round((v*100)/sum)+'%':''; } } };
+    let barDL   = { datalabels:{ color:'#ffffff', font:{weight:'bold',size:10}, formatter:function(v){return v>0?v+'%':'';} } };
+    let lineDL  = { datalabels:{ color:'#1e3a8a', align:'top', anchor:'end', font:{weight:'bold',size:11}, formatter:function(v){return v>0?v+'%':'';} } };
+    let countDL = { datalabels:{ color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v){return v>0?v:'';} } };
+    let pieDL   = { datalabels:{ color:'#ffffff', font:{weight:'bold',size:12}, formatter:function(v,ctx){ let sum=0; ctx.chart.data.datasets[0].data.forEach(function(d){sum+=d;}); return (v>0&&sum>0)?Math.round((v*100)/sum)+'%':''; } } };
 
     let uwNames = [], uwScores = [];
     for (let n in userWiseGraphData) { uwNames.push(n); uwScores.push(Math.round(userWiseGraphData[n].score / userWiseGraphData[n].count)); }
@@ -1777,7 +1886,7 @@
         for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, " ") + '"');
         csv.push(row.join(','));
     }
-    let csvFile = new Blob(["﻿" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    let csvFile = new Blob(["\ufeff" + csv.join('\n')], { type:'text/csv;charset=utf-8;' });
     let url = window.URL.createObjectURL(csvFile);
     let downloadLink = document.createElement('a');
     downloadLink.download = filename; downloadLink.href = url; downloadLink.style.display = 'none';
