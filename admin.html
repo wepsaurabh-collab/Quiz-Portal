@@ -13,11 +13,11 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycby00vRY-KVmesgk0bia4Zy8w0QM_ZlYveoiJCfq8lKJk6Xr-aBZiuTEpE_3OkRmNYIq/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyb9iycbUFlDQqK_k53kttmKYWsqi0MGSdxBC3R3odIeJDZHSabyBrIZ9P6E19VS7ZO/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 55000;
-    const EXPECTED_API = 5.1;          // must match API_VERSION in Code.gs
+    const EXPECTED_API = 5.2;          // must match API_VERSION in Code.gs
     let SERVER_API = null;
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -346,9 +346,14 @@
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);
          padding-bottom:14px; gap:12px; flex-wrap:wrap;">
       <h3 style="margin:0; color:var(--primary); font-size:19px;">📷 Live Frame — <span id="snap-user" style="color:var(--accent);"></span></h3>
-      <button onclick="document.getElementById('snapModal').style.display='none'" class="btn-mini" style="background:#64748b;">Close</button>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="live-pill" id="snap-live-pill" onclick="toggleSnapLive()" title="Auto-refresh this frame">
+          <span class="dot"></span><span id="snap-live-label">LIVE</span>
+        </div>
+        <button onclick="closeSnapModal()" class="btn-mini" style="background:#64748b;">Close</button>
+      </div>
     </div>
-    <p style="font-size:13px; color:var(--text-muted); margin:14px 0 0 0;">The user's most recent camera frame, stored in the <b>LiveCamera</b> sheet. Use Refresh to pull the latest one.</p>
+    <p style="font-size:13px; color:var(--text-muted); margin:14px 0 0 0;">The user's most recent camera frame, stored in the <b>LiveCamera</b> sheet. With <b>LIVE</b> on, this view pulls a new frame every 10 seconds on its own.</p>
     <div id="snap-grid" class="snap-grid"></div>
   </div>
 </div>
@@ -511,6 +516,16 @@
             </select>
             <button onclick="updateWidget()" style="background:#6d28d9;">Apply Icon</button>
           </div>
+          <div style="flex:1; min-width:190px;"><label style="color:#7c3aed;">Live Frame Interval</label>
+            <select id="ctrl-camint">
+              <option value="15">⚡ Every 15 seconds (exam only)</option>
+              <option value="30">🔄 Every 30 seconds</option>
+              <option value="60">🕐 Every 1 minute (recommended)</option>
+              <option value="120">🕑 Every 2 minutes</option>
+              <option value="300">🕔 Every 5 minutes</option>
+            </select>
+            <button onclick="updateCamInterval()" style="background:#7c3aed;">Apply Interval</button>
+          </div>
           <div style="flex:1; min-width:190px;"><label style="color:#0f766e;">Login Name List</label>
             <select id="ctrl-userlist">
               <option value="ON">📋 ON (pick name from list)</option>
@@ -523,6 +538,7 @@
           <b>OPTIONAL</b> shows the browser camera prompt to every user and captures snapshots if allowed — a denial is logged but the user can still continue.
           <b>REQUIRED</b> blocks the Start button until the camera is allowed.
           <b>Camera Icon</b> only controls whether the little preview box is visible — on HIDE, capture keeps working, just invisibly.
+          <b>Live Frame Interval</b> is how often each logged-in user's browser sends a fresh frame. Every frame is one Google Apps Script execution, and Google caps your daily script run-time — so keep 1 minute for normal days and drop to 15–30s only while an assessment is actually running.
           <b>Login Name List ON</b> shows approved names in a searchable dropdown on the login page (names only — no mobile numbers are ever sent to the browser).
           Switch it OFF if you do not want the staff list visible on the login page.
         </p>
@@ -537,13 +553,16 @@
       <div class="box">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <h3 style="margin:0; color:var(--primary); font-size:19px;">📷 Live Camera</h3>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div class="live-pill" id="cam-live-pill" onclick="toggleCamAuto()" title="Automatically pull new frames">
+              <span class="dot"></span><span id="cam-live-label">LIVE · auto</span>
+            </div>
             <button class="btn-mini btn-cam" onclick="loadAllCameraFrames()">⚡ Load All Frames</button>
             <button class="btn-export" onclick="downloadCSV('proctor-table','Camera_Log.csv')">Export Log CSV</button>
           </div>
         </div>
         <p style="font-size:14px; color:var(--text-muted);">
-          Each user's latest camera frame is captured on login and refreshed every 90 seconds while they are taking the quiz.
+          Each logged-in user's browser sends a fresh frame on the interval you set in Quiz Config → Step 2 (default 30s), from login until they log out.
           Nothing is stored in Google Drive — one overwriting row per user keeps the sheet tiny. Click a card to load that user's current frame. The quiz page must be opened over <b>https</b> for the browser to allow a camera; users who deny it are logged as <b>Camera Denied</b> and can retry from the assessment screen.
         </p>
         <div class="flex-row">
@@ -933,9 +952,11 @@
       elem.classList.add('active');
       let label = elem.cloneNode(true);
       let badge = label.querySelector('.nav-badge'); if (badge) badge.remove();
-      document.getElementById('page-title').innerText = label.innerText.replace(/[^\x00-\x7F]/g, "").trim();
+      document.getElementById('page-title').innerText = String(label.innerText || label.textContent || "").replace(/[^\x00-\x7F]/g, "").trim();
     }
     activeTab = tabId;
+    if (tabId === 'proctoring') { setCamPill(); if (camAuto) { startCamPolling(); pollCameras(); } }
+    else stopCamPolling();
     if (!adminData) return;
     if (await ensureTable(TAB_NEEDS[tabId])) renderTab(tabId);
   }
@@ -1148,6 +1169,7 @@
         setSelectValue('ctrl-strict', adminData.settings.strict || "OFF");
         setSelectValue('ctrl-camera', adminData.settings.camera || "OPTIONAL");
         setSelectValue('ctrl-widget', adminData.settings.widget || "SHOW");
+        setSelectValue('ctrl-camint', String(adminData.settings.camInterval || 60));
         setSelectValue('ctrl-approval', adminData.settings.requireApproval || "ON");
         setSelectValue('ctrl-userlist', adminData.settings.userList || "ON");
       }
@@ -1172,6 +1194,7 @@
   function updateStrict()   { actionWithRefresh("updateAdminSettings", {type:"SET_STRICT",   value1: document.getElementById('ctrl-strict').value},   "Applying Security...", "Strict Mode Updated!"); }
   function updateCamera()   { actionWithRefresh("updateAdminSettings", {type:"SET_CAMERA",   value1: document.getElementById('ctrl-camera').value},   "Applying Camera Policy...", "Camera Proctoring Updated!"); }
   function updateWidget()   { actionWithRefresh("updateAdminSettings", {type:"SET_WIDGET",   value1: document.getElementById('ctrl-widget').value},   "Updating Camera Icon...", "Camera Icon Setting Updated!"); }
+  function updateCamInterval() { actionWithRefresh("updateAdminSettings", {type:"SET_CAMINT", value1: document.getElementById('ctrl-camint').value}, "Updating Live Frame Interval...", "Live Frame Interval Updated!"); }
   function updateUserList() { actionWithRefresh("updateAdminSettings", {type:"SET_USERLIST", value1: document.getElementById('ctrl-userlist').value}, "Updating Login Name List...", "Login Name List Updated!"); }
   function updateApprovalMode() { actionWithRefresh("updateAdminSettings", {type:"SET_APPROVAL", value1: document.getElementById('ctrl-approval').value}, "Updating Registration Policy...", "Registration Policy Updated!"); }
   function setLiveStatus() {
@@ -1285,18 +1308,50 @@
 
   // Images are base64 JPEGs held in the sheet, fetched ONE user at a time so
   // the dashboard payload (and therefore login time) stays small.
-  let photoCache = {};   // phone -> { photo, event, capturedOn, name }
+  let photoCache = {};              // phone -> { photo, event, capturedOn, name }
+  let camAuto = true;               // auto-pull new frames on the Live Camera tab
+  let camPollTimer = null, camPollBusy = false;
+  let snapPhone = "", snapName = "", snapLive = true, snapTimer = null, snapTick = 0;
+  const CAM_POLL_MS = 15000;        // how often the tab re-checks who has a new frame
+  const SNAP_POLL_SEC = 10;         // big single-user view refresh
+
+  /** "26 Oct 2026, 13:44:02" -> Date */
+  function parseStamp(str) {
+    if (!str) return null;
+    let m = String(str).match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    let mon = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[m[2].toLowerCase()];
+    if (mon === undefined) return null;
+    return new Date(+m[3], mon, +m[1], +m[4], +m[5], +(m[6] || 0));
+  }
+
+  function ageInfo(capturedOn) {
+    let d = parseStamp(capturedOn);
+    if (!d) return { text: capturedOn || "-", fresh: false, secs: 1e9 };
+    let secs = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+    let text = secs < 10 ? "just now"
+             : secs < 60 ? secs + "s ago"
+             : secs < 3600 ? Math.round(secs/60) + "m ago"
+             : secs < 86400 ? Math.round(secs/3600) + "h ago"
+             : Math.round(secs/86400) + "d ago";
+    return { text: text, fresh: secs <= 180, secs: secs };
+  }
 
   function camCardShell(entry, loaded) {
     let p = entry.phone;
+    let age = ageInfo(entry.capturedOn);
+    let stale = loaded && loaded.capturedOn && entry.capturedOn && loaded.capturedOn !== entry.capturedOn;
     let media = loaded && loaded.photo
       ? '<img src="' + loaded.photo + '" alt="frame">'
       : '<div class="snap-noimg">' + (loaded ? "No frame stored" : "Click to load frame") + '</div>';
-    return '<div class="snap-card" style="cursor:pointer;" onclick="loadCameraFrame(\'' + p + '\')">' +
+    let dot = '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:' +
+              (age.fresh ? '#059669' : '#94a3b8') + ';"></span>';
+    return '<div class="snap-card" style="cursor:pointer;' + (stale ? 'border-color:#f59e0b;' : '') + '" onclick="openSnapshots(\'' + p + '\',\'' + escapeHtml(entry.name || "").replace(/'/g, "") + '\')">' +
         media +
         '<div class="snap-meta"><b>' + escapeHtml(entry.name || p) + '</b>' +
-        escapeHtml(entry.event || "-") + '<br>' + escapeHtml(entry.capturedOn || "") + '</div>' +
-      '</div>';
+        dot + escapeHtml(age.text) + ' · ' + escapeHtml(entry.event || "-") +
+        (stale ? '<br><span style="color:#b45309;">new frame available…</span>' : '') +
+      '</div></div>';
   }
 
   function renderProctoring() {
@@ -1306,29 +1361,78 @@
     let list = adminData.cameras || [];
     let search = (searchEl.value || "").trim().toLowerCase();
 
-    let cards = [], tbl = ["<tr><th>Name</th><th>Mobile</th><th>Last Event</th><th>Captured On</th><th style='text-align:center;'>Frame</th></tr>"];
+    let cards = [], tbl = ["<tr><th>Name</th><th>Mobile</th><th>Last Event</th><th>Captured On</th><th>Age</th><th style='text-align:center;'>Frame</th></tr>"];
     let shown = 0;
 
     for (let i = 0; i < list.length; i++) {
       let e = list[i];
       let hay = ((e.name || "") + " " + (e.phone || "")).toLowerCase();
       if (search && hay.indexOf(search) === -1) continue;
+      let age = ageInfo(e.capturedOn);
 
       cards.push('<div id="camcard-' + e.phone + '">' + camCardShell(e, photoCache[e.phone]) + '</div>');
       tbl.push('<tr><td><b>' + escapeHtml(e.name || "-") + '</b></td><td>' + escapeHtml(e.phone) + '</td>' +
         '<td>' + escapeHtml(e.event || "-") + '</td><td style="font-size:13px;">' + escapeHtml(e.capturedOn || "-") + '</td>' +
+        '<td style="font-weight:700; color:' + (age.fresh ? 'var(--success)' : 'var(--text-muted)') + ';">' + escapeHtml(age.text) + '</td>' +
         '<td style="text-align:center;"><button class="btn-mini btn-cam" onclick="openSnapshots(\'' + e.phone + '\',\'' + escapeHtml(e.name || "").replace(/'/g, "") + '\')">📷 View</button></td></tr>');
       shown++;
     }
 
     let emptyMsg = backendIsOutdated()
       ? '<p style="color:#b45309; background:#fef3c7; border:1px solid #fcd34d; padding:14px 16px; border-radius:10px; font-size:14px; grid-column:1/-1;"><b>Server script is outdated.</b> Paste the latest Code.gs, run <b>setupSheets</b> once, then publish a NEW deployment version. The <b>LiveCamera</b> sheet is created by that step — without it nothing can be saved.</p>'
-      : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:20px 0;">No camera frames captured yet. Camera Proctoring must be ON (Quiz Config → Step 2), the user must allow their camera, and they must log in once after that.</p>';
+      : '<p style="color:#94a3b8; font-size:14px; grid-column:1/-1; padding:20px 0;">No camera frames captured yet. Camera Proctoring must be ON (Quiz Config → Step 2), the user must allow their camera, and they must be logged in.</p>';
 
     document.getElementById('proctor-grid').innerHTML = cards.length ? cards.join("") : emptyMsg;
 
-    if (shown === 0) tbl.push("<tr><td colspan='5' style='text-align:center; padding:25px; color:#94a3b8;'>No camera records.</td></tr>");
+    if (shown === 0) tbl.push("<tr><td colspan='6' style='text-align:center; padding:25px; color:#94a3b8;'>No camera records.</td></tr>");
     document.getElementById('proctor-table').innerHTML = tbl.join("");
+  }
+
+  /* ---------- LIVE polling for the camera tab ---------- */
+
+  function setCamPill() {
+    let pill = document.getElementById('cam-live-pill');
+    if (!pill) return;
+    pill.classList.toggle('off', !camAuto);
+    document.getElementById('cam-live-label').innerText = camAuto ? "LIVE · auto" : "PAUSED · click";
+  }
+
+  function toggleCamAuto() {
+    camAuto = !camAuto;
+    setCamPill();
+    if (camAuto) { pollCameras(); startCamPolling(); showToast("Live frames resumed", "success"); }
+    else { clearInterval(camPollTimer); camPollTimer = null; showToast("Live frames paused", "success"); }
+  }
+
+  function startCamPolling() {
+    clearInterval(camPollTimer);
+    camPollTimer = setInterval(pollCameras, CAM_POLL_MS);
+  }
+  function stopCamPolling() { clearInterval(camPollTimer); camPollTimer = null; }
+
+  /** Cheap: pulls only the index, then re-pulls the images that actually changed. */
+  async function pollCameras() {
+    if (!camAuto || camPollBusy || !sessionPin || !adminData) return;
+    if (activeTab !== 'proctoring' && document.getElementById('snapModal').style.display !== 'flex') return;
+    if (document.hidden) return;
+
+    camPollBusy = true;
+    let res = await apiCall("getCameras", { pin: sessionPin });
+    camPollBusy = false;
+    if (!res || res.error || !res.cameras) return;
+
+    let changed = [];
+    res.cameras.forEach(function (e) {
+      let old = photoCache[e.phone];
+      if (old && old.capturedOn && e.capturedOn && old.capturedOn !== e.capturedOn) changed.push(e.phone);
+    });
+
+    adminData.cameras = res.cameras;
+    if (activeTab === 'proctoring') renderProctoring();
+
+    // Re-download only the frames that moved on.
+    for (let i = 0; i < changed.length && i < 12; i++) await loadCameraFrame(changed[i], true);
+    if (activeTab === 'proctoring') renderProctoring();
   }
 
   /** Pulls a single user's current frame from the server. */
@@ -1340,7 +1444,9 @@
     if (holder && !silent) holder.innerHTML = '<div class="snap-card"><div class="snap-noimg">Loading…</div><div class="snap-meta"><b>' + escapeHtml(entry.name || p) + '</b>please wait</div></div>';
 
     let res = await apiCall("getLoginPhoto", { pin: sessionPin, phone: p });
-    photoCache[p] = (res && res.ok) ? { photo: res.photo, event: res.event, capturedOn: res.capturedOn, name: res.name } : { photo: "" };
+    photoCache[p] = (res && res.ok)
+      ? { photo: res.photo, event: res.event, capturedOn: res.capturedOn, name: res.name }
+      : { photo: "", capturedOn: entry.capturedOn || "" };
 
     if (holder) holder.innerHTML = camCardShell(entry, photoCache[p]);
     return photoCache[p];
@@ -1354,36 +1460,81 @@
       if (!ok) return;
     }
     showToast("Loading " + list.length + " frame(s)...", "success");
-    for (let i = 0; i < list.length; i++) await loadCameraFrame(list[i].phone);
+    for (let i = 0; i < list.length; i++) await loadCameraFrame(list[i].phone, true);
+    renderProctoring();
     showToast("All frames loaded", "success");
   }
 
-  /** Big single-user view with a manual refresh button. */
+  /* ---------- big single-user live view ---------- */
+
+  function setSnapPill() {
+    let pill = document.getElementById('snap-live-pill');
+    if (!pill) return;
+    pill.classList.toggle('off', !snapLive);
+    document.getElementById('snap-live-label').innerText = snapLive ? "LIVE · " + snapTick + "s" : "PAUSED";
+  }
+
+  function toggleSnapLive() {
+    snapLive = !snapLive;
+    if (snapLive) { snapTick = SNAP_POLL_SEC; startSnapTimer(); refreshSnap(); }
+    else { clearInterval(snapTimer); snapTimer = null; }
+    setSnapPill();
+  }
+
+  function startSnapTimer() {
+    clearInterval(snapTimer);
+    snapTick = SNAP_POLL_SEC;
+    snapTimer = setInterval(function () {
+      if (!snapLive || document.getElementById('snapModal').style.display !== 'flex') return;
+      snapTick--;
+      if (snapTick <= 0) { snapTick = SNAP_POLL_SEC; refreshSnap(); }
+      setSnapPill();
+    }, 1000);
+  }
+
+  function closeSnapModal() {
+    document.getElementById('snapModal').style.display = 'none';
+    clearInterval(snapTimer); snapTimer = null;
+    snapPhone = "";
+  }
+
   async function openSnapshots(phone, name) {
-    let p = digits(phone);
-    document.getElementById('snap-user').innerText = (name || "") + " (" + p + ")";
+    snapPhone = digits(phone);
+    snapName = name || "";
+    snapLive = true;
+    document.getElementById('snap-user').innerText = snapName + " (" + snapPhone + ")";
     document.getElementById('snap-grid').innerHTML = '<p style="grid-column:1/-1; color:var(--text-muted); padding:25px 0;">Loading current frame…</p>';
     document.getElementById('snapModal').style.display = "flex";
+    startSnapTimer(); setSnapPill();
+    await refreshSnap();
+  }
 
+  async function refreshSnap() {
+    let p = snapPhone;
+    if (!p) return;
     let res = await apiCall("getLoginPhoto", { pin: sessionPin, phone: p });
+    if (snapPhone !== p) return;                 // the admin moved on while we waited
 
     if (!res || res.error || !res.photo) {
       document.getElementById('snap-grid').innerHTML =
         '<div style="grid-column:1/-1; padding:20px 0;">' +
-          '<p style="color:#94a3b8; font-size:14px; margin:0 0 14px 0;">No camera frame stored for this user. Either Camera Proctoring was OFF, or they denied camera permission.</p>' +
-          '<button class="btn-mini btn-cam" onclick="openSnapshots(\'' + p + '\',\'' + escapeHtml(name || "").replace(/'/g, "") + '\')">🔄 Retry</button>' +
+          '<p style="color:#94a3b8; font-size:14px; margin:0 0 14px 0;">No camera frame stored for this user yet. Either Camera Proctoring is OFF, they denied the camera, or they are not logged in right now.</p>' +
+          '<button class="btn-mini btn-cam" onclick="refreshSnap()">🔄 Retry now</button>' +
         '</div>';
       return;
     }
 
     photoCache[p] = { photo: res.photo, event: res.event, capturedOn: res.capturedOn, name: res.name };
+    let age = ageInfo(res.capturedOn);
     document.getElementById('snap-grid').innerHTML =
       '<div style="grid-column:1/-1; text-align:center;">' +
-        '<img src="' + res.photo + '" alt="frame" style="max-width:100%; width:420px; border-radius:12px; border:3px solid var(--success); box-shadow:0 10px 25px rgba(0,0,0,0.18);">' +
-        '<p style="margin:16px 0 6px 0; font-size:15px; font-weight:800; color:var(--primary);">' + escapeHtml(res.name || "") + '</p>' +
-        '<p style="margin:0 0 16px 0; font-size:13px; color:var(--text-muted);">Event: <b>' + escapeHtml(res.event || "-") + '</b> &nbsp;•&nbsp; Captured: <b>' + escapeHtml(res.capturedOn || "-") + '</b></p>' +
-        '<button class="btn-mini btn-cam" onclick="openSnapshots(\'' + p + '\',\'' + escapeHtml(res.name || "").replace(/'/g, "") + '\')">🔄 Refresh Frame</button>' +
+        '<img src="' + res.photo + '" alt="frame" style="max-width:100%; width:420px; border-radius:12px; border:3px solid ' + (age.fresh ? 'var(--success)' : '#94a3b8') + '; box-shadow:0 10px 25px rgba(0,0,0,0.18);">' +
+        '<p style="margin:16px 0 6px 0; font-size:15px; font-weight:800; color:var(--primary);">' + escapeHtml(res.name || snapName) + '</p>' +
+        '<p style="margin:0 0 16px 0; font-size:13px; color:var(--text-muted);">Event: <b>' + escapeHtml(res.event || "-") + '</b> &nbsp;•&nbsp; Captured: <b>' + escapeHtml(res.capturedOn || "-") + '</b> &nbsp;•&nbsp; <b style="color:' + (age.fresh ? 'var(--success)' : '#b45309') + ';">' + escapeHtml(age.text) + '</b></p>' +
+        (age.fresh ? '' : '<p style="margin:0 0 14px 0; font-size:12.5px; color:#b45309;">This user is probably not logged in right now — the frame stops updating when they close the portal.</p>') +
+        '<button class="btn-mini btn-cam" onclick="refreshSnap()">🔄 Refresh now</button>' +
       '</div>';
+    if (activeTab === 'proctoring') renderProctoring();
   }
 
   async function openSnapshotsForSelectedLog() {
