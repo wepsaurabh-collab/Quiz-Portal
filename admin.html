@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
   <title>WeP Operations Command</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -12,11 +13,11 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbyRBf6osGSDr3zNWuyNSZAR7srFV1iZN0Surb6FlVKnb4ANAIi08FxXKNjNRkB_f2JT/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycby00vRY-KVmesgk0bia4Zy8w0QM_ZlYveoiJCfq8lKJk6Xr-aBZiuTEpE_3OkRmNYIq/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 55000;
-    const EXPECTED_API = 5.0;          // must match API_VERSION in Code.gs
+    const EXPECTED_API = 5.1;          // must match API_VERSION in Code.gs
     let SERVER_API = null;
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -231,6 +232,69 @@
       .flex-row { flex-direction:column; gap:10px; }
       .flex-row > div { width:100%; }
       #toast-container { top:10px; right:10px; left:10px; }
+    }
+
+    /* ==========================================================
+       RESPONSIVE POLISH  (laptop / tablet / phone)
+       ========================================================== */
+    .box{border-radius:14px;}
+    .modal-box{max-height:92dvh;overflow-y:auto;}
+    #snapModal .modal-box,#editQModal .modal-box{max-height:92dvh;}
+    table{min-width:520px;}
+    #training-table{min-width:1300px;}
+    .nav-item{min-height:46px;}
+    button,.btn-mini,.btn-export,.btn-export-sm{min-height:38px;}
+
+    /* Laptops / small desktops */
+    @media (max-width:1280px){
+      .main-content{padding:26px;}
+      .chart-grid{gap:18px;}
+    }
+    /* Tablets (landscape) */
+    @media (max-width:1100px){
+      .sidebar{width:216px;}
+      .brand{font-size:18px;padding:22px 16px;}
+      .nav-item{padding:13px 16px;font-size:14px;}
+      .page-header h1{font-size:22px;}
+      .chart-container{height:250px;}
+      .large-chart-container{height:330px;}
+    }
+    /* Tablets (portrait) + big phones */
+    @media (max-width:900px){
+      body{overflow-y:auto;}
+      .layout-wrapper{flex-direction:column;height:auto;}
+      .sidebar{width:100%;flex-direction:row;overflow-x:auto;white-space:nowrap;align-items:center;padding:8px;
+               position:sticky;top:0;z-index:40;-webkit-overflow-scrolling:touch;}
+      .sidebar::-webkit-scrollbar{height:0;}
+      .brand{margin-bottom:0;border-bottom:none;border-right:1px solid #334155;padding:8px 14px;font-size:16px;}
+      .brand img{height:32px;}
+      .nav-item{border-left:none;border-bottom:3px solid transparent;padding:10px 14px;font-size:13.5px;flex-shrink:0;}
+      .nav-item.active{border-bottom-color:var(--accent);}
+      .nav-badge{margin-left:8px;}
+      .role-badge{display:none;}
+      .main-content{padding:18px;overflow-y:visible;}
+      .page-header{position:sticky;top:0;z-index:30;background:var(--bg);padding:12px 0;margin-bottom:16px;}
+      .page-header h1{font-size:19px;}
+      .chart-grid{grid-template-columns:1fr;}
+      .flex-row{flex-direction:column;gap:12px;}
+      .flex-row > div{width:100%;}
+      #toast-container{top:10px;right:10px;left:10px;}
+      .box{padding:20px 16px;}
+    }
+    /* Phones */
+    @media (max-width:560px){
+      input,select,textarea{font-size:16px;}   /* stops iOS zooming on focus */
+      .main-content{padding:14px;}
+      .box{padding:16px 13px;border-radius:12px;}
+      .page-header h1{font-size:17px;}
+      .header-tools{width:100%;}
+      .refresh-btn,.live-pill{flex:1;justify-content:center;}
+      th,td{padding:12px 10px;font-size:13px;}
+      .snap-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+      .modal-box{padding:22px 16px;border-radius:14px;}
+      .chart-container{height:220px;}
+      .large-chart-container{height:300px;}
+      .btn-export,.btn-export-sm,.btn-mini{font-size:12px;}
     }
   </style>
 </head>
@@ -480,7 +544,7 @@
         </div>
         <p style="font-size:14px; color:var(--text-muted);">
           Each user's latest camera frame is captured on login and refreshed every 90 seconds while they are taking the quiz.
-          Nothing is stored in Google Drive — one overwriting row per user keeps the sheet tiny. Click a card to load that user's current frame.
+          Nothing is stored in Google Drive — one overwriting row per user keeps the sheet tiny. Click a card to load that user's current frame. The quiz page must be opened over <b>https</b> for the browser to allow a camera; users who deny it are logged as <b>Camera Denied</b> and can retry from the assessment screen.
         </p>
         <div class="flex-row">
           <div style="flex:1;"><label>Search User</label><input type="text" id="proctor-search" oninput="renderProctoring()" placeholder="Name or mobile number..."></div>
