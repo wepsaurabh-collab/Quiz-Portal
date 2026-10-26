@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
   <title>WeP Assessment Portal</title>
 
   <link rel="icon" type="image/png" id="favicon" href="">
@@ -10,11 +11,11 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbyRBf6osGSDr3zNWuyNSZAR7srFV1iZN0Surb6FlVKnb4ANAIi08FxXKNjNRkB_f2JT/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycby00vRY-KVmesgk0bia4Zy8w0QM_ZlYveoiJCfq8lKJk6Xr-aBZiuTEpE_3OkRmNYIq/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 40000;
-    const EXPECTED_API = 5.0;          // must match API_VERSION in Code.gs
+    const EXPECTED_API = 5.1;          // must match API_VERSION in Code.gs
     let SERVER_API = null;             // filled from the first successful reply
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -22,9 +23,8 @@
     /**
      * A POST to /exec is answered with a 302 to script.googleusercontent.com.
      * That second hop is short-lived and single-use: under load, or if the
-     * script execution runs long, Google answers it with 404 or 5xx.
-     * That is exactly the "Server responded with status 404" popup.
-     * Retrying the whole call clears it, so transient statuses are retried here.
+     * script execution runs long, Google answers it with 404 or 5xx — which is
+     * exactly the "Server responded with status 404" popup. Retrying clears it.
      */
     async function rawApiCall(actionName, payloadData) {
       const RETRY_STATUS = [404, 408, 429, 500, 502, 503, 504];
@@ -72,11 +72,7 @@
       return { error: lastErr };
     }
 
-    /**
-     * SPEED + STABILITY: all calls run one at a time.
-     * Apps Script queues concurrent executions for the same owner anyway, and
-     * overlapping requests are what triggers the flaky 302 -> 404 redirect.
-     */
+    /** All calls run one at a time - overlapping requests trigger the flaky redirect. */
     let _apiChain = Promise.resolve();
     function apiCall(actionName, payloadData) {
       let run = function () { return rawApiCall(actionName, payloadData); };
@@ -89,237 +85,381 @@
   </script>
 
   <style>
-    :root {
-      --primary:#0f172a; --secondary:#1e3a8a; --accent:#2563eb; --accent-hover:#1d4ed8;
-      --success:#059669; --danger:#dc2626; --warn:#f59e0b;
-      --bg:#eef2f7; --surface:#ffffff; --text:#334155; --text-muted:#64748b; --border:#e2e8f0;
-      --radius:16px; --shadow:0 10px 30px -12px rgba(15,23,42,0.22);
+    /* ==========================================================
+       DESIGN TOKENS
+       ========================================================== */
+    :root{
+      --navy:#0b1220; --primary:#0f172a; --secondary:#1e3a8a;
+      --accent:#2563eb; --accent-dark:#1d4ed8; --accent-soft:#eff6ff;
+      --success:#059669; --success-soft:#ecfdf5;
+      --danger:#dc2626; --danger-soft:#fef2f2;
+      --warn:#f59e0b; --warn-soft:#fffbeb;
+      --bg:#eef2f8; --surface:#ffffff; --surface-2:#f8fafc;
+      --text:#334155; --text-strong:#0f172a; --text-muted:#64748b; --text-faint:#94a3b8;
+      --border:#e2e8f0; --border-strong:#cbd5e1;
+
+      --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:22px;
+      --sh-1:0 1px 2px rgba(15,23,42,.06);
+      --sh-2:0 6px 18px -8px rgba(15,23,42,.18);
+      --sh-3:0 18px 44px -20px rgba(15,23,42,.42);
+      --sh-4:0 30px 70px -28px rgba(15,23,42,.55);
+
+      --fs-xs:clamp(11px,.70rem + .1vw,12.5px);
+      --fs-sm:clamp(12.5px,.78rem + .12vw,14px);
+      --fs-md:clamp(14px,.86rem + .15vw,15.5px);
+      --fs-lg:clamp(16px,.95rem + .25vw,18px);
+      --fs-xl:clamp(19px,1.1rem + .55vw,24px);
+      --fs-2xl:clamp(22px,1.25rem + .9vw,30px);
+
+      --gap:clamp(14px,2.2vw,24px);
+      --pad-card:clamp(20px,3.2vw,34px);
+      --tap:46px;
     }
 
-    * { box-sizing: border-box; }
-    body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:var(--bg); margin:0; padding:0;
-           min-height:100vh; color:var(--text); font-size:15px; line-height:1.6; -webkit-text-size-adjust:100%; }
-
-    .box { background:var(--surface); padding:30px; border-radius:var(--radius); box-shadow:var(--shadow);
-           margin-bottom:26px; border:1px solid var(--border); }
-
-    .form-group { margin-bottom:20px; text-align:left; }
-    .form-group label { display:block; margin-bottom:8px; font-weight:700; color:var(--primary); font-size:14px; letter-spacing:0.2px; }
-    .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="tel"],
-    .form-group input[type="email"], .form-group input[type="password"] {
-      width:100%; padding:15px 16px; border:1px solid var(--border); border-radius:12px; outline:none;
-      font-size:16px; transition:0.2s; background:#f8fafc; font-family:inherit; color:var(--text); }
-    .form-group input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,0.10); }
-    .hint { font-size:12px; color:var(--text-muted); margin:6px 2px 0 2px; font-weight:600; }
-
-    .btn { background:var(--accent); color:#fff; border:none; padding:16px 20px; border-radius:12px; cursor:pointer;
-           font-size:16px; font-weight:700; width:100%; transition:0.2s; display:inline-block; text-align:center;
-           letter-spacing:0.3px; font-family:inherit; }
-    .btn:hover { background:var(--accent-hover); transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(37,99,235,0.7); }
-    .btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
-    .btn-secondary { background:#64748b; } .btn-secondary:hover { background:#475569; }
-    .btn-success { background:var(--success); } .btn-success:hover { background:#047857; }
-    .link-btn { background:none; border:none; color:var(--accent); font-weight:700; font-size:14px; cursor:pointer;
-                text-decoration:underline; padding:0; width:auto; font-family:inherit; }
-    .link-btn:hover { color:var(--accent-hover); }
-
-    /* ================= LOGIN SHELL ================= */
-    .login-shell { min-height:100vh; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,430px);
-                   gap:30px; max-width:1100px; margin:0 auto; padding:32px 20px; align-items:center; }
-    .login-card { padding:38px 32px; margin:0; }
-    .login-brand { text-align:center; margin-bottom:26px; }
-    .login-brand img { height:54px; width:auto; max-width:220px; background:#fff; padding:6px 16px; border-radius:10px;
-                       box-shadow:0 6px 16px -8px rgba(15,23,42,0.45); }
-    .login-title { margin:0; color:var(--primary); text-align:center; font-size:25px; font-weight:800; letter-spacing:-0.3px; }
-    .login-sub { text-align:center; color:var(--text-muted); font-size:14px; margin:8px 0 28px 0; }
-
-    /* ---- searchable name combobox ---- */
-    .combo { position:relative; }
-    .combo-input { width:100%; padding:15px 46px 15px 16px; border:1px solid var(--border); border-radius:12px;
-                   outline:none; font-size:16px; background:#f8fafc; font-family:inherit; color:var(--text); transition:0.2s; }
-    .combo-input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,0.10); }
-    .combo-caret { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none;
-                   color:var(--text-muted); font-size:15px; cursor:pointer; padding:6px 8px; width:auto; }
-    .combo-list { position:absolute; z-index:50; left:0; right:0; top:calc(100% + 6px); background:#fff;
-                  border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 38px -14px rgba(15,23,42,0.4);
-                  max-height:260px; overflow-y:auto; display:none; }
-    .combo.open .combo-list { display:block; }
-    .combo-item { padding:12px 16px; font-size:15px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-weight:600; color:var(--primary); }
-    .combo-item:last-child { border-bottom:none; }
-    .combo-item:hover, .combo-item.active { background:#eff6ff; }
-    .combo-item mark { background:#dbeafe; color:#1d4ed8; padding:0 1px; border-radius:3px; }
-    .combo-empty { padding:16px; font-size:13px; color:var(--text-muted); text-align:center; }
-
-    .pwd-wrap { position:relative; }
-    .pwd-wrap input { padding-right:62px !important; letter-spacing:2px; }
-    .pwd-toggle { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:#f1f5f9; border:none;
-                  color:#475569; font-size:12px; font-weight:800; cursor:pointer; padding:8px 10px; border-radius:8px; width:auto; }
-    .pwd-toggle:hover { background:#e2e8f0; }
-
-    .tnc-box { display:flex; align-items:flex-start; gap:12px; margin-bottom:22px; background:#f8fafc; padding:14px;
-               border-radius:10px; border:1px solid var(--border); }
-    .tnc-box input { width:20px; height:20px; margin-top:2px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
-    .tnc-box label { font-size:12.5px; color:var(--text-muted); line-height:1.6; font-weight:500; margin:0; }
-
-    /* ================= TRAINING PANEL ================= */
-    .t-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-               box-shadow:var(--shadow); padding:26px 26px 22px 26px; }
-    .t-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
-    .t-chip { display:inline-flex; align-items:center; gap:7px; background:#eff6ff; color:#1d4ed8; font-size:11px;
-              font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:6px 12px; border-radius:20px; }
-    .t-chip .dot { width:7px; height:7px; border-radius:50%; background:#2563eb; animation:pulse 1.6s infinite; }
-    .t-head h2 { margin:0; font-size:20px; color:var(--primary); font-weight:800; letter-spacing:-0.3px; }
-
-    .t-next { background:linear-gradient(135deg,#0f172a,#1e3a8a); color:#fff; border-radius:14px; padding:22px;
-              position:relative; overflow:hidden; }
-    .t-next::after { content:""; position:absolute; width:180px; height:180px; border-radius:50%;
-                     background:rgba(255,255,255,0.07); right:-60px; top:-70px; }
-    .t-next-top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
-                  position:relative; z-index:1; margin-bottom:12px; }
-    .t-count { background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.22); color:#fff; font-size:11px;
-               font-weight:800; letter-spacing:0.6px; text-transform:uppercase; padding:5px 11px; border-radius:20px; }
-    .t-count.soon { background:#f59e0b; border-color:#f59e0b; color:#1f2937; }
-    .t-count.today { background:#059669; border-color:#059669; }
-    .t-when { font-size:12.5px; color:#cbd5e1; font-weight:700; }
-    .t-topic { margin:0 0 14px 0; font-size:21px; font-weight:800; line-height:1.35; position:relative; z-index:1; }
-    .t-person { display:flex; align-items:center; gap:12px; position:relative; z-index:1;
-                border-top:1px dashed rgba(255,255,255,0.22); padding-top:14px; }
-    .t-avatar { width:40px; height:40px; border-radius:50%; background:#fff; color:#1e3a8a; font-weight:800;
-                display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
-    .t-person b { display:block; font-size:15px; }
-    .t-person small { color:#cbd5e1; font-size:12px; }
-
-    .t-sub { font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted);
-             margin:20px 0 10px 0; display:flex; align-items:center; gap:8px; }
-    .t-sub.red { color:var(--danger); }
-    .t-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-    .t-row { display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid var(--border);
-             border-radius:10px; padding:11px 13px; }
-    .t-row.late { background:#fff1f2; border-color:#fecdd3; }
-    .t-row .t-date-pill { font-size:11px; font-weight:800; color:#475569; background:#fff; border:1px solid var(--border);
-                          padding:5px 9px; border-radius:7px; white-space:nowrap; }
-    .t-row.late .t-date-pill { color:#be123c; border-color:#fecdd3; }
-    .t-row .t-info { min-width:0; flex:1; }
-    .t-row .t-info b { display:block; font-size:13.5px; color:var(--primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .t-row .t-info span { font-size:12px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
-    .t-empty { background:#f8fafc; border:1px dashed var(--border); border-radius:12px; padding:26px; text-align:center;
-               color:var(--text-muted); font-size:14px; font-weight:600; }
-    .t-foot { margin-top:18px; font-size:11.5px; color:#94a3b8; text-align:center; font-weight:600; }
-
-    /* ================= APP SHELL ================= */
-    .app-container { max-width:900px; padding:22px; margin:0 auto; width:100%; }
-    .wep-logo { height:48px; width:auto; max-width:100%; object-fit:contain; background:#fff; padding:7px 14px;
-                border-radius:9px; margin:0 auto 14px auto; display:block; box-shadow:0 6px 14px -8px rgba(0,0,0,0.5); }
-    .header { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; padding:28px 20px;
-              border-radius:var(--radius); margin-bottom:22px; text-align:center; position:relative;
-              box-shadow:0 14px 30px -16px rgba(15,23,42,0.8); }
-    .header h1 { margin:0; font-size:21px; font-weight:800; letter-spacing:0.3px; }
-    .header p { margin:7px 0 0 0; font-size:13px; color:#cbd5e1; font-weight:500; }
-    .sync-icon { position:absolute; right:14px; top:14px; background:rgba(255,255,255,0.12); color:#fff;
-                 border:1px solid rgba(255,255,255,0.22); padding:8px 12px; border-radius:9px; font-size:12px;
-                 cursor:pointer; transition:0.2s; font-weight:700; display:flex; align-items:center; gap:5px; }
-    .sync-icon:hover { background:rgba(255,255,255,0.26); }
-
-    .top-nav { display:flex; background:#e2e8f0; border-radius:12px; margin-bottom:24px; padding:6px; }
-    .nav-item { flex:1; text-align:center; color:var(--text-muted); font-size:15px; font-weight:700; cursor:pointer;
-                display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s; padding:13px; border-radius:9px; }
-    .nav-item.active { color:var(--primary); background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.08); font-weight:800; }
-
-    .section-title { font-size:17px; font-weight:800; color:var(--primary); margin-bottom:14px; letter-spacing:0.2px;
-                     border-bottom:2px solid var(--bg); padding-bottom:10px; }
-    table { width:100%; border-collapse:collapse; font-size:14px; text-align:left; }
-    th, td { padding:15px 13px; border-bottom:1px solid var(--border); }
-    th { background:#f8fafc; color:var(--text-muted); text-transform:uppercase; font-size:11.5px; font-weight:800; letter-spacing:0.5px; }
-    .badge-pending { background:#fef08a; color:#854d0e; padding:5px 11px; border-radius:20px; font-weight:800; font-size:11.5px; text-transform:uppercase; }
-    .badge-score { background:#dcfce7; color:#166534; padding:5px 13px; border-radius:20px; font-weight:800; font-size:14px; }
-    .rank-pill { display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; border-radius:50%;
-                 background:#e2e8f0; color:#475569; font-size:11px; font-weight:800; margin-right:8px; }
-    .rank-pill.top { background:#fde68a; color:#92400e; }
-
-    .timer-bar { background:#fff1f2; color:#be123c; padding:16px 22px; border-radius:12px; font-weight:800; text-align:center;
-                 margin-bottom:22px; border:1px solid #fecdd3; display:flex; justify-content:space-between; align-items:center; }
-    .timer-bar.warning { background:#fee2e2; border-color:#f87171; animation:pulse 1.2s infinite; }
-    .status-bar { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; background:#fff;
-                  padding:15px; border-radius:12px; border:1px solid #bfdbfe; font-size:14px; color:var(--text-muted); font-weight:700; }
-
-    .q-title { font-size:19px; font-weight:700; color:var(--primary); line-height:1.5; margin-bottom:22px;
-               padding-bottom:14px; border-bottom:1px solid var(--border); }
-    .option-label { display:flex; align-items:center; padding:18px 16px; border:1px solid var(--border); margin-bottom:13px;
-                    border-radius:11px; cursor:pointer; background:#f8fafc; transition:0.15s; font-size:16px; font-weight:600;
-                    color:var(--text); overflow-wrap:anywhere; line-height:1.45; }
-    .option-label:hover { border-color:var(--accent); background:#eff6ff; }
-    .option-label.selected { border-color:var(--accent); background:#eff6ff; box-shadow:0 2px 8px rgba(37,99,235,0.14); }
-    input[type="radio"] { margin-right:16px; transform:scale(1.35); accent-color:var(--accent); flex-shrink:0; }
-    .opt-key { width:26px; height:26px; border-radius:7px; background:#e2e8f0; color:#475569; font-size:12px; font-weight:800;
-               display:flex; align-items:center; justify-content:center; margin-right:12px; flex-shrink:0; }
-    .option-label.selected .opt-key { background:var(--accent); color:#fff; }
-
-    .progress-bar-bg { width:100%; background:var(--border); height:8px; border-radius:4px; margin-bottom:22px; overflow:hidden; }
-    .progress-bar-fill { background:var(--accent); height:100%; width:0%; transition:width 0.4s cubic-bezier(0.4,0,0.2,1); }
-
-    .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(5px); display:flex;
-                     justify-content:center; align-items:center; z-index:9999; animation:fadeIn 0.2s ease-out; padding:18px; }
-    .modal-box { background:#fff; padding:34px 28px; border-radius:16px; text-align:center; max-width:420px; width:100%;
-                 box-shadow:0 20px 40px rgba(0,0,0,0.3); animation:popIn 0.3s cubic-bezier(0.175,0.885,0.32,1.2); }
-    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
-    @keyframes popIn { 0%{transform:scale(0.92);opacity:0;} 100%{transform:scale(1);opacity:1;} }
-
-    /* ===== BRANDED DIALOG ===== */
-    #wepDialog { position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(6px); display:none;
-                 justify-content:center; align-items:center; z-index:100000; padding:20px; animation:fadeIn 0.18s ease-out; }
-    #wepDialog .dlg { background:#fff; border-radius:18px; width:100%; max-width:430px;
-                      box-shadow:0 25px 55px rgba(0,0,0,0.35); animation:popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.2); overflow:hidden; }
-    #wepDialog .dlg-head { padding:28px 28px 0 28px; text-align:center; }
-    #wepDialog .dlg-icon { font-size:42px; line-height:1; margin-bottom:12px; display:block; }
-    #wepDialog .dlg-title { margin:0; font-size:20px; font-weight:800; color:var(--primary); }
-    #wepDialog .dlg-msg { padding:14px 28px 24px 28px; text-align:center; font-size:15px; color:var(--text); line-height:1.65; }
-    #wepDialog .dlg-actions { display:flex; gap:12px; padding:0 28px 28px 28px; }
-    #wepDialog .dlg-actions button { flex:1; padding:14px 16px; border-radius:10px; border:none; font-size:15px;
-                                     font-weight:700; cursor:pointer; transition:0.2s; font-family:inherit; }
-    #wepDialog .dlg-cancel { background:#e2e8f0; color:#475569; } #wepDialog .dlg-cancel:hover { background:#cbd5e1; }
-    #wepDialog .dlg-ok { background:var(--accent); color:#fff; } #wepDialog .dlg-ok:hover { background:var(--accent-hover); }
-    #wepDialog.danger .dlg-ok { background:var(--danger); } #wepDialog.danger .dlg-ok:hover { background:#b91c1c; }
-    #wepDialog.success .dlg-ok { background:var(--success); } #wepDialog.success .dlg-ok:hover { background:#047857; }
-    #wepDialog .dlg-bar { height:7px; width:100%; background:var(--accent); }
-    #wepDialog.danger .dlg-bar { background:var(--danger); }
-    #wepDialog.success .dlg-bar { background:var(--success); }
-    #wepDialog.warn .dlg-bar { background:var(--warn); } #wepDialog.warn .dlg-ok { background:var(--warn); }
-
-    /* ===== CAMERA WIDGET ===== */
-    #cam-box { position:fixed; right:16px; bottom:16px; width:150px; border-radius:12px; overflow:hidden;
-               box-shadow:0 10px 25px rgba(0,0,0,0.3); border:2px solid var(--success); background:#000; z-index:9500; display:none; }
-    #cam-box video { width:100%; height:auto; display:block; transform:scaleX(-1); }
-    #cam-status { font-size:10px; font-weight:800; color:#fff; background:var(--success); padding:4px 6px; text-align:center;
-                  letter-spacing:0.5px; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:5px; }
-    #cam-status .dot { width:7px; height:7px; border-radius:50%; background:#fff; animation:pulse 1.2s infinite; }
-    #cam-box.denied { border-color:var(--danger); } #cam-box.denied #cam-status { background:var(--danger); }
-
-    .skeleton { background:#e2e8f0; border-radius:8px; animation:pulse 1.5s infinite; }
-    @keyframes pulse { 0%{opacity:0.5;} 50%{opacity:1;} 100%{opacity:0.5;} }
-
-    .load-container { width:100%; background:#e2e8f0; border-radius:10px; height:22px; overflow:hidden; position:relative;
-                      margin-top:15px; display:none; }
-    .load-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent)); width:0%; transition:width 0.3s linear; }
-    .load-text { position:absolute; width:100%; text-align:center; top:0; left:0; line-height:22px; font-size:12px;
-                 font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
-
-    @media (max-width: 920px) {
-      .login-shell { grid-template-columns:1fr; gap:20px; padding:18px 14px; align-items:start; }
-      .login-col { order:1; } .train-col { order:2; }
-      .login-card { padding:30px 22px; }
-      .t-panel { padding:22px 18px; }
+    *,*::before,*::after{box-sizing:border-box;}
+    html{-webkit-text-size-adjust:100%;}
+    body{
+      margin:0; min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--text);
+      font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;
+      font-size:var(--fs-md); line-height:1.6; overflow-x:hidden;
     }
-    @media (max-width: 600px) {
-      .top-nav { flex-direction:column; gap:8px; }
-      .status-bar, .timer-bar { flex-direction:column; align-items:flex-start; gap:8px; }
-      .timer-bar { align-items:center; }
-      .header h1 { font-size:19px; }
-      .box { padding:22px 18px; }
-      .q-title { font-size:17px; }
-      .option-label { font-size:15px; padding:15px 13px; }
-      .app-container { padding:12px; }
-      #cam-box { width:108px; right:10px; bottom:10px; }
+    img{max-width:100%;}
+    button{font-family:inherit;}
+
+    /* ==========================================================
+       SHARED COMPONENTS
+       ========================================================== */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+          box-shadow:var(--sh-2);padding:var(--pad-card);margin-bottom:var(--gap);}
+
+    .field{margin-bottom:18px;text-align:left;}
+    .field label{display:block;margin-bottom:7px;font-weight:700;color:var(--text-strong);
+                 font-size:var(--fs-sm);letter-spacing:.2px;}
+    .inp{width:100%;min-height:var(--tap);padding:13px 15px;border:1.5px solid var(--border);
+         border-radius:var(--r-md);outline:none;font-size:16px;background:var(--surface-2);
+         color:var(--text-strong);font-family:inherit;transition:border-color .18s,box-shadow .18s,background .18s;}
+    .inp::placeholder{color:var(--text-faint);}
+    .inp:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+    .inp:disabled{opacity:.6;}
+    .hint{font-size:var(--fs-xs);color:var(--text-muted);margin:7px 2px 0;font-weight:600;display:flex;
+          align-items:center;gap:6px;line-height:1.45;}
+    .hint.err{color:var(--danger);} .hint.ok{color:var(--success);}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+         min-height:var(--tap);padding:14px 20px;border:none;border-radius:var(--r-md);cursor:pointer;
+         font-size:var(--fs-md);font-weight:700;letter-spacing:.2px;background:var(--accent);color:#fff;
+         transition:background .18s,transform .12s,box-shadow .18s;}
+    .btn:hover{background:var(--accent-dark);box-shadow:0 10px 22px -12px rgba(37,99,235,.9);}
+    .btn:active{transform:translateY(1px);}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+    .btn-ghost{background:#e2e8f0;color:#475569;} .btn-ghost:hover{background:#cbd5e1;box-shadow:none;}
+    .btn-success{background:var(--success);} .btn-success:hover{background:#047857;}
+    .btn-sm{width:auto;min-height:38px;padding:9px 16px;font-size:var(--fs-sm);border-radius:10px;}
+    .linkbtn{background:none;border:none;color:var(--accent);font-weight:700;font-size:var(--fs-sm);
+             cursor:pointer;text-decoration:underline;padding:4px 2px;width:auto;font-family:inherit;}
+    .linkbtn:hover{color:var(--accent-dark);}
+
+    .skeleton{background:linear-gradient(90deg,#e8edf4 25%,#f3f6fa 50%,#e8edf4 75%);
+              background-size:200% 100%;border-radius:8px;animation:shimmer 1.3s infinite;}
+    @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+    @keyframes pulse{0%{opacity:.5;}50%{opacity:1;}100%{opacity:.5;}}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes popIn{0%{transform:scale(.94) translateY(8px);opacity:0;}100%{transform:scale(1) translateY(0);opacity:1;}}
+    @keyframes slideDown{from{transform:translateY(-14px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+    /* ==========================================================
+       LOGIN SCREEN
+       ========================================================== */
+    #login-view{
+      min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;
+      padding:clamp(16px,4vw,48px);position:relative;overflow:hidden;
+      background:
+        radial-gradient(900px 500px at 12% -10%,rgba(37,99,235,.16),transparent 60%),
+        radial-gradient(700px 480px at 108% 8%,rgba(15,23,42,.14),transparent 55%),
+        linear-gradient(180deg,#eef2f8 0%,#e6ecf6 100%);
     }
+    .auth-shell{width:100%;max-width:448px;position:relative;z-index:2;}
+
+    .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);
+               box-shadow:var(--sh-4);padding:clamp(24px,4.5vw,40px);}
+    .brand{text-align:center;margin-bottom:clamp(16px,2.6vw,22px);}
+    .brand img{height:clamp(40px,6vw,52px);width:auto;max-width:200px;object-fit:contain;
+               background:#fff;padding:6px 14px;border-radius:10px;box-shadow:var(--sh-1);}
+    .auth-title{margin:0;text-align:center;font-size:var(--fs-2xl);font-weight:800;
+                color:var(--text-strong);letter-spacing:-.4px;line-height:1.2;}
+    .auth-sub{margin:8px 0 clamp(18px,3vw,26px);text-align:center;color:var(--text-muted);
+              font-size:var(--fs-sm);}
+
+    /* --- combobox --- */
+    .combo{position:relative;}
+    .combo .inp{padding-right:46px;}
+    .combo-caret{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;
+                 color:var(--text-muted);font-size:12px;cursor:pointer;width:38px;height:38px;border-radius:9px;}
+    .combo-caret:hover{background:#f1f5f9;color:var(--accent);}
+    .combo.open .combo-caret{transform:translateY(-50%) rotate(180deg);color:var(--accent);}
+    .combo-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 6px);background:#fff;
+                border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-3);
+                max-height:min(52vh,280px);overflow-y:auto;display:none;overscroll-behavior:contain;
+                -webkit-overflow-scrolling:touch;}
+    .combo.open .combo-list{display:block;animation:slideDown .14s ease-out;}
+    .combo-head{padding:9px 14px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.6px;
+                text-transform:uppercase;color:var(--text-faint);background:var(--surface-2);
+                border-bottom:1px solid var(--border);position:sticky;top:0;}
+    .combo-item{padding:12px 14px;font-size:var(--fs-md);cursor:pointer;border-bottom:1px solid #f1f5f9;
+                font-weight:600;color:var(--text-strong);display:flex;align-items:center;gap:10px;min-height:var(--tap);}
+    .combo-item:last-child{border-bottom:none;}
+    .combo-item:hover,.combo-item.active{background:var(--accent-soft);}
+    .combo-item .av{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:#e0e7ff;color:#3730a3;
+                    font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+    .combo-item mark{background:#dbeafe;color:#1d4ed8;padding:0 1px;border-radius:3px;}
+    .combo-msg{padding:16px 14px;font-size:var(--fs-sm);color:var(--text-muted);text-align:center;line-height:1.6;}
+
+    /* --- password --- */
+    .pwd{position:relative;}
+    .pwd .inp{padding-right:72px;letter-spacing:2px;}
+    .pwd-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;
+                color:#475569;font-size:11px;font-weight:800;cursor:pointer;padding:9px 11px;border-radius:9px;
+                letter-spacing:.5px;}
+    .pwd-toggle:hover{background:#e2e8f0;color:var(--accent);}
+
+    .tnc{display:flex;align-items:flex-start;gap:12px;margin:4px 0 20px;background:var(--surface-2);
+         padding:14px;border-radius:var(--r-md);border:1px solid var(--border);}
+    .tnc input{width:20px;height:20px;flex:0 0 20px;margin-top:2px;accent-color:var(--accent);cursor:pointer;}
+    .tnc label{font-size:var(--fs-xs);color:var(--text-muted);line-height:1.6;font-weight:500;margin:0;cursor:pointer;}
+
+    .auth-foot{margin-top:22px;padding-top:18px;border-top:1px dashed var(--border);
+               display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;}
+    .auth-foot p{margin:0;font-size:var(--fs-xs);color:var(--text-muted);}
+
+    .train-teaser{display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:13px 15px;
+                  background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border:none;border-radius:var(--r-md);
+                  cursor:pointer;text-align:left;box-shadow:var(--sh-2);transition:transform .15s,box-shadow .15s;}
+    .train-teaser:hover{transform:translateY(-2px);box-shadow:var(--sh-3);}
+    .train-teaser .ic{width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:rgba(255,255,255,.14);
+                      display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .train-teaser .tx{min-width:0;flex:1;}
+    .train-teaser .tx b{display:block;font-size:var(--fs-sm);font-weight:800;overflow:hidden;
+                        text-overflow:ellipsis;white-space:nowrap;}
+    .train-teaser .tx span{font-size:var(--fs-xs);color:#cbd5e1;display:block;overflow:hidden;
+                           text-overflow:ellipsis;white-space:nowrap;}
+    .train-teaser .go{font-size:18px;color:#cbd5e1;}
+
+    .sysbar{display:none;align-items:flex-start;gap:10px;margin-bottom:14px;padding:13px 15px;border-radius:var(--r-md);
+            font-size:var(--fs-xs);font-weight:700;line-height:1.55;background:var(--warn-soft);
+            border:1px solid #fcd34d;color:#92400e;}
+    .sysbar.show{display:flex;}
+    .sysbar.bad{background:var(--danger-soft);border-color:#fca5a5;color:#991b1b;}
+
+    /* ==========================================================
+       TRAINING POPUP
+       ========================================================== */
+    .overlay{position:fixed;inset:0;background:rgba(10,16,30,.74);backdrop-filter:blur(6px);
+             display:none;align-items:center;justify-content:center;z-index:9000;padding:clamp(12px,3vw,28px);
+             animation:fadeIn .18s ease-out;overflow-y:auto;}
+    .overlay.open{display:flex;}
+
+    .tpop{position:relative;width:100%;max-width:560px;background:var(--surface);border-radius:var(--r-xl);
+          box-shadow:var(--sh-4);overflow:hidden;animation:popIn .26s cubic-bezier(.17,.88,.32,1.2);
+          max-height:92dvh;display:flex;flex-direction:column;margin:auto;}
+    .tpop-hero{background:linear-gradient(135deg,#0b1220 0%,#17275c 55%,#1e3a8a 100%);color:#fff;
+               padding:clamp(20px,3.4vw,28px);position:relative;overflow:hidden;flex:0 0 auto;}
+    .tpop-hero::after{content:"";position:absolute;width:230px;height:230px;border-radius:50%;
+                      background:rgba(255,255,255,.07);right:-80px;top:-110px;}
+    .tpop-close{position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:50%;border:none;
+                background:rgba(255,255,255,.16);color:#fff;font-size:19px;line-height:1;cursor:pointer;z-index:3;
+                display:flex;align-items:center;justify-content:center;transition:background .15s,transform .15s;}
+    .tpop-close:hover{background:rgba(255,255,255,.3);transform:rotate(90deg);}
+    .tpop-chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);
+               border:1px solid rgba(255,255,255,.2);padding:5px 12px;border-radius:999px;font-size:var(--fs-xs);
+               font-weight:800;letter-spacing:.9px;text-transform:uppercase;position:relative;z-index:2;}
+    .tpop-chip .dot{width:7px;height:7px;border-radius:50%;background:#38bdf8;animation:pulse 1.5s infinite;}
+    .tpop-count{display:inline-block;margin-left:8px;padding:5px 12px;border-radius:999px;font-size:var(--fs-xs);
+                font-weight:800;letter-spacing:.5px;text-transform:uppercase;background:rgba(255,255,255,.18);
+                border:1px solid rgba(255,255,255,.22);position:relative;z-index:2;}
+    .tpop-count.soon{background:#f59e0b;border-color:#f59e0b;color:#1f2937;}
+    .tpop-count.today{background:#10b981;border-color:#10b981;color:#06281e;}
+    .tpop-topic{margin:14px 0 4px;font-size:var(--fs-xl);font-weight:800;line-height:1.3;position:relative;z-index:2;}
+    .tpop-date{font-size:var(--fs-sm);color:#cbd5e1;font-weight:700;position:relative;z-index:2;}
+    .tpop-person{display:flex;align-items:center;gap:12px;margin-top:16px;padding-top:14px;
+                 border-top:1px dashed rgba(255,255,255,.25);position:relative;z-index:2;}
+    .tpop-person .av{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:#fff;color:#1e3a8a;
+                     font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;}
+    .tpop-person b{display:block;font-size:var(--fs-md);}
+    .tpop-person small{color:#cbd5e1;font-size:var(--fs-xs);}
+
+    .tpop-body{padding:clamp(16px,3vw,24px);overflow-y:auto;flex:1 1 auto;-webkit-overflow-scrolling:touch;}
+    .tsec{font-size:var(--fs-xs);font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-muted);
+          margin:0 0 10px;display:flex;align-items:center;gap:7px;}
+    .tsec.red{color:var(--danger);}
+    .tsec + .tsec{margin-top:20px;}
+    .tlist{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-direction:column;gap:9px;}
+    .trow{display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);
+          border-radius:var(--r-md);padding:11px 13px;}
+    .trow.late{background:var(--danger-soft);border-color:#fecaca;}
+    .trow .pill{font-size:var(--fs-xs);font-weight:800;color:#475569;background:#fff;border:1px solid var(--border);
+                padding:6px 10px;border-radius:8px;white-space:nowrap;}
+    .trow.late .pill{color:#be123c;border-color:#fecaca;}
+    .trow .info{min-width:0;flex:1;}
+    .trow .info b{display:block;font-size:var(--fs-sm);color:var(--text-strong);overflow:hidden;
+                  text-overflow:ellipsis;white-space:nowrap;}
+    .trow .info span{display:block;font-size:var(--fs-xs);color:var(--text-muted);overflow:hidden;
+                     text-overflow:ellipsis;white-space:nowrap;}
+    .tempty{background:var(--surface-2);border:1px dashed var(--border);border-radius:var(--r-md);
+            padding:28px 18px;text-align:center;color:var(--text-muted);font-size:var(--fs-sm);font-weight:600;}
+    .tpop-foot{padding:14px clamp(16px,3vw,24px);border-top:1px solid var(--border);background:var(--surface-2);
+               display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;flex:0 0 auto;}
+    .tpop-foot small{color:var(--text-faint);font-size:var(--fs-xs);font-weight:700;}
+
+    /* ==========================================================
+       BRANDED DIALOG
+       ========================================================== */
+    #wepDialog{position:fixed;inset:0;background:rgba(10,16,30,.8);backdrop-filter:blur(6px);display:none;
+               justify-content:center;align-items:center;z-index:100000;padding:18px;animation:fadeIn .16s ease-out;}
+    #wepDialog .dlg{background:#fff;border-radius:var(--r-xl);width:100%;max-width:430px;box-shadow:var(--sh-4);
+                    animation:popIn .24s cubic-bezier(.17,.88,.32,1.2);overflow:hidden;max-height:92dvh;
+                    display:flex;flex-direction:column;}
+    #wepDialog .dlg-bar{height:6px;width:100%;background:var(--accent);flex:0 0 auto;}
+    #wepDialog .dlg-head{padding:26px 26px 0;text-align:center;flex:0 0 auto;}
+    #wepDialog .dlg-icon{font-size:40px;line-height:1;margin-bottom:12px;display:block;}
+    #wepDialog .dlg-title{margin:0;font-size:var(--fs-lg);font-weight:800;color:var(--text-strong);}
+    #wepDialog .dlg-msg{padding:12px 26px 22px;text-align:center;font-size:var(--fs-md);color:var(--text);
+                        line-height:1.65;overflow-y:auto;flex:1 1 auto;}
+    #wepDialog .dlg-actions{display:flex;gap:12px;padding:0 26px 26px;flex:0 0 auto;}
+    #wepDialog .dlg-actions button{flex:1;min-height:var(--tap);padding:13px 16px;border-radius:var(--r-md);border:none;
+                                   font-size:var(--fs-md);font-weight:700;cursor:pointer;font-family:inherit;}
+    #wepDialog .dlg-cancel{background:#e2e8f0;color:#475569;}
+    #wepDialog .dlg-ok{background:var(--accent);color:#fff;}
+    #wepDialog.danger .dlg-bar,#wepDialog.danger .dlg-ok{background:var(--danger);}
+    #wepDialog.success .dlg-bar,#wepDialog.success .dlg-ok{background:var(--success);}
+    #wepDialog.warn .dlg-bar,#wepDialog.warn .dlg-ok{background:var(--warn);}
+
+    /* ==========================================================
+       CAMERA
+       ========================================================== */
+    #cam-box{position:fixed;right:14px;bottom:14px;width:clamp(104px,17vw,156px);border-radius:14px;overflow:hidden;
+             box-shadow:var(--sh-3);border:2px solid var(--success);background:#000;z-index:9500;display:none;}
+    #cam-box video{width:100%;height:auto;display:block;transform:scaleX(-1);background:#0b1220;}
+    #cam-status{font-size:9.5px;font-weight:800;color:#fff;background:var(--success);padding:5px 6px;text-align:center;
+                letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:5px;}
+    #cam-status .dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.2s infinite;}
+    #cam-box.warnstate{border-color:var(--warn);} #cam-box.warnstate #cam-status{background:var(--warn);color:#422006;}
+    #cam-box.denied{border-color:var(--danger);} #cam-box.denied #cam-status{background:var(--danger);}
+
+    .cam-note{display:none;margin-top:16px;padding:13px 15px;border-radius:var(--r-md);font-size:var(--fs-sm);
+              font-weight:600;line-height:1.6;border:1px solid transparent;}
+    .cam-note.on{display:block;}
+    .cam-note.good{background:var(--success-soft);border-color:#6ee7b7;color:#065f46;}
+    .cam-note.warn{background:var(--warn-soft);border-color:#fcd34d;color:#92400e;}
+    .cam-note.bad{background:var(--danger-soft);border-color:#fca5a5;color:#991b1b;}
+    .cam-note .btn-sm{margin-top:10px;}
+
+    /* ==========================================================
+       APP SHELL
+       ========================================================== */
+    .app{max-width:min(1040px,100%);margin:0 auto;padding:clamp(12px,2.4vw,26px);width:100%;}
+    .app-head{background:linear-gradient(135deg,var(--navy),var(--secondary));color:#fff;border-radius:var(--r-lg);
+              padding:clamp(18px,3vw,26px);margin-bottom:var(--gap);box-shadow:var(--sh-3);
+              display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+    .app-head .logo{height:40px;width:auto;max-width:150px;background:#fff;padding:5px 12px;border-radius:9px;
+                    object-fit:contain;display:none;}
+    .app-head .ttl{flex:1;min-width:180px;}
+    .app-head h1{margin:0;font-size:var(--fs-lg);font-weight:800;letter-spacing:.2px;}
+    .app-head p{margin:4px 0 0;font-size:var(--fs-xs);color:#cbd5e1;font-weight:600;}
+    .head-btn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22);
+              padding:10px 14px;border-radius:10px;font-size:var(--fs-xs);cursor:pointer;font-weight:700;
+              display:inline-flex;align-items:center;gap:6px;min-height:40px;width:auto;}
+    .head-btn:hover{background:rgba(255,255,255,.24);}
+
+    .tabs{display:flex;gap:6px;background:#e2e8f0;border-radius:var(--r-md);margin-bottom:var(--gap);padding:6px;}
+    .tab{flex:1;text-align:center;color:var(--text-muted);font-size:var(--fs-sm);font-weight:700;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border-radius:9px;
+         min-height:var(--tap);transition:.18s;}
+    .tab.active{color:var(--text-strong);background:#fff;box-shadow:var(--sh-1);font-weight:800;}
+
+    .sec-title{font-size:var(--fs-lg);font-weight:800;color:var(--text-strong);margin:0 0 14px;
+               padding-bottom:10px;border-bottom:2px solid var(--bg);display:flex;align-items:center;
+               gap:10px;flex-wrap:wrap;}
+    .tag{font-size:var(--fs-xs);background:#e2e8f0;padding:4px 10px;border-radius:7px;color:#475569;font-weight:700;}
+
+    .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-md);-webkit-overflow-scrolling:touch;}
+    table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);text-align:left;min-width:420px;}
+    th,td{padding:13px 12px;border-bottom:1px solid var(--border);}
+    th{background:var(--surface-2);color:var(--text-muted);text-transform:uppercase;font-size:var(--fs-xs);
+       font-weight:800;letter-spacing:.5px;white-space:nowrap;}
+    tr:last-child td{border-bottom:none;}
+    .badge-pending{background:#fef08a;color:#854d0e;padding:5px 10px;border-radius:999px;font-weight:800;
+                   font-size:var(--fs-xs);text-transform:uppercase;white-space:nowrap;}
+    .badge-score{background:#dcfce7;color:#166534;padding:5px 12px;border-radius:999px;font-weight:800;font-size:var(--fs-sm);}
+    .rank{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:50%;
+          background:#e2e8f0;color:#475569;font-size:11px;font-weight:800;margin-right:9px;flex:0 0 24px;}
+    .rank.top{background:#fde68a;color:#92400e;}
+
+    .infobox{background:var(--accent-soft);border:1px solid #bfdbfe;padding:clamp(16px,2.8vw,24px);
+             border-radius:var(--r-md);margin-top:16px;}
+    .statusbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:#fff;
+               padding:14px;border-radius:var(--r-md);border:1px solid #bfdbfe;font-size:var(--fs-sm);
+               color:var(--text-muted);font-weight:700;}
+
+    .timer{background:#fff1f2;color:#be123c;padding:14px 18px;border-radius:var(--r-md);font-weight:800;
+           margin-bottom:var(--gap);border:1px solid #fecdd3;display:flex;justify-content:space-between;
+           align-items:center;gap:12px;position:sticky;top:8px;z-index:50;box-shadow:var(--sh-2);}
+    .timer.warning{background:#fee2e2;border-color:#f87171;animation:pulse 1.2s infinite;}
+    .timer .num{font-size:clamp(22px,4.5vw,28px);font-variant-numeric:tabular-nums;letter-spacing:1px;}
+
+    .qmeta{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--text-muted);font-weight:800;
+           margin-bottom:10px;text-transform:uppercase;gap:10px;}
+    .bar{width:100%;background:var(--border);height:8px;border-radius:4px;margin-bottom:20px;overflow:hidden;}
+    .bar>div{background:var(--accent);height:100%;width:0;transition:width .4s cubic-bezier(.4,0,.2,1);}
+    .qtext{font-size:var(--fs-lg);font-weight:700;color:var(--text-strong);line-height:1.5;margin:0 0 20px;
+           padding-bottom:14px;border-bottom:1px solid var(--border);}
+    .opt{display:flex;align-items:center;gap:12px;padding:15px 14px;border:1.5px solid var(--border);margin-bottom:12px;
+         border-radius:var(--r-md);cursor:pointer;background:var(--surface-2);transition:.15s;font-size:var(--fs-md);
+         font-weight:600;color:var(--text);overflow-wrap:anywhere;line-height:1.45;min-height:var(--tap);}
+    .opt:hover{border-color:var(--accent);background:var(--accent-soft);}
+    .opt.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 2px 10px -4px rgba(37,99,235,.5);}
+    .opt input[type=radio]{width:20px;height:20px;flex:0 0 20px;accent-color:var(--accent);margin:0;}
+    .optkey{width:27px;height:27px;flex:0 0 27px;border-radius:8px;background:#e2e8f0;color:#475569;font-size:12px;
+            font-weight:800;display:flex;align-items:center;justify-content:center;}
+    .opt.selected .optkey{background:var(--accent);color:#fff;}
+    .qnav{display:flex;justify-content:space-between;margin-top:28px;gap:12px;}
+    .qnav .btn{flex:1;}
+
+    .strip{display:none;align-items:center;gap:10px;background:var(--accent-soft);border:1px solid #bfdbfe;
+           color:var(--accent-dark);padding:10px 15px;border-radius:var(--r-md);font-size:var(--fs-xs);
+           font-weight:700;margin-bottom:14px;}
+    .strip .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite;flex:0 0 9px;}
+
+    .loadbar{width:100%;background:#e2e8f0;border-radius:999px;height:22px;overflow:hidden;position:relative;
+             margin-top:14px;display:none;}
+    .loadbar .fill{height:100%;background:linear-gradient(90deg,var(--navy),var(--accent));width:0;transition:width .3s linear;}
+    .loadbar .txt{position:absolute;inset:0;text-align:center;line-height:22px;font-size:11.5px;font-weight:800;color:#fff;
+                  text-shadow:0 1px 2px rgba(0,0,0,.45);}
+
+    /* ==========================================================
+       BREAKPOINTS
+       ========================================================== */
+    @media (min-width:1100px){
+      .auth-shell{max-width:470px;}
+    }
+    @media (max-width:640px){
+      .app-head{padding:16px;gap:12px;}
+      .app-head .ttl{min-width:100%;}
+      .tabs{gap:5px;}
+      .tab{font-size:var(--fs-xs);padding:11px 4px;}
+      .timer{position:static;}
+      .qnav{flex-direction:column-reverse;}
+      .tpop{border-radius:18px;}
+    }
+    @media (max-width:420px){
+      .auth-card{padding:22px 18px;border-radius:18px;}
+      .card{padding:18px 15px;}
+      .tnc label{font-size:11.5px;}
+    }
+    @media (max-height:560px) and (orientation:landscape){
+      #login-view{align-items:flex-start;}
+      .tpop{max-height:94dvh;}
+    }
+    @media print{ #login-view,#cam-box,.tabs,.head-btn{display:none !important;} }
   </style>
 </head>
 <body>
@@ -348,232 +488,223 @@
 <canvas id="cam-canvas" width="320" height="240" style="display:none;"></canvas>
 
 <!-- ===== STRICT MODE WARNING ===== -->
-<div class="modal-overlay" id="strictModal" style="display:none;">
-  <div class="modal-box" style="border-top:8px solid #dc2626;">
-    <div style="font-size:42px; margin-bottom:12px;">⚠️</div>
-    <h2 style="color:#dc2626; margin-top:0; font-size:23px;">Security Violation</h2>
-    <p style="color:#475569; font-size:15px;">Changing tabs, minimizing the window, or opening other apps is strictly prohibited during the assessment.</p>
-    <div style="background:#fee2e2; border:1px solid #f87171; padding:12px; border-radius:8px; margin:22px 0;">
-      <h3 id="strict-count-text" style="color:#991b1b; margin:0; font-size:17px;">Warning 1 of 3</h3>
+<div class="overlay" id="strictModal">
+  <div class="tpop" style="max-width:430px;">
+    <div style="height:7px;background:var(--danger);"></div>
+    <div style="padding:clamp(22px,4vw,32px);text-align:center;">
+      <div style="font-size:42px;margin-bottom:10px;">⚠️</div>
+      <h2 style="color:var(--danger);margin:0 0 10px;font-size:var(--fs-xl);">Security Violation</h2>
+      <p style="color:var(--text);font-size:var(--fs-sm);margin:0;">Changing tabs, minimizing the window or opening other apps is strictly prohibited during the assessment.</p>
+      <div style="background:var(--danger-soft);border:1px solid #fca5a5;padding:12px;border-radius:var(--r-md);margin:20px 0;">
+        <h3 id="strict-count-text" style="color:#991b1b;margin:0;font-size:var(--fs-md);">Warning 1 of 3</h3>
+      </div>
+      <p style="color:var(--danger);font-size:var(--fs-xs);font-weight:800;margin:0 0 18px;">Your test will be auto-submitted on the 4th violation.</p>
+      <button class="btn" style="background:var(--danger);" onclick="closeStrictModal()">I Understand &amp; Agree</button>
     </div>
-    <p style="color:#dc2626; font-size:13px; font-weight:800;">Your test will be auto-submitted on the 4th violation.</p>
-    <button class="btn" style="background:#dc2626;" onclick="closeStrictModal()">I Understand &amp; Agree</button>
+  </div>
+</div>
+
+<!-- ===== TRAINING POPUP ===== -->
+<div class="overlay" id="trainPop" role="dialog" aria-modal="true" aria-labelledby="tp-topic">
+  <div class="tpop">
+    <button type="button" class="tpop-close" id="tp-close" aria-label="Close">✕</button>
+
+    <div class="tpop-hero" id="tp-hero">
+      <span class="tpop-chip"><span class="dot"></span>Training Calendar</span>
+      <span class="tpop-count" id="tp-count">Scheduled</span>
+      <h2 class="tpop-topic" id="tp-topic">Topic to be announced</h2>
+      <div class="tpop-date" id="tp-date">—</div>
+      <div class="tpop-person">
+        <span class="av" id="tp-avatar">--</span>
+        <div style="min-width:0;">
+          <b id="tp-presenter">To be announced</b>
+          <small id="tp-segment"></small>
+        </div>
+      </div>
+    </div>
+
+    <div class="tpop-body">
+      <div id="tp-empty" class="tempty">No training sessions are scheduled right now.</div>
+
+      <div id="tp-upcoming-wrap" style="display:none;">
+        <div class="tsec">📅 Following Sessions</div>
+        <ul class="tlist" id="tp-upcoming"></ul>
+      </div>
+
+      <div id="tp-overdue-wrap" style="display:none;">
+        <div class="tsec red">⚠️ Pending / Overdue Presentations</div>
+        <ul class="tlist" id="tp-overdue"></ul>
+      </div>
+    </div>
+
+    <div class="tpop-foot">
+      <small>WeP Solutions · Learning &amp; Development</small>
+      <button type="button" class="btn btn-sm" onclick="closeTrainPop(true)">Got it</button>
+    </div>
   </div>
 </div>
 
 <!-- ===================================================================
      LOGIN SCREEN
      =================================================================== -->
-<div id="login-container" class="login-shell">
+<div id="login-view">
+  <div class="auth-shell">
 
-  <!-- ---------- TRAINING PANEL ---------- -->
-  <div class="train-col">
-    <section class="t-panel" id="training-panel">
-      <div class="t-head">
-        <div>
-          <span class="t-chip"><span class="dot"></span>Training Calendar</span>
-          <h2 style="margin-top:10px;">Next Knowledge Session</h2>
-        </div>
-        <span id="t-updated" style="font-size:11px; color:#94a3b8; font-weight:700;"></span>
-      </div>
+    <div class="sysbar" id="sysbar"><span id="sysbar-text"></span></div>
 
-      <div id="t-empty" class="t-empty">No training sessions are scheduled right now.</div>
-
-      <div id="t-next-card" class="t-next" style="display:none;">
-        <div class="t-next-top">
-          <span class="t-count" id="t-count">Scheduled</span>
-          <span class="t-when" id="t-when">—</span>
-        </div>
-        <h3 class="t-topic" id="t-topic">Topic</h3>
-        <div class="t-person">
-          <span class="t-avatar" id="t-avatar">--</span>
-          <div style="min-width:0;">
-            <b id="t-presenter">Presenter</b>
-            <small id="t-segment"></small>
-          </div>
-        </div>
-      </div>
-
-      <div id="t-upcoming-wrap" style="display:none;">
-        <div class="t-sub">📅 Following Sessions</div>
-        <ul class="t-list" id="t-upcoming"></ul>
-      </div>
-
-      <div id="t-overdue-wrap" style="display:none;">
-        <div class="t-sub red">⚠️ Pending / Overdue Presentations</div>
-        <ul class="t-list" id="t-overdue"></ul>
-      </div>
-
-      <div class="t-foot">WeP Solutions · Learning &amp; Development</div>
-    </section>
-  </div>
-
-  <!-- ---------- LOGIN CARD ---------- -->
-  <div class="login-col">
-    <div id="login-section" class="box login-card">
-      <div class="login-brand">
-        <div id="login-logo-skeleton" class="skeleton" style="height:52px; width:160px; margin:0 auto;"></div>
+    <!-- ---------- LOGIN CARD ---------- -->
+    <div id="login-section" class="auth-card">
+      <div class="brand">
+        <div id="login-logo-skeleton" class="skeleton" style="height:48px;width:150px;margin:0 auto;"></div>
         <img id="login-logo" src="" alt="WeP Logo" style="display:none;">
       </div>
-      <h2 class="login-title">Wepsol Quiz Portal</h2>
-      <p class="login-sub">Select your name and enter your registered mobile number.</p>
+      <h1 class="auth-title">Wepsol Quiz Portal</h1>
+      <p class="auth-sub">Select your name and enter your registered mobile number.</p>
 
-      <div class="form-group">
+      <div class="field">
         <label for="uName">Your Name</label>
         <div class="combo" id="nameCombo">
-          <input type="text" id="uName" class="combo-input" autocomplete="off" role="combobox"
-                 aria-autocomplete="list" aria-expanded="false" placeholder="Select your name">
-          <button type="button" class="combo-caret" id="comboCaret" tabindex="-1" aria-label="Show list">▼</button>
-          <div class="combo-list" id="comboList"></div>
+          <input type="text" id="uName" class="inp" autocomplete="off" role="combobox" aria-expanded="false"
+                 aria-autocomplete="list" aria-controls="comboList" placeholder="Loading name list…">
+          <button type="button" class="combo-caret" id="comboCaret" tabindex="-1" aria-label="Show name list">▼</button>
+          <div class="combo-list" id="comboList" role="listbox"></div>
         </div>
-        <p class="hint" id="nameHint">Start typing to search the list.</p>
+        <p class="hint" id="nameHint">Fetching the registered user list…</p>
       </div>
 
-      <div class="form-group">
-        <label for="uPhone">Password (Registered Mobile Number)</label>
-        <div class="pwd-wrap">
-          <input type="password" id="uPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10"
+      <div class="field">
+        <label for="uPhone">Password <span style="font-weight:600;color:var(--text-muted);">(Registered Mobile Number)</span></label>
+        <div class="pwd">
+          <input type="password" id="uPhone" class="inp" inputmode="numeric" pattern="[0-9]*" maxlength="10"
                  autocomplete="current-password" placeholder="10-digit mobile number">
           <button type="button" class="pwd-toggle" id="pwdToggle" onclick="togglePwd()">SHOW</button>
         </div>
-        <p class="hint">Your 10-digit mobile number is your password.</p>
+        <p class="hint">🔑 Your 10-digit mobile number is your password.</p>
       </div>
 
-      <div class="tnc-box">
+      <div class="tnc">
         <input type="checkbox" id="tnc">
-        <label for="tnc">I agree to the strict <b style="color:var(--primary);">Terms &amp; Conditions</b>. I understand that my assessment is monitored, including <b style="color:var(--primary);">camera proctoring</b>, and that tab-switching, minimizing or any malpractice may lead to auto-submission.</label>
+        <label for="tnc">I agree to the strict <b style="color:var(--text-strong);">Terms &amp; Conditions</b>. I understand that my assessment is monitored, including <b style="color:var(--text-strong);">camera proctoring</b>, and that tab-switching, minimizing or any malpractice may lead to auto-submission.</label>
       </div>
 
-      <button class="btn" id="loginBtn" onclick="loginUser()" style="font-size:17px; padding:17px;">Access Platform</button>
+      <button class="btn" id="loginBtn" onclick="loginUser()">Access Platform</button>
 
-      <div id="login-progress-container" class="load-container">
-        <div id="login-progress-fill" class="load-fill"></div>
-        <div id="login-progress-text" class="load-text">0%</div>
+      <div id="login-progress-container" class="loadbar">
+        <div id="login-progress-fill" class="fill"></div>
+        <div id="login-progress-text" class="txt">0%</div>
       </div>
-      <p id="login-stage-text" style="display:none; text-align:center; font-size:12px; color:var(--text-muted); margin:10px 0 0 0; font-weight:600;"></p>
+      <p id="login-stage-text" style="display:none;text-align:center;font-size:var(--fs-xs);color:var(--text-muted);margin:10px 0 0;font-weight:600;"></p>
 
-      <div style="text-align:center; margin-top:26px; padding-top:20px; border-top:1px dashed var(--border);">
-        <p style="font-size:13.5px; color:var(--text-muted); margin:0 0 10px 0;">Name not in the list?</p>
-        <button type="button" class="link-btn" onclick="showRegister()">🆕 New User Registration</button>
+      <button type="button" class="train-teaser" id="trainTeaser" onclick="openTrainPop()" style="display:none;">
+        <span class="ic">📅</span>
+        <span class="tx"><b id="teaser-title">Next training session</b><span id="teaser-sub">View the training calendar</span></span>
+        <span class="go">›</span>
+      </button>
+
+      <div class="auth-foot">
+        <p>Name not in the list?</p>
+        <button type="button" class="linkbtn" onclick="showRegister()">🆕 New User Registration</button>
       </div>
     </div>
 
     <!-- ---------- REGISTRATION CARD ---------- -->
-    <div id="register-section" class="box login-card" style="display:none;">
-      <div class="login-brand">
-        <img id="reg-logo" src="" alt="WeP Logo" style="display:none;">
-      </div>
-      <h2 class="login-title">New User Registration</h2>
-      <p class="login-sub">Submit your details. You can login once the WeP Admin approves your request.</p>
+    <div id="register-section" class="auth-card" style="display:none;">
+      <div class="brand"><img id="reg-logo" src="" alt="WeP Logo" style="display:none;"></div>
+      <h1 class="auth-title">New User Registration</h1>
+      <p class="auth-sub">Submit your details. You can login once the WeP Admin approves your request.</p>
 
-      <div class="form-group">
+      <div class="field">
         <label for="rName">Full Name <span style="color:var(--danger);">*</span></label>
-        <input type="text" id="rName" autocomplete="name" placeholder="e.g. Saurabh Gupta">
+        <input type="text" id="rName" class="inp" autocomplete="name" placeholder="e.g. Saurabh Gupta">
       </div>
-      <div class="form-group">
+      <div class="field">
         <label for="rPhone">Mobile Number <span style="color:var(--danger);">*</span></label>
-        <input type="tel" id="rPhone" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-Digit Mobile No.">
+        <input type="tel" id="rPhone" class="inp" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="tel" placeholder="10-digit mobile no.">
       </div>
-      <div class="form-group">
+      <div class="field">
         <label for="rEmail">Official Email</label>
-        <input type="email" id="rEmail" autocomplete="email" placeholder="name@wepsol.com">
+        <input type="email" id="rEmail" class="inp" autocomplete="email" placeholder="name@wepsol.com">
       </div>
-      <div class="form-group">
+      <div class="field">
         <label for="rDept">Department / Branch</label>
-        <input type="text" id="rDept" placeholder="e.g. Sales - Baddi">
+        <input type="text" id="rDept" class="inp" placeholder="e.g. Sales - Baddi">
       </div>
 
       <button class="btn btn-success" id="registerBtn" onclick="submitRegistration()">Submit Registration</button>
-      <div id="reg-progress-container" class="load-container">
-        <div id="reg-progress-fill" class="load-fill"></div>
-        <div id="reg-progress-text" class="load-text">0%</div>
+      <div id="reg-progress-container" class="loadbar">
+        <div id="reg-progress-fill" class="fill"></div>
+        <div id="reg-progress-text" class="txt">0%</div>
       </div>
 
-      <div style="text-align:center; margin-top:22px; padding-top:18px; border-top:1px dashed var(--border);">
-        <button type="button" class="link-btn" onclick="showLogin()">⬅️ Back to Login</button>
+      <div class="auth-foot">
+        <button type="button" class="linkbtn" onclick="showLogin()">⬅️ Back to Login</button>
       </div>
     </div>
+
   </div>
 </div>
 
 <!-- ===================================================================
      MAIN APP
      =================================================================== -->
-<div id="main-app" class="app-container" style="display:none;">
-  <div id="sync-strip" style="display:none; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe;
-       color:#1d4ed8; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; margin-bottom:14px;">
-    <span style="width:9px; height:9px; border-radius:50%; background:#2563eb; animation:pulse 1s infinite; display:inline-block; flex-shrink:0;"></span>
-    <span id="sync-strip-text">Fetching the latest data…</span>
+<div id="main-app" class="app" style="display:none;">
+  <div class="strip" id="sync-strip"><span class="dot"></span><span id="sync-strip-text">Fetching the latest data…</span></div>
+
+  <div class="app-head">
+    <img id="dash-logo" src="" alt="WeP Logo" class="logo">
+    <div class="ttl">
+      <h1>WeP Solutions Assessment</h1>
+      <p>Sales Team &amp; Student Evaluation Platform</p>
+    </div>
+    <button class="head-btn" id="trainBtn" onclick="openTrainPop()">📅 Training</button>
+    <button class="head-btn" id="syncBtn" onclick="silentSync()" style="display:none;">🔄 Sync</button>
   </div>
 
-  <div class="header">
-    <img id="dash-logo" src="" alt="WeP Logo" class="wep-logo" style="display:none;">
-    <h1>WeP Solutions Assessment</h1>
-    <p>Sales Team &amp; Student Evaluation Platform</p>
-    <button class="sync-icon" id="syncBtn" onclick="silentSync()" style="display:none;">🔄 Sync</button>
-  </div>
-
-  <div class="top-nav" id="top-nav">
-    <div class="nav-item active" id="tab-results" onclick="switchView('results')"><span>📊</span> Assessment Results</div>
-    <div class="nav-item" id="tab-assessment" onclick="switchView('assessment')"><span>📝</span> Attend Quiz</div>
+  <div class="tabs" id="top-nav">
+    <div class="tab active" id="tab-results" onclick="switchView('results')"><span>📊</span> Results</div>
+    <div class="tab" id="tab-assessment" onclick="switchView('assessment')"><span>📝</span> Attend Quiz</div>
   </div>
 
   <div id="view-results">
-    <div class="box">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-        <h2 style="color:var(--primary); margin:0; font-size:22px;">Welcome, <span id="display-name" style="color:var(--accent);"></span></h2>
-        <a href="YOUR_DRIVE_PPT_LINK_HERE" target="_blank" rel="noopener noreferrer"
-           style="background:var(--accent); color:#fff; padding:10px 15px; border-radius:9px; text-decoration:none;
-                  font-weight:700; font-size:13px; display:flex; align-items:center; gap:6px;">📥 Download PPT Template</a>
-      </div>
+    <div class="card">
+      <h2 style="color:var(--text-strong);margin:0 0 4px;font-size:var(--fs-xl);">Welcome, <span id="display-name" style="color:var(--accent);"></span></h2>
 
-      <div class="section-title" style="margin-top:26px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        🏆 WeP Team Leaderboard
-        <span id="lb-mod-name" style="font-size:12px; background:#e2e8f0; padding:4px 10px; border-radius:6px; color:#475569;"></span>
-      </div>
-      <p style="font-size:13px; color:var(--text-muted); margin:-8px 0 16px 0;">
+      <div class="sec-title" style="margin-top:22px;">🏆 Team Leaderboard <span class="tag" id="lb-mod-name"></span></div>
+      <p style="font-size:var(--fs-xs);color:var(--text-muted);margin:-8px 0 14px;">
         Results appear here once published by the Admin. <span id="last-sync-label" style="font-weight:700;"></span>
       </p>
-      <div style="overflow-x:auto; border:1px solid var(--border); border-radius:10px;">
-        <table id="leaderboard-table"></table>
-      </div>
+      <div class="tbl-wrap"><table id="leaderboard-table"></table></div>
     </div>
 
-    <div class="box">
-      <div class="section-title">📊 My Assessment History</div>
-      <div style="overflow-x:auto; border:1px solid var(--border); border-radius:10px;">
-        <table id="history-table"></table>
-      </div>
+    <div class="card">
+      <div class="sec-title">📊 My Assessment History</div>
+      <div class="tbl-wrap"><table id="history-table"></table></div>
     </div>
   </div>
 
   <div id="view-assessment" style="display:none;">
-    <div class="box" id="assessment-intro">
-      <h2 style="margin-top:0; color:var(--primary); font-size:21px;">Active Assessment Module</h2>
-      <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:26px; border-radius:14px; margin-top:18px;">
-        <h3 style="margin-top:0; color:#1d4ed8; font-size:19px;"><span id="active-mod-name"></span></h3>
-        <p id="quiz-status-msg" style="font-size:15px; color:#334155; font-weight:600; margin-bottom:22px;"></p>
-        <div class="status-bar">
-          <span style="display:flex; align-items:center; gap:8px;">⏱️ Timer limit: <span id="display-time-limit" style="color:var(--primary);"></span> Mins</span>
-          <span style="display:flex; align-items:center; gap:8px;">📋 Status: <span id="display-mod-status" style="color:var(--success);"></span></span>
+    <div class="card" id="assessment-intro">
+      <h2 style="margin:0;color:var(--text-strong);font-size:var(--fs-xl);">Active Assessment Module</h2>
+      <div class="infobox">
+        <h3 style="margin:0 0 10px;color:var(--accent-dark);font-size:var(--fs-lg);"><span id="active-mod-name"></span></h3>
+        <p id="quiz-status-msg" style="font-size:var(--fs-sm);color:var(--text);font-weight:600;margin:0 0 18px;"></p>
+        <div class="statusbar">
+          <span style="display:flex;align-items:center;gap:8px;">⏱️ Timer: <b id="display-time-limit" style="color:var(--text-strong);"></b> mins</span>
+          <span style="display:flex;align-items:center;gap:8px;">📋 Status: <b id="display-mod-status" style="color:var(--success);"></b></span>
         </div>
-        <div id="camera-warning" style="display:none; margin-top:18px; background:#fef3c7; border:1px solid #fcd34d;
-             color:#92400e; padding:13px 15px; border-radius:10px; font-size:13.5px; font-weight:600;"></div>
-        <button id="start-btn" class="btn" style="display:none; margin-top:26px; font-size:17px; padding:17px;" onclick="startQuiz()">Start Assessment Now</button>
+        <div id="camera-warning" class="cam-note"></div>
+        <button id="start-btn" class="btn" style="display:none;margin-top:22px;" onclick="startQuiz()">Start Assessment Now</button>
       </div>
     </div>
 
     <div id="quiz-wizard" style="display:none;">
-      <div class="timer-bar" id="timer-bar">
-        <span style="font-size:15px; display:flex; align-items:center; gap:8px;">⏳ Time Remaining</span>
-        <span id="countdown-timer" style="font-size:26px; font-variant-numeric:tabular-nums;">00:00</span>
+      <div class="timer" id="timer-bar">
+        <span style="font-size:var(--fs-sm);display:flex;align-items:center;gap:8px;">⏳ Time Remaining</span>
+        <span id="countdown-timer" class="num">00:00</span>
       </div>
-      <div class="box" style="padding:34px 26px;">
-        <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); font-weight:800;
-             margin-bottom:12px; text-transform:uppercase;">
-          <span id="q-counter">Question 1 of 10</span><span id="q-percent">0% Complete</span>
-        </div>
-        <div class="progress-bar-bg"><div id="q-progress" class="progress-bar-fill"></div></div>
+      <div class="card">
+        <div class="qmeta"><span id="q-counter">Question 1 of 10</span><span id="q-percent">0% Complete</span></div>
+        <div class="bar"><div id="q-progress"></div></div>
         <div id="questions-container"></div>
       </div>
     </div>
@@ -591,34 +722,33 @@
   let isLoggedIn = false, isSubmitting = false, quizDeadline = 0;
 
   // Camera proctoring state
-  let camStream = null, camReady = false, camMode = "OPTIONAL", camSnapTimer = null, camAsked = false;
-  let camWidget = "SHOW";                 // admin-controlled: SHOW preview / HIDE (capture silently)
-  const CAM_INTERVAL_MS = 90000;          // one frame every 90 seconds during the quiz
+  let camStream = null, camReady = false, camMode = "OPTIONAL", camSnapTimer = null, camBusy = false;
+  let camWidget = "SHOW", camState = "idle";          // idle | starting | live | denied | unsupported | error
+  const CAM_INTERVAL_MS = 90000;
 
   // Login name list
-  let USER_NAMES = [], userListMode = "ON", comboIndex = -1;
+  let USER_NAMES = [], userListMode = "ON", comboIndex = -1, nameListState = "loading";
+  let trainingData = null, trainingDismissed = false;
 
   /* ==========================================================
-     BRANDED DIALOG - replaces every native alert() / confirm()
+     BRANDED DIALOG
      ========================================================== */
   let _dlgResolve = null;
 
   function wepDialog(opts) {
     opts = opts || {};
-    let box   = document.getElementById('wepDialog');
-    let okBtn = document.getElementById('dlg-ok');
-    let cnBtn = document.getElementById('dlg-cancel');
+    let box = safeGet('wepDialog'), okBtn = safeGet('dlg-ok'), cnBtn = safeGet('dlg-cancel');
 
-    document.getElementById('dlg-icon').innerText  = opts.icon  || "❓";
-    document.getElementById('dlg-title').innerText = opts.title || "Please Confirm";
-    document.getElementById('dlg-msg').innerHTML   = opts.html ? opts.message : escapeHtml(opts.message || "").replace(/\n/g, "<br>");
+    safeGet('dlg-icon').innerText  = opts.icon  || "❓";
+    safeGet('dlg-title').innerText = opts.title || "Please Confirm";
+    safeGet('dlg-msg').innerHTML   = opts.html ? opts.message : escapeHtml(opts.message || "").replace(/\n/g, "<br>");
 
     okBtn.innerText = opts.okText || "OK";
-    if (opts.cancelText === null) { cnBtn.style.display = "none"; }
+    if (opts.cancelText === null) cnBtn.style.display = "none";
     else { cnBtn.style.display = "block"; cnBtn.innerText = opts.cancelText || "Cancel"; }
 
     box.className = "";
-    if (opts.tone) box.classList.add(opts.tone);   // danger | success | warn
+    if (opts.tone) box.classList.add(opts.tone);
     box.style.display = "flex";
     setTimeout(function () { okBtn.focus(); }, 60);
 
@@ -626,7 +756,7 @@
   }
 
   function closeWepDialog(result) {
-    document.getElementById('wepDialog').style.display = "none";
+    safeGet('wepDialog').style.display = "none";
     if (_dlgResolve) { let r = _dlgResolve; _dlgResolve = null; r(result); }
   }
 
@@ -642,105 +772,148 @@
       okText: okText || "Yes, Continue", cancelText: "Cancel" });
   }
 
-  document.getElementById('dlg-ok').addEventListener('click', function () { closeWepDialog(true); });
-  document.getElementById('dlg-cancel').addEventListener('click', function () { closeWepDialog(false); });
-  document.addEventListener('keydown', function (e) {
-    if (document.getElementById('wepDialog').style.display !== "flex") return;
-    if (e.key === "Escape") { e.preventDefault(); closeWepDialog(false); }
-    if (e.key === "Enter")  { e.preventDefault(); closeWepDialog(true); }
-  });
-
   /* ---------- Helpers ---------- */
-
-  function escapeHtml(value) {
-    if (value === null || value === undefined) return "";
-    return String(value)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  }
-
   function safeGet(id) { return document.getElementById(id); }
-  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-  function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
-  function lsDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
-  function tidy(s) { return String(s === null || s === undefined ? "" : s).trim().replace(/\s+/g, " "); }
+  function escapeHtml(v) {
+    if (v === null || v === undefined) return "";
+    return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+                    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+  function lsDel(k){ try { localStorage.removeItem(k); } catch(e){} }
+  function tidy(s){ return String(s===null||s===undefined?"":s).trim().replace(/\s+/g," "); }
 
-  function parseDate(dateStr) {
-      if (!dateStr) return null;
-      let raw = String(dateStr).trim();
-      if (!raw) return null;
-      let p = raw.split(/[\/\-\s]+/);
-      if (p.length < 3) { let d0 = new Date(raw); return isNaN(d0.getTime()) ? null : stripTime(d0); }
-      let m = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
-      let key = String(p[1]).trim().toLowerCase().slice(0, 3);
-      let month = (m[key] !== undefined) ? m[key] : (parseInt(p[1], 10) - 1);
-      if (isNaN(month) || month < 0 || month > 11) return null;
-      let year = parseInt(p[2], 10), day = parseInt(p[0], 10);
-      if (isNaN(year) || isNaN(day)) return null;
-      if (year < 100) year += 2000;
-      return stripTime(new Date(year, month, day));
+  function stripTime(d){ d.setHours(0,0,0,0); return d; }
+  function today0(){ return stripTime(new Date()); }
+  function daysBetween(a,b){ return Math.round((a.getTime()-b.getTime())/86400000); }
+  function fmtDate(d){
+    const M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return d.getDate()+" "+M[d.getMonth()]+" "+d.getFullYear();
   }
-  function stripTime(d) { d.setHours(0,0,0,0); return d; }
-  function today0() { return stripTime(new Date()); }
-  function daysBetween(a, b) { return Math.round((a.getTime() - b.getTime()) / 86400000); }
-  function fmtDate(d) {
-    const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return d.getDate() + " " + M[d.getMonth()] + " " + d.getFullYear();
+  function parseDate(s){
+    if(!s) return null;
+    let raw=String(s).trim(); if(!raw) return null;
+    let p=raw.split(/[\/\-\s.]+/);
+    if(p.length<3){ let d0=new Date(raw); return isNaN(d0.getTime())?null:stripTime(d0); }
+    let m={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    let key=String(p[1]).trim().toLowerCase().slice(0,3);
+    let month=(m[key]!==undefined)?m[key]:(parseInt(p[1],10)-1);
+    let year=parseInt(p[2],10), day=parseInt(p[0],10);
+    if(isNaN(month)||isNaN(year)||isNaN(day)||month<0||month>11) return null;
+    if(year<100) year+=2000;
+    return stripTime(new Date(year,month,day));
   }
-  function initials(name) {
-    let parts = tidy(name).split(" ").filter(Boolean);
-    if (parts.length === 0) return "--";
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  function initials(name){
+    let parts=tidy(name).split(" ").filter(Boolean);
+    if(parts.length===0) return "--";
+    if(parts.length===1) return parts[0].substring(0,2).toUpperCase();
+    return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
   }
 
   /* ==========================================================
      CAMERA PROCTORING
      ========================================================== */
 
-  async function initCamera() {
-    if (camMode === "OFF" || camAsked) return;
-    camAsked = true;
+  function setCamUI(state, text) {
+    camState = state;
+    let box = safeGet('cam-box'), txt = safeGet('cam-status-text');
+    box.classList.remove('denied','warnstate');
+    if (state === "denied" || state === "error") box.classList.add('denied');
+    if (state === "starting") box.classList.add('warnstate');
+    txt.innerText = text || (state === "live" ? "Proctoring Active" : state === "starting" ? "Starting camera…" : "Camera Blocked");
+    // HIDE = capture silently, nothing on screen. OFF = no camera at all.
+    box.style.display = (camMode === "OFF" || camWidget === "HIDE" || state === "idle") ? "none" : "block";
+    updateCameraNotice();
+  }
+
+  /** Waits until the video element actually has pixels (mobile needs this). */
+  function waitForVideo(video, ms) {
+    return new Promise(function (resolve) {
+      let done = false, t0 = Date.now();
+      function check() {
+        if (done) return;
+        if (video.videoWidth > 0 && video.readyState >= 2) { done = true; resolve(true); return; }
+        if (Date.now() - t0 > (ms || 6000)) { done = true; resolve(false); return; }
+        setTimeout(check, 180);
+      }
+      check();
+    });
+  }
+
+  async function initCamera(isRetry) {
+    if (camMode === "OFF") { setCamUI("idle"); return; }
+    if (camBusy) return;
+    if (camReady && !isRetry) return;
+    camBusy = true;
+    setCamUI("starting");
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      camReady = false;
+      camBusy = false; camReady = false;
+      setCamUI("unsupported", "Not supported");
       logCameraEvent("Camera Unsupported");
-      updateCameraNotice();
+      if (camMode === "REQUIRED") {
+        wepAlert("This browser cannot access a camera, and camera proctoring is mandatory for this assessment.\n\nPlease use Google Chrome on a device that has a camera.",
+                 "Camera Not Supported", "danger", "📷");
+      }
+      return;
+    }
+    // Browsers only hand out a camera on https (or localhost). Check the real
+    // URL rather than isSecureContext alone, which some embedded webviews lie about.
+    var host = location.hostname;
+    var secure = (location.protocol === "https:") || host === "localhost" || host === "127.0.0.1" || host === "";
+    if (!secure) {
+      camBusy = false; camReady = false;
+      setCamUI("error", "Needs HTTPS");
+      logCameraEvent("Camera Blocked (insecure page)");
+      if (camMode === "REQUIRED") {
+        wepAlert("The portal must be opened over https for the browser to allow a camera.\n\nPlease open the official https link of the WeP portal.",
+                 "Secure Connection Required", "danger", "🔒");
+      }
       return;
     }
 
     try {
+      // Stop an old stream before asking again, otherwise a retry can hang.
+      if (camStream) { try { camStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} camStream = null; }
+
       camStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }, audio: false
       });
+
       let vid = safeGet('cam-video');
       vid.srcObject = camStream;
-      // The stream still runs and still captures when the box is hidden.
-      safeGet('cam-box').style.display = (camWidget === "HIDE") ? "none" : "block";
-      safeGet('cam-box').classList.remove('denied');
-      safeGet('cam-status-text').innerText = "Proctoring Active";
+      vid.muted = true; vid.setAttribute('playsinline','');
+      try { await vid.play(); } catch (e) { /* some browsers resolve late; the wait below covers it */ }
+
+      let ok = await waitForVideo(vid, 7000);
       camReady = true;
-      setTimeout(function () { captureSnapshot("Login"); }, 1800);   // let the sensor expose first
+      setCamUI("live", ok ? "Proctoring Active" : "Warming up…");
+      captureSnapshot("Login");
     } catch (err) {
       camReady = false;
-      safeGet('cam-box').style.display = (camWidget === "HIDE") ? "none" : "block";
-      safeGet('cam-box').classList.add('denied');
-      safeGet('cam-status-text').innerText = "Camera Blocked";
-      logCameraEvent("Camera Denied");
+      let name = (err && err.name) ? err.name : "";
+      let msg = (name === "NotAllowedError" || name === "SecurityError") ? "Camera Blocked"
+              : (name === "NotFoundError" || name === "OverconstrainedError") ? "No camera found"
+              : (name === "NotReadableError") ? "Camera in use" : "Camera error";
+      setCamUI(name === "NotAllowedError" ? "denied" : "error", msg);
+      logCameraEvent("Camera " + (name || "Error"));
+
       if (camMode === "REQUIRED") {
-        wepAlert("Camera access is mandatory for this assessment.\n\nClick the 🔒 lock icon in your browser's address bar, set Camera to 'Allow', then reload this page.",
-                 "Camera Permission Required", "danger", "📷");
+        wepAlert(
+          name === "NotReadableError"
+            ? "Your camera is being used by another app (Zoom, Teams, Meet…). Close that app and tap 'Retry camera'."
+            : name === "NotFoundError"
+            ? "No camera was found on this device. Camera proctoring is mandatory for this assessment."
+            : "Camera access is mandatory for this assessment.\n\nTap the 🔒 lock icon in the address bar → Camera → Allow, then tap 'Retry camera'.",
+          "Camera Permission Required", "danger", "📷");
       }
-    }
-    updateCameraNotice();
+    } finally { camBusy = false; }
   }
 
   function stopCamera() {
     clearInterval(camSnapTimer); camSnapTimer = null;
-    if (camStream) {
-      try { camStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
-      camStream = null;
-    }
+    if (camStream) { try { camStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} camStream = null; }
     camReady = false;
     safeGet('cam-box').style.display = "none";
   }
@@ -754,136 +927,175 @@
    * Captures one frame and OVERWRITES this user's single row on the server.
    * Nothing is stored in Google Drive and the sheet never grows.
    */
-  function captureSnapshot(eventName) {
-    if (!camReady || !camStream) return;
+  async function captureSnapshot(eventName, attempt) {
+    if (!camReady || !camStream || !userData.phone) return;
+    attempt = attempt || 1;
     try {
       let video = safeGet('cam-video');
-      if (!video.videoWidth) return;
+      if (!video.videoWidth) {
+        if (attempt <= 5) { setTimeout(function () { captureSnapshot(eventName, attempt + 1); }, 700); }
+        return;
+      }
       let canvas = safeGet('cam-canvas');
       canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      // 320x240 @ 0.5 quality keeps a frame around 8-12 KB, well inside the
-      // 50,000-character limit of a single spreadsheet cell.
+      // 320x240 @ 0.5 quality ≈ 8-12 KB, well inside the 50,000-char cell limit.
       let dataUrl = canvas.toDataURL('image/jpeg', 0.5);
       if (dataUrl.length > 47000) dataUrl = canvas.toDataURL('image/jpeg', 0.35);
 
-      apiCall("saveLoginPhoto", {
+      let res = await apiCall("saveLoginPhoto", {
         name: userData.name, phone: userData.phone, event: eventName || "Snapshot", image: dataUrl
-      }).then(function (res) {
-        let txt = safeGet('cam-status-text');
-        if (camWidget === "HIDE") { if (res && res.error) console.warn("WeP camera upload failed:", res.error); return; }
-        if (res && res.error) {
-          safeGet('cam-box').classList.add('denied');
-          txt.innerText = "Upload failed";
-          console.warn("WeP camera upload failed:", res.error);
-        } else {
-          safeGet('cam-box').classList.remove('denied');
-          txt.innerText = "Captured ✓";
-          setTimeout(function () { if (camReady) txt.innerText = "Proctoring Active"; }, 2500);
-        }
       });
+
+      if (camWidget === "HIDE" || camMode === "OFF") { if (res && res.error) console.warn("WeP camera upload failed:", res.error); return; }
+      let txt = safeGet('cam-status-text');
+      if (res && res.error) {
+        safeGet('cam-box').classList.add('denied');
+        txt.innerText = "Upload failed";
+        console.warn("WeP camera upload failed:", res.error);
+      } else {
+        safeGet('cam-box').classList.remove('denied');
+        txt.innerText = "Captured ✓";
+        setTimeout(function () { if (camReady && camState === "live") txt.innerText = "Proctoring Active"; }, 2500);
+      }
     } catch (e) { /* never let the camera break the quiz */ }
   }
 
   function updateCameraNotice() {
     let el = safeGet('camera-warning');
-    if (camMode === "OFF" || camWidget === "HIDE") { el.style.display = "none"; return; }
+    if (!el) return;
+    el.className = "cam-note";
+    if (camMode === "OFF" || camWidget === "HIDE") return;
 
-    if (camReady) {
-      el.style.display = "block";
-      el.style.background = "#ecfdf5"; el.style.borderColor = "#6ee7b7"; el.style.color = "#065f46";
-      el.innerHTML = "📷 <b>Camera proctoring is active.</b> Your photo is captured at the start and periodically during the assessment.";
+    let retry = '<button type="button" class="btn btn-sm btn-ghost" onclick="retryCamera()">🔄 Retry camera</button>';
+
+    if (camState === "live") {
+      el.className = "cam-note on good";
+      el.innerHTML = "📷 <b>Camera proctoring is active.</b> Your photo is captured when you log in and periodically during the assessment.";
+    } else if (camState === "starting") {
+      el.className = "cam-note on warn";
+      el.innerHTML = "⏳ <b>Starting your camera…</b> Please allow the permission prompt if your browser asks.";
     } else if (camMode === "REQUIRED") {
-      el.style.display = "block";
-      el.style.background = "#fee2e2"; el.style.borderColor = "#fca5a5"; el.style.color = "#991b1b";
-      el.innerHTML = "🚫 <b>Camera is blocked.</b> This assessment cannot be started without camera access. Allow the camera from your browser's address bar. " +
-                     '<button type="button" class="link-btn" style="color:#991b1b;" onclick="retryCamera()">Retry camera</button>';
+      el.className = "cam-note on bad";
+      el.innerHTML = "🚫 <b>Camera is not available.</b> This assessment cannot be started without camera access. Allow Camera from the 🔒 icon in your address bar, then retry.<br>" + retry;
     } else {
-      el.style.display = "block";
-      el.style.background = "#fef3c7"; el.style.borderColor = "#fcd34d"; el.style.color = "#92400e";
-      el.innerHTML = "⚠️ <b>Camera is not available.</b> You may continue, but this has been recorded in your proctoring log. " +
-                     '<button type="button" class="link-btn" style="color:#92400e;" onclick="retryCamera()">Retry camera</button>';
+      el.className = "cam-note on warn";
+      el.innerHTML = "⚠️ <b>Camera is not available.</b> You may continue, but this has been recorded in your proctoring log.<br>" + retry;
     }
   }
 
-  function retryCamera() { camAsked = false; initCamera(); }
+  function retryCamera() { initCamera(true); }
+  window.addEventListener("pagehide", function () { try { stopCamera(); } catch (e) {} });
 
   /* ==========================================================
-     TRAINING PANEL  (professional, non-blocking)
+     TRAINING POPUP
      ========================================================== */
 
-  function renderTraining(res) {
-    let panel = safeGet('training-panel');
+  function buildTraining(res) {
     let rows = (res && res.trainingPlan) ? res.trainingPlan : [];
-
-    safeGet('t-next-card').style.display = 'none';
-    safeGet('t-upcoming-wrap').style.display = 'none';
-    safeGet('t-overdue-wrap').style.display = 'none';
-    safeGet('t-upcoming').innerHTML = '';
-    safeGet('t-overdue').innerHTML = '';
-    safeGet('t-empty').style.display = 'block';
-    if (!panel) return;
-
-    if (!rows || rows.length <= 1) return;
-
-    let now = today0();
-    let pending = [];
+    let now = today0(), pending = [];
     for (let i = 1; i < rows.length; i++) {
       let r = rows[i] || [];
-      let status = tidy(r[8]).toLowerCase();
-      if (status !== 'pending') continue;
+      if (tidy(r[8]).toLowerCase() !== 'pending') continue;
       let d = parseDate(r[4]);
       if (!d) continue;
-      pending.push({
-        date: d, month: tidy(r[0]), week: tidy(r[1]), segment: tidy(r[2]),
-        presenter: tidy(r[5]) || 'To be announced', topic: tidy(r[7]) || 'Topic to be announced'
-      });
+      pending.push({ date:d, month:tidy(r[0]), week:tidy(r[1]), segment:tidy(r[2]),
+                     presenter:tidy(r[5]) || 'To be announced', topic:tidy(r[7]) || 'Topic to be announced' });
     }
-    if (pending.length === 0) return;
+    pending.sort(function (a,b) { return a.date - b.date; });
+    return { now: now,
+             upcoming: pending.filter(function(t){ return t.date >= now; }),
+             overdue:  pending.filter(function(t){ return t.date <  now; }) };
+  }
 
-    pending.sort(function (a, b) { return a.date - b.date; });
-    let upcoming = pending.filter(function (t) { return t.date >= now; });
-    let overdue  = pending.filter(function (t) { return t.date <  now; });
+  function renderTraining(res) {
+    trainingData = buildTraining(res);
+    let up = trainingData.upcoming, over = trainingData.overdue, now = trainingData.now;
 
-    if (upcoming.length > 0) {
-      safeGet('t-empty').style.display = 'none';
-      let n = upcoming[0];
-      let diff = daysBetween(n.date, now);
-      let pill = safeGet('t-count');
-      pill.className = "t-count";
+    safeGet('tp-upcoming').innerHTML = '';
+    safeGet('tp-overdue').innerHTML = '';
+    safeGet('tp-upcoming-wrap').style.display = 'none';
+    safeGet('tp-overdue-wrap').style.display = 'none';
+    safeGet('tp-empty').style.display = 'none';
+    safeGet('tp-hero').style.display = 'block';
+
+    if (up.length > 0) {
+      let n = up[0], diff = daysBetween(n.date, now), pill = safeGet('tp-count');
+      pill.className = "tpop-count";
       if (diff === 0)      { pill.innerText = "Today"; pill.classList.add('today'); }
       else if (diff === 1) { pill.innerText = "Tomorrow"; pill.classList.add('soon'); }
       else if (diff <= 3)  { pill.innerText = "In " + diff + " days"; pill.classList.add('soon'); }
       else                 { pill.innerText = "In " + diff + " days"; }
 
-      safeGet('t-when').innerText = fmtDate(n.date) + (n.week ? " · " + n.week : "");
-      safeGet('t-topic').innerText = n.topic;
-      safeGet('t-presenter').innerText = n.presenter;
-      safeGet('t-avatar').innerText = initials(n.presenter);
-      safeGet('t-segment').innerText = [n.segment, n.month].filter(Boolean).join(" · ");
-      safeGet('t-next-card').style.display = 'block';
+      safeGet('tp-topic').innerText = n.topic;
+      safeGet('tp-date').innerText = fmtDate(n.date) + (n.week ? " · " + n.week : "");
+      safeGet('tp-presenter').innerText = n.presenter;
+      safeGet('tp-avatar').innerText = initials(n.presenter);
+      safeGet('tp-segment').innerText = [n.segment, n.month].filter(Boolean).join(" · ");
 
-      let rest = upcoming.slice(1, 4);
-      if (rest.length > 0) {
-        safeGet('t-upcoming').innerHTML = rest.map(function (t) {
-          return '<li class="t-row"><span class="t-date-pill">' + escapeHtml(fmtDate(t.date)) + '</span>' +
-                 '<span class="t-info"><b>' + escapeHtml(t.presenter) + '</b><span>' + escapeHtml(t.topic) + '</span></span></li>';
+      safeGet('teaser-title').innerText = "Next: " + n.topic;
+      safeGet('teaser-sub').innerText = n.presenter + " · " + fmtDate(n.date) +
+        (diff === 0 ? " (today)" : diff === 1 ? " (tomorrow)" : " (in " + diff + " days)");
+      safeGet('trainTeaser').style.display = 'flex';
+
+      let rest = up.slice(1, 5);
+      if (rest.length) {
+        safeGet('tp-upcoming').innerHTML = rest.map(function (t) {
+          return '<li class="trow"><span class="pill">' + escapeHtml(fmtDate(t.date)) + '</span>' +
+                 '<span class="info"><b>' + escapeHtml(t.presenter) + '</b><span>' + escapeHtml(t.topic) + '</span></span></li>';
         }).join("");
-        safeGet('t-upcoming-wrap').style.display = 'block';
+        safeGet('tp-upcoming-wrap').style.display = 'block';
       }
+    } else {
+      safeGet('tp-hero').style.display = 'none';
+      safeGet('teaser-title').innerText = "Training calendar";
+      safeGet('teaser-sub').innerText = over.length ? over.length + " pending presentation(s)" : "No session scheduled";
+      safeGet('trainTeaser').style.display = 'flex';
     }
 
-    if (overdue.length > 0) {
-      safeGet('t-empty').style.display = 'none';
-      safeGet('t-overdue').innerHTML = overdue.slice(0, 5).map(function (t) {
-        let late = daysBetween(now, t.date);
-        return '<li class="t-row late"><span class="t-date-pill">' + late + 'd late</span>' +
-               '<span class="t-info"><b>' + escapeHtml(t.presenter) + '</b><span>' + escapeHtml(t.topic) + ' · ' + escapeHtml(fmtDate(t.date)) + '</span></span></li>';
+    if (over.length > 0) {
+      safeGet('tp-overdue').innerHTML = over.slice(0, 6).map(function (t) {
+        return '<li class="trow late"><span class="pill">' + daysBetween(now, t.date) + 'd late</span>' +
+               '<span class="info"><b>' + escapeHtml(t.presenter) + '</b><span>' + escapeHtml(t.topic) + ' · ' + escapeHtml(fmtDate(t.date)) + '</span></span></li>';
       }).join("");
-      safeGet('t-overdue-wrap').style.display = 'block';
+      safeGet('tp-overdue-wrap').style.display = 'block';
     }
 
-    let now2 = new Date();
-    safeGet('t-updated').innerText = "Updated " + ("0" + now2.getHours()).slice(-2) + ":" + ("0" + now2.getMinutes()).slice(-2);
+    if (up.length === 0 && over.length === 0) {
+      safeGet('tp-empty').style.display = 'block';
+      safeGet('trainTeaser').style.display = 'none';
+    }
+
+    maybeAutoOpenTraining();
+  }
+
+  function trainSignature() {
+    if (!trainingData) return "";
+    let u = trainingData.upcoming[0];
+    return (u ? u.date.getTime() + "|" + u.topic + "|" + u.presenter : "none") + "|" + trainingData.overdue.length;
+  }
+
+  /** Shows the popup once per day per device, and again whenever the plan changes. */
+  function maybeAutoOpenTraining() {
+    if (isLoggedIn || trainingDismissed) return;
+    if (!trainingData || (trainingData.upcoming.length === 0 && trainingData.overdue.length === 0)) return;
+    let today = fmtDate(today0());
+    let seen = lsGet("wep_train_seen") || "";
+    if (seen === today + "::" + trainSignature()) return;
+    openTrainPop();
+  }
+
+  function openTrainPop() {
+    if (!trainingData) return;
+    safeGet('trainPop').classList.add('open');
+    document.body.style.overflow = "hidden";
+    setTimeout(function () { safeGet('tp-close').focus(); }, 80);
+  }
+
+  function closeTrainPop(remember) {
+    safeGet('trainPop').classList.remove('open');
+    document.body.style.overflow = "";
+    trainingDismissed = true;
+    if (remember !== false) lsSet("wep_train_seen", fmtDate(today0()) + "::" + trainSignature());
   }
 
   /* ==========================================================
@@ -893,15 +1105,13 @@
   function comboEl() { return safeGet('nameCombo'); }
 
   function openCombo(filterNow) {
-    if (userListMode !== "ON" || USER_NAMES.length === 0) return;
     renderNameOptions(filterNow ? safeGet('uName').value : "");
     comboEl().classList.add('open');
-    safeGet('uName').setAttribute('aria-expanded', 'true');
+    safeGet('uName').setAttribute('aria-expanded','true');
   }
-
   function closeCombo() {
     comboEl().classList.remove('open');
-    safeGet('uName').setAttribute('aria-expanded', 'false');
+    safeGet('uName').setAttribute('aria-expanded','false');
     comboIndex = -1;
   }
 
@@ -909,55 +1119,84 @@
     if (!f) return escapeHtml(name);
     let i = name.toLowerCase().indexOf(f);
     if (i === -1) return escapeHtml(name);
-    return escapeHtml(name.substring(0, i)) + "<mark>" + escapeHtml(name.substr(i, f.length)) + "</mark>" + escapeHtml(name.substring(i + f.length));
+    return escapeHtml(name.substring(0,i)) + "<mark>" + escapeHtml(name.substr(i,f.length)) + "</mark>" + escapeHtml(name.substring(i+f.length));
   }
 
   function renderNameOptions(filter) {
     let list = safeGet('comboList');
-    let f = tidy(filter).toLowerCase();
-    let items = USER_NAMES.filter(function (n) { return !f || n.toLowerCase().indexOf(f) !== -1; });
     comboIndex = -1;
 
+    if (nameListState === "loading") { list.innerHTML = '<div class="combo-msg">⏳ Loading the registered user list…</div>'; return; }
+    if (nameListState === "off")     { list.innerHTML = '<div class="combo-msg">The name list is turned off by the admin.<br>Please type your full name as registered.</div>'; return; }
+    if (nameListState === "outdated"){ list.innerHTML = '<div class="combo-msg">⚠️ The server script is an older version, so the name list is unavailable.<br>Type your full name, or ask the admin to publish a <b>new deployment</b>.</div>'; return; }
+    if (nameListState === "error")   { list.innerHTML = '<div class="combo-msg">Could not reach the WeP server.<br><button type="button" class="linkbtn" onclick="refreshPublicData(true)">Try again</button></div>'; return; }
+    if (nameListState === "empty")   { list.innerHTML = '<div class="combo-msg">No approved users yet.<br>Use <b>New User Registration</b>, then ask the admin to approve you.</div>'; return; }
+
+    let f = tidy(filter).toLowerCase();
+    let items = USER_NAMES.filter(function (n) { return !f || n.toLowerCase().indexOf(f) !== -1; });
     if (items.length === 0) {
-      list.innerHTML = '<div class="combo-empty">No matching name found.<br>Use <b>New User Registration</b> if you are new.</div>';
+      list.innerHTML = '<div class="combo-msg">No matching name found.<br>Check the spelling, or use <b>New User Registration</b>.</div>';
       return;
     }
-    list.innerHTML = items.slice(0, 400).map(function (n) {
-      return '<div class="combo-item" data-name="' + escapeHtml(n) + '">' + highlightMatch(n, f) + '</div>';
+    let head = '<div class="combo-head">' + items.length + (f ? " match" + (items.length>1?"es":"") : " registered user" + (items.length>1?"s":"")) + '</div>';
+    list.innerHTML = head + items.slice(0,500).map(function (n) {
+      return '<div class="combo-item" role="option" data-name="' + escapeHtml(n) + '">' +
+               '<span class="av">' + escapeHtml(initials(n)) + '</span>' +
+               '<span>' + highlightMatch(n, f) + '</span></div>';
     }).join("");
   }
 
   function selectComboName(name) {
     safeGet('uName').value = name;
     closeCombo();
-    safeGet('nameHint').innerText = "Now enter your registered mobile number.";
-    setTimeout(function () { safeGet('uPhone').focus(); }, 40);
+    let h = safeGet('nameHint'); h.className = "hint ok"; h.innerText = "✓ Now enter your registered mobile number.";
+    setTimeout(function () { safeGet('uPhone').focus(); }, 60);
   }
 
   function moveCombo(step) {
     let items = safeGet('comboList').querySelectorAll('.combo-item');
-    if (items.length === 0) return;
+    if (!items.length) return;
     comboIndex += step;
     if (comboIndex < 0) comboIndex = items.length - 1;
     if (comboIndex >= items.length) comboIndex = 0;
     for (let i = 0; i < items.length; i++) items[i].classList.toggle('active', i === comboIndex);
-    items[comboIndex].scrollIntoView({ block: "nearest" });
+    items[comboIndex].scrollIntoView({ block:"nearest" });
   }
 
-  function applyUserList(list, mode) {
-    userListMode = (mode || "ON").toUpperCase();
-    USER_NAMES = Array.isArray(list) ? list.filter(Boolean) : [];
-    let input = safeGet('uName'), hint = safeGet('nameHint'), caret = safeGet('comboCaret');
+  /** Single place that decides what the name field looks like. */
+  function setNameListState(state, list, mode) {
+    nameListState = state;
+    if (list) USER_NAMES = list.filter(Boolean);
+    if (mode) userListMode = String(mode).toUpperCase();
 
-    if (userListMode !== "ON" || USER_NAMES.length === 0) {
+    let input = safeGet('uName'), hint = safeGet('nameHint'), caret = safeGet('comboCaret');
+    hint.className = "hint";
+    caret.style.display = (state === "ready") ? "block" : "none";
+    input.disabled = false;
+
+    if (state === "loading") {
+      input.placeholder = "Loading name list…";
+      hint.innerText = "⏳ Fetching the registered user list…";
+    } else if (state === "ready") {
+      input.placeholder = "Tap to select your name";
+      hint.innerHTML = "👤 " + USER_NAMES.length + " registered users — tap the box or start typing to search.";
+    } else if (state === "empty") {
       input.placeholder = "Type your full name";
-      caret.style.display = "none";
+      hint.className = "hint err";
+      hint.innerText = "No approved users yet — register first, then ask the admin to approve.";
+    } else if (state === "off") {
+      input.placeholder = "Type your full name";
       hint.innerText = "Type your full name exactly as registered.";
+    } else if (state === "outdated") {
+      input.placeholder = "Type your full name";
+      hint.className = "hint err";
+      hint.innerText = "Name list unavailable — server script needs a new deployment.";
     } else {
-      input.placeholder = "Select your name";
-      caret.style.display = "block";
-      hint.innerText = USER_NAMES.length + " registered users · start typing to search.";
+      input.placeholder = "Type your full name";
+      hint.className = "hint err";
+      hint.innerText = "Could not load the name list. You can still type your name.";
     }
+    if (comboEl().classList.contains('open')) renderNameOptions(input.value);
   }
 
   function togglePwd() {
@@ -966,20 +1205,24 @@
     else { f.type = "password"; b.innerText = "SHOW"; }
   }
 
+  function showSysbar(text, bad) {
+    let el = safeGet('sysbar');
+    safeGet('sysbar-text').innerHTML = text;
+    el.className = "sysbar show" + (bad ? " bad" : "");
+  }
+
   /* ==========================================================
      BOOT
      ========================================================== */
 
   document.addEventListener("DOMContentLoaded", function () {
       // ---- instant paint from the last known public payload ----
-      let cachedLogo = lsGet("wep_logo");
-      let cachedFav  = lsGet("wep_favicon");
-      let cachedPub  = lsGet("wep_public");
+      let cachedLogo = lsGet("wep_logo"), cachedFav = lsGet("wep_favicon"), cachedPub = lsGet("wep_public");
 
       if (cachedLogo) {
           safeGet('login-logo-skeleton').style.display = 'none';
-          safeGet('login-logo').src = cachedLogo; safeGet('login-logo').style.display = 'block';
-          safeGet('reg-logo').src = cachedLogo;   safeGet('reg-logo').style.display = 'block';
+          safeGet('login-logo').src = cachedLogo; safeGet('login-logo').style.display = 'inline-block';
+          safeGet('reg-logo').src = cachedLogo;   safeGet('reg-logo').style.display = 'inline-block';
           safeGet('dash-logo').src = cachedLogo;  safeGet('dash-logo').style.display = 'block';
       }
       if (cachedFav) safeGet('favicon').href = cachedFav;
@@ -987,21 +1230,20 @@
       if (cachedPub) {
           try {
             let p = JSON.parse(cachedPub);
-            applyUserList(p.users, p.userListMode);
+            if (p.users && p.users.length) setNameListState("ready", p.users, p.userListMode);
             renderTraining(p);
           } catch (e) { lsDel("wep_public"); }
       }
 
-      // remember the last person who logged in on this device
       let lastName = lsGet("wep_last_name");
       if (lastName) safeGet('uName').value = lastName;
 
-      /* ---- combobox wiring ---- */
+      /* ---- combobox wiring (pointer events cover mouse + touch) ---- */
       let nameInput = safeGet('uName');
       nameInput.addEventListener('focus', function () { openCombo(false); });
       nameInput.addEventListener('click', function () { openCombo(false); });
       nameInput.addEventListener('input', function () { openCombo(true); });
-      nameInput.addEventListener('blur', function () { setTimeout(closeCombo, 160); });
+      nameInput.addEventListener('blur',  function () { setTimeout(closeCombo, 180); });
       nameInput.addEventListener('keydown', function (ev) {
           let isOpen = comboEl().classList.contains('open');
           if (ev.key === "ArrowDown") { ev.preventDefault(); if (!isOpen) openCombo(true); else moveCombo(1); return; }
@@ -1014,13 +1256,13 @@
               else { closeCombo(); safeGet('uPhone').focus(); }
           }
       });
-      safeGet('comboList').addEventListener('mousedown', function (ev) {
+      safeGet('comboList').addEventListener('pointerdown', function (ev) {
           let item = ev.target.closest('.combo-item');
           if (!item) return;
           ev.preventDefault();
           selectComboName(item.getAttribute('data-name'));
       });
-      safeGet('comboCaret').addEventListener('mousedown', function (ev) {
+      safeGet('comboCaret').addEventListener('pointerdown', function (ev) {
           ev.preventDefault();
           if (comboEl().classList.contains('open')) closeCombo();
           else { nameInput.focus(); openCombo(false); }
@@ -1029,55 +1271,92 @@
       safeGet('uPhone').addEventListener("keydown", function (ev) {
           if (ev.key === "Enter") { ev.preventDefault(); loginUser(); }
       });
-      ["rName", "rPhone", "rEmail", "rDept"].forEach(function (id) {
+      ["rName","rPhone","rEmail","rDept"].forEach(function (id) {
           safeGet(id).addEventListener("keydown", function (ev) {
               if (ev.key === "Enter") { ev.preventDefault(); submitRegistration(); }
           });
       });
-      ["uPhone", "rPhone"].forEach(function (id) {
-          safeGet(id).addEventListener("input", function () {
-              this.value = this.value.replace(/[^0-9]/g, "").slice(0, 10);
-          });
+      ["uPhone","rPhone"].forEach(function (id) {
+          safeGet(id).addEventListener("input", function () { this.value = this.value.replace(/[^0-9]/g,"").slice(0,10); });
       });
 
-      // SPEED: the moment the user touches the form, wake a cold Apps Script
-      // container while they are still typing. Fired once.
+      /* ---- popups ---- */
+      safeGet('tp-close').addEventListener('click', function () { closeTrainPop(true); });
+      safeGet('trainPop').addEventListener('click', function (ev) { if (ev.target === this) closeTrainPop(true); });
+      safeGet('dlg-ok').addEventListener('click', function () { closeWepDialog(true); });
+      safeGet('dlg-cancel').addEventListener('click', function () { closeWepDialog(false); });
+      document.addEventListener('keydown', function (e) {
+        if (safeGet('wepDialog').style.display === "flex") {
+          if (e.key === "Escape") { e.preventDefault(); closeWepDialog(false); }
+          if (e.key === "Enter")  { e.preventDefault(); closeWepDialog(true); }
+          return;
+        }
+        if (e.key === "Escape" && safeGet('trainPop').classList.contains('open')) closeTrainPop(true);
+      });
+
+      // SPEED: wake a cold Apps Script container while the user is still typing.
       let warmed = false;
-      ["uName", "uPhone", "tnc"].forEach(function (id) {
+      ["uName","uPhone","tnc"].forEach(function (id) {
           safeGet(id).addEventListener("focus", function () {
-              if (warmed) return;
-              warmed = true;
-              apiCall("ping", {});
+              if (warmed) return; warmed = true; apiCall("ping", {});
           });
       });
 
       if (cachedLogo) safeGet('login-logo-skeleton').style.display = 'none';
-      refreshPublicData();           // always verify against the server
+      refreshPublicData();
   });
 
   /** ONE call brings logo + favicon + training plan + the login name list. */
-  async function refreshPublicData() {
+  async function refreshPublicData(isManual) {
+      if (isManual) setNameListState("loading");
       let res = await apiCall("getPublicData", {});
-      if (!res || res.error) { safeGet('login-logo-skeleton').style.display = 'none'; return; }
+
+      if (!res || res.error) {
+          safeGet('login-logo-skeleton').style.display = 'none';
+          if (nameListState !== "ready") setNameListState("error");
+          showSysbar("⚠️ Could not reach the WeP server. " + escapeHtml((res && res.error) || "Check your internet connection.") +
+                     ' <button type="button" class="linkbtn" onclick="refreshPublicData(true)">Retry</button>', true);
+          return;
+      }
 
       if (res.settings) {
           if (res.settings.favicon) { safeGet('favicon').href = res.settings.favicon; lsSet("wep_favicon", res.settings.favicon); }
           if (res.settings.logo) {
-              safeGet('login-logo-skeleton').style.display = 'none';
-              safeGet('login-logo').src = res.settings.logo; safeGet('login-logo').style.display = 'block';
-              safeGet('reg-logo').src = res.settings.logo;   safeGet('reg-logo').style.display = 'block';
+              safeGet('login-logo').src = res.settings.logo; safeGet('login-logo').style.display = 'inline-block';
+              safeGet('reg-logo').src = res.settings.logo;   safeGet('reg-logo').style.display = 'inline-block';
               safeGet('dash-logo').src = res.settings.logo;  safeGet('dash-logo').style.display = 'block';
               lsSet("wep_logo", res.settings.logo);
-          } else { safeGet('login-logo-skeleton').style.display = 'none'; }
-      } else { safeGet('login-logo-skeleton').style.display = 'none'; }
+          }
+      }
+      safeGet('login-logo-skeleton').style.display = 'none';
 
-      applyUserList(res.users, res.userListMode);
-      if (!isLoggedIn) renderTraining(res);      // fresh data always wins over the cached paint
+      // --- the name list, with a fallback for an older deployment ---
+      let users = res.users, mode = res.userListMode;
+      if (users === undefined) {
+          let u = await apiCall("getUserList", {});
+          if (u && u.ok && Array.isArray(u.users)) { users = u.users; mode = u.userListMode; }
+      }
 
+      if (users === undefined) {
+          setNameListState("outdated");
+          showSysbar("🔧 <b>Server script is outdated" + (SERVER_API ? " (v" + SERVER_API + ")" : "") +
+                     ".</b> The name dropdown needs WeP server v" + EXPECTED_API +
+                     ". Paste the latest Code.gs in Apps Script and publish a <b>NEW deployment version</b>.", true);
+      } else if (String(mode || "ON").toUpperCase() !== "ON") {
+          setNameListState("off", [], mode);
+      } else if (users.length === 0) {
+          setNameListState("empty", [], mode);
+          showSysbar("ℹ️ No approved users found yet. In the Admin portal open <b>User Approvals</b> and approve the pending registrations — approved names then appear in this dropdown.");
+      } else {
+          setNameListState("ready", users, mode);
+          if (backendIsOutdated()) {
+            showSysbar("🔧 Server script is v" + SERVER_API + " but this page expects v" + EXPECTED_API + ". Publish a new deployment version.", false);
+          }
+      }
+
+      renderTraining(res);
       try {
-        lsSet("wep_public", JSON.stringify({
-          users: res.users || [], userListMode: res.userListMode || "ON", trainingPlan: res.trainingPlan || []
-        }));
+        lsSet("wep_public", JSON.stringify({ users: users || [], userListMode: mode || "ON", trainingPlan: res.trainingPlan || [] }));
       } catch (e) {}
   }
 
@@ -1090,14 +1369,14 @@
     safeGet('register-section').style.display = "block";
     if (prefillName)  safeGet('rName').value = prefillName;
     if (prefillPhone) safeGet('rPhone').value = prefillPhone;
-    window.scrollTo(0, 0);
+    window.scrollTo(0,0);
     setTimeout(function () { safeGet('rName').focus(); }, 80);
   }
 
   function showLogin() {
     safeGet('register-section').style.display = "none";
     safeGet('login-section').style.display = "block";
-    window.scrollTo(0, 0);
+    window.scrollTo(0,0);
   }
 
   function startBar(fillId, textId, containerId, btnId) {
@@ -1114,22 +1393,20 @@
     safeGet(containerId).style.display = "none";
     safeGet(fillId).style.width = "0%";
     safeGet(textId).innerText = "0%";
-    safeGet(btnId).style.display = "block";
+    safeGet(btnId).style.display = "flex";
   }
 
   async function submitRegistration() {
-    let name  = tidy(safeGet('rName').value);
-    let phone = safeGet('rPhone').value.trim();
-    let email = safeGet('rEmail').value.trim();
-    let dept  = safeGet('rDept').value.trim();
+    let name = tidy(safeGet('rName').value), phone = safeGet('rPhone').value.trim();
+    let email = safeGet('rEmail').value.trim(), dept = safeGet('rDept').value.trim();
 
     if (!name || name.length < 3) { await wepAlert("Please enter your full name (at least 3 characters).", "Name Required", "warn", "✏️"); return; }
     if (!/^[0-9]{10}$/.test(phone)) { await wepAlert("Please enter a valid 10-digit mobile number.", "Invalid Number", "warn", "📱"); return; }
     if (email && email.indexOf("@") === -1) { await wepAlert("Please enter a valid email address, or leave the field blank.", "Invalid Email", "warn", "✉️"); return; }
 
-    regProgressInterval = startBar('reg-progress-fill', 'reg-progress-text', 'reg-progress-container', 'registerBtn');
-    let res = await apiCall("registerUser", { name: name, phone: phone, email: email, dept: dept });
-    stopBar(regProgressInterval, 'reg-progress-fill', 'reg-progress-text', 'reg-progress-container', 'registerBtn');
+    regProgressInterval = startBar('reg-progress-fill','reg-progress-text','reg-progress-container','registerBtn');
+    let res = await apiCall("registerUser", { name:name, phone:phone, email:email, dept:dept });
+    stopBar(regProgressInterval,'reg-progress-fill','reg-progress-text','reg-progress-container','registerBtn');
 
     if (!res || res.error) {
       await wepAlert((res && res.error) ? res.error : "Registration could not be submitted. Please try again.", "Registration Failed", "danger", "🚫");
@@ -1137,7 +1414,7 @@
     }
 
     await wepAlert((res.message || "Registration submitted successfully.") +
-      "\n\nOnce approved, your name will appear in the login list. Your password is your mobile number.",
+      "\n\nOnce approved, your name appears in the login list. Your password is your mobile number.",
       "Registration Submitted", "success", "🎉");
 
     ['rName','rPhone','rEmail','rDept'].forEach(function (id) { safeGet(id).value = ""; });
@@ -1172,33 +1449,31 @@
       let fill = safeGet('login-progress-fill'), txt = safeGet('login-progress-text'), stage = safeGet('login-stage-text');
       safeGet('login-progress-container').style.display = "block";
       stage.style.display = "block";
-      stage.innerText = "Connecting to WeP server...";
+      stage.innerText = "Connecting to WeP server…";
 
       let w = 0, ticks = 0;
       clearInterval(loginProgressInterval);
       loginProgressInterval = setInterval(function () {
           ticks++;
           if (w < 97) { w += Math.max(1, Math.round((97 - w) * 0.12)); fill.style.width = w + "%"; txt.innerText = w + "%"; }
-          if (ticks === 8)  stage.innerText = "Verifying your credentials...";
-          if (ticks === 16) stage.innerText = "Loading leaderboard & history...";
-          if (ticks === 32) stage.innerText = "Server is waking up, almost there...";
+          if (ticks === 8)  stage.innerText = "Verifying your credentials…";
+          if (ticks === 16) stage.innerText = "Loading leaderboard & history…";
+          if (ticks === 32) stage.innerText = "Server is waking up, almost there…";
       }, 250);
   }
-
   function completeLoginProgress() {
       clearInterval(loginProgressInterval); loginProgressInterval = null;
       safeGet('login-progress-fill').style.width = "100%";
       safeGet('login-progress-text').innerText = "100%";
       safeGet('login-stage-text').innerText = "Done!";
   }
-
   function resetLoginProgress() {
       clearInterval(loginProgressInterval); loginProgressInterval = null;
       safeGet('login-stage-text').style.display = "none";
       safeGet('login-progress-container').style.display = "none";
       safeGet('login-progress-fill').style.width = "0%";
       safeGet('login-progress-text').innerText = "0%";
-      safeGet('loginBtn').style.display = "block";
+      safeGet('loginBtn').style.display = "flex";
   }
 
   /* ==========================================================
@@ -1206,9 +1481,10 @@
      ========================================================== */
 
   function showAppShell() {
-    safeGet("login-container").style.display = "none";
+    safeGet("login-view").style.display = "none";
     safeGet("main-app").style.display = "block";
-    safeGet("syncBtn").style.display = "flex";
+    safeGet("syncBtn").style.display = "inline-flex";
+    document.body.style.overflow = "";
   }
 
   function setSyncStrip(on, text) {
@@ -1217,7 +1493,6 @@
     if (on) safeGet('sync-strip-text').innerText = text || "Fetching the latest data…";
   }
 
-  /** Paints the whole dashboard from a payload (server reply OR local cache). */
   function applyDashboard(res, fromCache) {
     safeGet("display-name").innerText = userData.name.split(" ")[0];
     let modName = (res.activeMonth || "-") + " (" + (res.activeWeek || "-") + ")";
@@ -1236,76 +1511,71 @@
 
     let now = new Date();
     safeGet("last-sync-label").innerText = fromCache ? "Showing saved copy…" : "Last updated: " +
-      ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2) + ":" + ("0" + now.getSeconds()).slice(-2);
+      ("0"+now.getHours()).slice(-2) + ":" + ("0"+now.getMinutes()).slice(-2) + ":" + ("0"+now.getSeconds()).slice(-2);
 
     let leaderboard = res.leaderboard || [];
-    let lbRows = ["<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>"];
-    leaderboard.forEach(function (lb, idx) {
-      let displayScore = lb.isPublished ? '<span class="badge-score">' + escapeHtml(lb.score) + '</span>'
-                                        : '<span class="badge-pending">Evaluating</span>';
-      let detailsText = lb.isPublished ? '<span style="font-weight:800; color:var(--text-muted);">' + escapeHtml(lb.correct) + ' / ' + escapeHtml(lb.total) + ' Right</span>' : '-';
-      let rank = '<span class="rank-pill' + (lb.isPublished && idx < 3 ? ' top' : '') + '">' + (idx + 1) + '</span>';
-      let boldName = lb.isMe ? '<b style="color:var(--accent);">' + escapeHtml(lb.name) + ' (You)</b>'
-                             : '<span>' + escapeHtml(lb.name) + '</span>';
-      lbRows.push('<tr><td>' + rank + boldName + '</td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
+    let lb = ["<tr><th>Sales Rep / Student</th><th>Score %</th><th>Details</th></tr>"];
+    leaderboard.forEach(function (x, idx) {
+      let score = x.isPublished ? '<span class="badge-score">' + escapeHtml(x.score) + '</span>'
+                                : '<span class="badge-pending">Evaluating</span>';
+      let det = x.isPublished ? '<b style="color:var(--text-muted);">' + escapeHtml(x.correct) + ' / ' + escapeHtml(x.total) + ' right</b>' : '-';
+      let rank = '<span class="rank' + (x.isPublished && idx < 3 ? ' top' : '') + '">' + (idx+1) + '</span>';
+      let nm = x.isMe ? '<b style="color:var(--accent);">' + escapeHtml(x.name) + ' (You)</b>' : escapeHtml(x.name);
+      lb.push('<tr><td style="display:flex;align-items:center;">' + rank + '<span>' + nm + '</span></td><td>' + score + '</td><td>' + det + '</td></tr>');
     });
-    if (leaderboard.length === 0) lbRows.push('<tr><td colspan="3" style="text-align:center; padding:22px; color:var(--text-muted);">No team data found for the active week.</td></tr>');
-    safeGet("leaderboard-table").innerHTML = lbRows.join("");
+    if (!leaderboard.length) lb.push('<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--text-muted);">No team data for the active week yet.</td></tr>');
+    safeGet("leaderboard-table").innerHTML = lb.join("");
 
     let history = res.history || [];
-    let hRows = ["<tr><th>Assessment Date</th><th>Training Module</th><th>Score %</th><th>Right / Wrong</th></tr>"];
-    history.forEach(function (h) {
-      let displayScore = h.isPublished ? '<span class="badge-score">' + escapeHtml(h.score) + '</span>'
-                                       : '<span class="badge-pending">Evaluating</span>';
-      let detailsText = h.isPublished
-        ? '<span style="color:#059669; font-weight:800;">' + escapeHtml(h.correct) + ' Right</span><br><span style="color:#dc2626; font-weight:800;">' + escapeHtml(h.wrong) + ' Wrong</span>'
+    let h = ["<tr><th>Date</th><th>Module</th><th>Score %</th><th>Right / Wrong</th></tr>"];
+    history.forEach(function (x) {
+      let score = x.isPublished ? '<span class="badge-score">' + escapeHtml(x.score) + '</span>'
+                                : '<span class="badge-pending">Evaluating</span>';
+      let det = x.isPublished
+        ? '<span style="color:var(--success);font-weight:800;">' + escapeHtml(x.correct) + ' right</span><br><span style="color:var(--danger);font-weight:800;">' + escapeHtml(x.wrong) + ' wrong</span>'
         : '-';
-      hRows.push('<tr><td style="font-weight:600;">' + escapeHtml(h.date) + '</td><td><b style="color:var(--primary); font-size:13px;">' +
-        escapeHtml(h.month) + ' - ' + escapeHtml(h.week) + '</b></td><td>' + displayScore + '</td><td>' + detailsText + '</td></tr>');
+      h.push('<tr><td style="font-weight:600;white-space:nowrap;">' + escapeHtml(x.date) + '</td><td><b style="color:var(--text-strong);">' +
+        escapeHtml(x.month) + ' - ' + escapeHtml(x.week) + '</b></td><td>' + score + '</td><td>' + det + '</td></tr>');
     });
-    if (history.length === 0) hRows.push('<tr><td colspan="4" style="text-align:center; padding:22px; color:var(--text-muted);">No assessment history found.</td></tr>');
-    safeGet("history-table").innerHTML = hRows.join("");
+    if (!history.length) h.push('<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted);">No assessment history found.</td></tr>');
+    safeGet("history-table").innerHTML = h.join("");
 
-    // SAFETY: a cached payload never unlocks the quiz. The Start button and the
-    // question set only ever come from a live server reply.
+    // SAFETY: a cached payload never unlocks the quiz.
     if (fromCache) {
       safeGet("quiz-status-msg").innerHTML = "⏳ Checking the latest assessment status with the WeP server…";
       safeGet("start-btn").style.display = "none";
       return;
     }
 
-    let serverQuestions = res.questions || [];
+    let qs = res.questions || [];
     if (res.hasAttempted) {
-      safeGet("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score will update once the Admin publishes the results.";
+      safeGet("quiz-status-msg").innerHTML = "✅ You have submitted your assessment. Your score updates once the Admin publishes the results.";
       safeGet("start-btn").style.display = "none";
-      currentQuestions = [];
-      clearQuizState();
-    } else if (serverQuestions.length === 0) {
-      safeGet("quiz-status-msg").innerHTML = "⏳ Admin has not added questions for this module yet. Please check back later.";
+      currentQuestions = []; clearQuizState();
+    } else if (qs.length === 0) {
+      safeGet("quiz-status-msg").innerHTML = "⏳ The Admin has not added questions for this module yet. Please check back later.";
       safeGet("start-btn").style.display = "none";
       currentQuestions = [];
     } else if (quizGlobalState === "PAUSED") {
-      safeGet("quiz-status-msg").innerHTML = "🛑 The Admin has temporarily paused this assessment. You cannot start the quiz right now.";
+      safeGet("quiz-status-msg").innerHTML = "🛑 The Admin has temporarily paused this assessment.";
       safeGet("start-btn").style.display = "none";
-      safeGet("display-mod-status").style.color = "#dc2626";
+      safeGet("display-mod-status").style.color = "var(--danger)";
       currentQuestions = [];
     } else {
       let strictAlert = strictModeEnabled
-        ? '<br><br><span style="color:#dc2626; display:inline-block; background:#fee2e2; padding:10px; border-radius:8px;">🛡️ <b>Strict Mode ON:</b> Tab switching or opening new apps is restricted.</span>'
+        ? '<br><br><span style="color:var(--danger);display:inline-block;background:var(--danger-soft);padding:10px 12px;border-radius:10px;">🛡️ <b>Strict Mode ON:</b> tab switching or opening other apps is restricted.</span>'
         : "";
-      safeGet("quiz-status-msg").innerHTML = "🚨 You have a pending assessment. Click below to begin." + strictAlert;
-      safeGet("start-btn").style.display = "block";
+      safeGet("quiz-status-msg").innerHTML = "🚨 You have a pending assessment. Tap below to begin." + strictAlert;
+      safeGet("start-btn").style.display = "flex";
       safeGet("display-mod-status").style.color = "var(--success)";
-      currentQuestions = serverQuestions;
+      currentQuestions = qs;
     }
   }
 
   function resolveSelectedName(typed) {
     let t = tidy(typed);
     if (!t) return "";
-    for (let i = 0; i < USER_NAMES.length; i++) {
-      if (USER_NAMES[i].toLowerCase() === t.toLowerCase()) return USER_NAMES[i];  // normalise casing
-    }
+    for (let i = 0; i < USER_NAMES.length; i++) if (USER_NAMES[i].toLowerCase() === t.toLowerCase()) return USER_NAMES[i];
     return t;
   }
 
@@ -1314,16 +1584,15 @@
     let usedCache = false;
 
     if (!isSilent) {
-      let typedName = resolveSelectedName(safeGet("uName").value);
-      userData.name = typedName;
+      userData.name = resolveSelectedName(safeGet("uName").value);
       userData.phone = safeGet("uPhone").value.trim();
 
-      if (!userData.name) { await wepAlert("Please select your name from the list.", "Name Required", "warn", "👤"); safeGet('uName').focus(); return; }
+      if (!userData.name) { await wepAlert("Please select or type your name.", "Name Required", "warn", "👤"); safeGet('uName').focus(); return; }
 
-      if (userListMode === "ON" && USER_NAMES.length > 0) {
+      if (nameListState === "ready") {
         let known = USER_NAMES.some(function (n) { return n.toLowerCase() === userData.name.toLowerCase(); });
         if (!known) {
-          await wepAlert("Please pick your name from the dropdown list. If your name is not there, use 'New User Registration'.",
+          await wepAlert("Please pick your name from the dropdown list. If it is not there, use 'New User Registration'.",
                          "Name Not In List", "warn", "👤");
           safeGet('uName').focus(); openCombo(true); return;
         }
@@ -1332,11 +1601,9 @@
       if (!safeGet("tnc").checked) { await wepAlert("Please read and accept the Terms & Conditions before logging in.", "Terms Not Accepted", "warn", "📜"); return; }
 
       lsSet("wep_last_name", userData.name);
+      if (safeGet('trainPop').classList.contains('open')) closeTrainPop(false);
 
-      // INSTANT LOGIN: if this same person logged in successfully on this device
-      // before, paint their dashboard from the saved copy right away and refresh
-      // it in the background. Nothing sensitive is unlocked from cache - the quiz
-      // itself still waits for the live reply.
+      // INSTANT LOGIN from the saved copy; the quiz still waits for the live reply.
       let saved = null;
       try {
         let raw = lsGet("wep_dash_" + userData.phone);
@@ -1361,14 +1628,11 @@
     if (!res || res.error) {
        if (!isSilent) {
          if (usedCache) {
-           setSyncStrip(false);
-           isLoggedIn = false;
+           setSyncStrip(false); isLoggedIn = false;
            safeGet("main-app").style.display = "none";
-           safeGet("login-container").style.display = "grid";
+           safeGet("login-view").style.display = "flex";
            lsDel("wep_dash_" + userData.phone);
-         } else {
-           resetLoginProgress();
-         }
+         } else { resetLoginProgress(); }
 
          if (res && res.needRegister) {
            let go = await wepConfirm(res.error + "\n\nWould you like to open the registration form now?", "Not Registered", "warn", "Register Now");
@@ -1383,24 +1647,20 @@
     }
 
     if (!isSilent && !usedCache) {
-      completeLoginProgress();
-      isLoggedIn = true;
+      completeLoginProgress(); isLoggedIn = true;
       setTimeout(showAppShell, 220);
     }
 
     applyDashboard(res, false);
     setSyncStrip(false);
 
-    // Save a copy for the next instant login on this device (never the paper).
     if (!isSilent) {
       try {
         let slim = JSON.parse(JSON.stringify(res));
-        delete slim.questions;
-        lsSet("wep_dash_" + userData.phone, JSON.stringify({ name: userData.name, data: slim, at: Date.now() }));
+        delete slim.questions;                       // never cache the paper
+        lsSet("wep_dash_" + userData.phone, JSON.stringify({ name:userData.name, data:slim, at:Date.now() }));
       } catch (e) {}
-    }
 
-    if (!isSilent) {
       if (backendIsOutdated()) {
         wepAlert("This page expects WeP server v" + EXPECTED_API + " but the deployed script is v" + SERVER_API +
                  ".\n\nOpen the Apps Script project, paste the latest Code.gs, then publish a NEW deployment version.",
@@ -1429,15 +1689,12 @@
      ANTI-CHEAT
      ========================================================== */
 
-  function closeStrictModal() {
-    safeGet('strictModal').style.display = 'none';
-    cheatTriggered = false;
-  }
+  function closeStrictModal() { safeGet('strictModal').classList.remove('open'); cheatTriggered = false; }
 
   function handleCheatEvent() {
     if (!isQuizActive || !strictModeEnabled || isSubmitting) return;
     if (cheatTriggered) return;
-    if (safeGet('strictModal').style.display === 'flex') return;
+    if (safeGet('strictModal').classList.contains('open')) return;
     if (safeGet('wepDialog').style.display === 'flex') return;
     if (document.visibilityState !== "hidden" && document.hasFocus()) return;
 
@@ -1447,10 +1704,10 @@
 
     if (tabSwitchCount <= maxWarnings) {
       safeGet("strict-count-text").innerText = "Warning " + tabSwitchCount + " of " + maxWarnings;
-      safeGet("strictModal").style.display = "flex";
+      safeGet("strictModal").classList.add('open');
       setTimeout(function () { cheatTriggered = false; }, 4000);
     } else {
-      safeGet("strictModal").style.display = "none";
+      safeGet("strictModal").classList.remove('open');
       wepAlert("You have been disqualified for switching tabs or windows multiple times. Your test is being submitted automatically.",
                "Disqualified", "danger", "🚨");
       submitQuiz(true, "Disqualified");
@@ -1459,32 +1716,23 @@
 
   document.addEventListener("visibilitychange", handleCheatEvent);
   window.addEventListener("blur", handleCheatEvent);
-
   window.addEventListener("beforeunload", function (e) {
     if (isQuizActive && !isSubmitting) { e.preventDefault(); e.returnValue = ""; return ""; }
   });
 
   /* ==========================================================
      QUIZ STATE PERSISTENCE
-     A refresh (or an accidental close) no longer resets the timer or wipes
-     the answers - the deadline is stored, so reloading buys no extra time.
      ========================================================== */
 
   function quizKey() { return "wep_quiz_" + userData.phone; }
-
   function saveQuizState() {
     if (!userData.phone || !isQuizActive) return;
-    lsSet(quizKey(), JSON.stringify({
-      m: activeModuleObj.month, w: activeModuleObj.week,
-      d: quizDeadline, a: userAnswers, v: tabSwitchCount
-    }));
+    lsSet(quizKey(), JSON.stringify({ m:activeModuleObj.month, w:activeModuleObj.week, d:quizDeadline, a:userAnswers, v:tabSwitchCount }));
   }
   function clearQuizState() { if (userData.phone) lsDel(quizKey()); }
-
   function readQuizState() {
     try {
-      let raw = lsGet(quizKey());
-      if (!raw) return null;
+      let raw = lsGet(quizKey()); if (!raw) return null;
       let o = JSON.parse(raw);
       if (!o || o.m !== activeModuleObj.month || o.w !== activeModuleObj.week) { clearQuizState(); return null; }
       return o;
@@ -1492,7 +1740,7 @@
   }
 
   async function maybeResumeQuiz() {
-    if (!currentQuestions || currentQuestions.length === 0) return;
+    if (!currentQuestions || !currentQuestions.length) return;
     let st = readQuizState();
     if (!st || !st.d) return;
 
@@ -1500,10 +1748,7 @@
     switchView('assessment');
 
     if (remaining <= 0) {
-      // Time ran out while the page was closed - submit what was answered.
-      userAnswers = st.a || {};
-      tabSwitchCount = st.v || 0;
-      isQuizActive = false;
+      userAnswers = st.a || {}; tabSwitchCount = st.v || 0; isQuizActive = false;
       await wepAlert("Your previous attempt's time limit had expired. The answers saved on this device are being submitted now.",
                      "Time Expired", "warn", "⏰");
       safeGet("assessment-intro").style.display = "none";
@@ -1513,7 +1758,7 @@
     }
 
     let go = await wepConfirm("An unfinished assessment was found on this device with " +
-      Math.ceil(remaining / 60) + " minute(s) left.\n\nYour saved answers will be restored.",
+      Math.ceil(remaining/60) + " minute(s) left.\n\nYour saved answers will be restored.",
       "Resume Assessment?", "warn", "Resume Now");
     if (!go) return;
     startQuiz(st);
@@ -1524,32 +1769,28 @@
      ========================================================== */
 
   async function startQuiz(resumeState) {
-    if (!currentQuestions || currentQuestions.length === 0) {
+    if (!currentQuestions || !currentQuestions.length) {
       await wepAlert("No questions are available for this module right now.", "Nothing to Attempt", "warn", "📭");
       return;
     }
     if (camMode === "REQUIRED" && !camReady) {
-      await wepAlert("Camera access is mandatory for this assessment.\n\nAllow the camera from your browser's address bar, then click 'Retry camera'.",
+      await wepAlert("Camera access is mandatory for this assessment.\n\nAllow Camera from the 🔒 icon in your address bar, then tap 'Retry camera'.",
                      "Camera Required", "danger", "📷");
+      retryCamera();
       return;
     }
 
     clearInterval(autoSyncTimer); autoSyncTimer = null;
-
-    isQuizActive = true; isSubmitting = false;
-    cheatTriggered = false;
+    isQuizActive = true; isSubmitting = false; cheatTriggered = false;
 
     let seconds = quizTimeLimit * 60;
     if (resumeState && resumeState.d) {
-      userAnswers = resumeState.a || {};
-      tabSwitchCount = resumeState.v || 0;
-      seconds = Math.max(1, Math.round((resumeState.d - Date.now()) / 1000));
-    } else {
-      userAnswers = {};
-      tabSwitchCount = 0;
-    }
+      userAnswers = resumeState.a || {}; tabSwitchCount = resumeState.v || 0;
+      seconds = Math.max(1, Math.round((resumeState.d - Date.now())/1000));
+    } else { userAnswers = {}; tabSwitchCount = 0; }
 
     safeGet("syncBtn").style.display = "none";
+    safeGet("trainBtn").style.display = "none";
     safeGet("assessment-intro").style.display = "none";
     safeGet("top-nav").style.display = "none";
     safeGet("quiz-wizard").style.display = "block";
@@ -1559,13 +1800,11 @@
     startTimer(seconds);
     saveQuizState();
 
-    // Proctoring: one frame at start, then every 90 seconds. Each capture
-    // replaces the previous one, so the sheet never grows.
     captureSnapshot("Quiz Start");
     clearInterval(camSnapTimer);
     camSnapTimer = setInterval(function () { captureSnapshot("In-Quiz"); }, CAM_INTERVAL_MS);
 
-    window.scrollTo(0, 0);
+    window.scrollTo(0,0);
   }
 
   function startTimer(durationInSeconds) {
@@ -1574,12 +1813,11 @@
     let display = safeGet('countdown-timer'), bar = safeGet('timer-bar');
 
     function tick() {
-      let remaining = Math.round((quizDeadline - Date.now()) / 1000);
+      let remaining = Math.round((quizDeadline - Date.now())/1000);
       if (remaining < 0) remaining = 0;
-      let minutes = Math.floor(remaining / 60), seconds = remaining % 60;
-      display.textContent = (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds < 10 ? "0" + seconds : seconds);
+      let m = Math.floor(remaining/60), s = remaining % 60;
+      display.textContent = (m<10?"0"+m:m) + ":" + (s<10?"0"+s:s);
       if (remaining <= 60) bar.classList.add("warning"); else bar.classList.remove("warning");
-
       if (remaining <= 0) {
         clearInterval(countdownInterval); countdownInterval = null;
         if (!isSubmitting) {
@@ -1594,66 +1832,61 @@
   }
 
   function handleRadioClick(elem) {
-     document.querySelectorAll('#questions-container .option-label').forEach(function (l) { l.classList.remove('selected'); });
-     let parent = elem.closest('.option-label');
+     document.querySelectorAll('#questions-container .opt').forEach(function (l) { l.classList.remove('selected'); });
+     let parent = elem.closest('.opt');
      if (parent) parent.classList.add('selected');
-     saveCurrentSelection();
-     saveQuizState();
+     saveCurrentSelection(); saveQuizState();
   }
 
   function renderSingleQuestion() {
     let q = currentQuestions[currentQIndex];
     if (!q) return;
     let total = currentQuestions.length;
-    let progress = Math.round((currentQIndex / total) * 100);
+    let progress = Math.round((currentQIndex/total)*100);
 
-    safeGet("q-counter").innerText = "Question " + (currentQIndex + 1) + " of " + total;
+    safeGet("q-counter").innerText = "Question " + (currentQIndex+1) + " of " + total;
     safeGet("q-percent").innerText = progress + "% Complete";
     safeGet("q-progress").style.width = progress + "%";
 
     let savedAns = userAnswers[currentQIndex] || "";
-    let opts = q.opts || [], letters = ["A", "B", "C", "D"];
+    let opts = q.opts || [], letters = ["A","B","C","D"];
 
-    let html = '<p class="q-title">' + escapeHtml(q.q) + '</p>';
+    let html = '<p class="qtext">' + escapeHtml(q.q) + '</p>';
     for (let i = 0; i < 4; i++) {
-      let optText = (opts[i] === undefined || opts[i] === null || String(opts[i]).trim() === "") ? "" : String(opts[i]);
-      if (optText === "") continue;
+      let t = (opts[i]===undefined||opts[i]===null||String(opts[i]).trim()==="") ? "" : String(opts[i]);
+      if (!t) continue;
       let L = letters[i];
-      html += '<label class="option-label ' + (savedAns === L ? 'selected' : '') + '">' +
-                '<input type="radio" name="q_current" value="' + L + '" onchange="handleRadioClick(this)" ' +
-                (savedAns === L ? 'checked' : '') + '>' +
-                '<span class="opt-key">' + L + '</span>' +
-                '<span style="flex:1;">' + escapeHtml(optText) + '</span>' +
-              '</label>';
+      html += '<label class="opt ' + (savedAns===L?'selected':'') + '">' +
+                '<input type="radio" name="q_current" value="' + L + '" onchange="handleRadioClick(this)" ' + (savedAns===L?'checked':'') + '>' +
+                '<span class="optkey">' + L + '</span>' +
+                '<span style="flex:1;">' + escapeHtml(t) + '</span></label>';
     }
 
-    let btns = '<div style="display:flex; justify-content:space-between; margin-top:34px; gap:16px;">';
+    let btns = '<div class="qnav">';
     btns += (currentQIndex > 0)
-      ? '<button type="button" class="btn btn-secondary" style="flex:1;" onclick="prevQuestion()">⬅️ Previous</button>'
+      ? '<button type="button" class="btn btn-ghost" onclick="prevQuestion()">⬅️ Previous</button>'
       : '<div style="flex:1;"></div>';
-    btns += (currentQIndex < total - 1)
-      ? '<button type="button" class="btn" style="flex:1;" onclick="nextQuestion()">Next ➡️</button>'
-      : '<button type="button" class="btn btn-success" style="flex:1;" onclick="submitQuiz()">Submit Assessment ✅</button>';
+    btns += (currentQIndex < total-1)
+      ? '<button type="button" class="btn" onclick="nextQuestion()">Next ➡️</button>'
+      : '<button type="button" class="btn btn-success" onclick="submitQuiz()">Submit Assessment ✅</button>';
     btns += '</div>';
 
     safeGet("questions-container").innerHTML = html + btns;
   }
 
   function saveCurrentSelection() {
-    let selected = document.querySelector('input[name="q_current"]:checked');
-    if (selected) userAnswers[currentQIndex] = selected.value;
+    let sel = document.querySelector('input[name="q_current"]:checked');
+    if (sel) userAnswers[currentQIndex] = sel.value;
   }
-
   function nextQuestion() {
     saveCurrentSelection(); saveQuizState();
-    if (currentQIndex < currentQuestions.length - 1) currentQIndex++;
-    renderSingleQuestion(); window.scrollTo(0, 0);
+    if (currentQIndex < currentQuestions.length-1) currentQIndex++;
+    renderSingleQuestion(); window.scrollTo(0,0);
   }
-
   function prevQuestion() {
     saveCurrentSelection(); saveQuizState();
     if (currentQIndex > 0) currentQIndex--;
-    renderSingleQuestion(); window.scrollTo(0, 0);
+    renderSingleQuestion(); window.scrollTo(0,0);
   }
 
   async function submitQuiz(isAutoSubmit, forceReason) {
@@ -1663,78 +1896,68 @@
     saveCurrentSelection();
 
     if (!isAutoSubmit) {
-      let missedCount = 0;
-      for (let i = 0; i < currentQuestions.length; i++) { if (!userAnswers[i]) missedCount++; }
-      let msg = missedCount > 0
-        ? "You have left " + missedCount + " question(s) unattempted.\n\nOnce submitted, you cannot re-attempt this assessment."
+      let missed = 0;
+      for (let i = 0; i < currentQuestions.length; i++) if (!userAnswers[i]) missed++;
+      let msg = missed > 0
+        ? "You have left " + missed + " question(s) unattempted.\n\nOnce submitted, you cannot re-attempt this assessment."
         : "All questions attempted.\n\nOnce submitted, you cannot re-attempt this assessment.";
-      let conf = await wepConfirm(msg, "Submit Assessment?", missedCount > 0 ? "warn" : "", "Yes, Submit");
+      let conf = await wepConfirm(msg, "Submit Assessment?", missed > 0 ? "warn" : "", "Yes, Submit");
       if (!conf) return;
     }
 
-    isSubmitting = true;
-    isQuizActive = false;
+    isSubmitting = true; isQuizActive = false;
     clearInterval(countdownInterval); countdownInterval = null;
 
     captureSnapshot(forceReason === "Disqualified" ? "Disqualified" : "Quiz Submit");
     clearInterval(camSnapTimer); camSnapTimer = null;
 
-    let spinnerIcon  = forceReason === "Disqualified" ? "🚨" : "⚙️";
-    let spinnerText  = forceReason === "Disqualified" ? "Disqualified. Submitting..." : "Saving Assessment Data...";
-    let spinnerColor = forceReason === "Disqualified" ? "#dc2626" : "var(--primary)";
+    let icon = forceReason === "Disqualified" ? "🚨" : "⚙️";
+    let text = forceReason === "Disqualified" ? "Disqualified. Submitting…" : "Saving assessment data…";
+    let color = forceReason === "Disqualified" ? "var(--danger)" : "var(--text-strong)";
 
     safeGet("quiz-wizard").innerHTML =
-      "<div style='text-align:center; padding:50px 0;'>" +
-        '<div style="font-size:42px; margin-bottom:18px; animation:spin 2s linear infinite;">' + spinnerIcon + '</div>' +
-        "<h2 style='color:" + spinnerColor + "; margin:0; font-size:21px;'>" + spinnerText + "</h2>" +
-        "<p style='color:var(--text-muted); font-size:14px; margin-top:14px;'>Please wait while your answers are submitted to the WeP server.</p>" +
-        "<style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>" +
-      "</div>";
+      '<div class="card" style="text-align:center;padding:48px 20px;">' +
+        '<div style="font-size:40px;margin-bottom:16px;animation:spin 2s linear infinite;">' + icon + '</div>' +
+        '<h2 style="color:' + color + ';margin:0;font-size:var(--fs-xl);">' + text + '</h2>' +
+        '<p style="color:var(--text-muted);font-size:var(--fs-sm);margin-top:12px;">Please wait while your answers reach the WeP server.</p>' +
+        '<style>@keyframes spin{100%{transform:rotate(360deg);}}</style></div>';
 
-    let correct = 0, detailedLogs = {};
-    if (forceReason === "Disqualified") detailedLogs["Status"] = "Disqualified - Cheating detected via Strict Mode";
+    let correct = 0, logs = {};
+    if (forceReason === "Disqualified") logs["Status"] = "Disqualified - Cheating detected via Strict Mode";
 
     currentQuestions.forEach(function (q, idx) {
-      let opts = q.opts || [], letterIndex = { A: 0, B: 1, C: 2, D: 3 };
-      let uAnsLetter = userAnswers[idx] || "Skipped";
-      let cAnsLetter = q.ans ? String(q.ans).toUpperCase().trim() : "";
-      let uAnsText = (letterIndex[uAnsLetter] !== undefined) ? (opts[letterIndex[uAnsLetter]] || "") : "Skipped";
-      let cAnsText = (letterIndex[cAnsLetter] !== undefined) ? (opts[letterIndex[cAnsLetter]] || "") : "";
-      let isRight = (uAnsLetter !== "Skipped" && uAnsLetter === cAnsLetter);
-      if (isRight) correct++;
-
-      let logKey = "Q" + ((q.id === undefined || q.id === null || q.id === "") ? (idx + 1) : q.id);
-      detailedLogs[logKey] = {
-        question: q.q, userAnswerLetter: uAnsLetter, userAnswerText: uAnsText,
-        correctAnswerLetter: cAnsLetter, correctAnswerText: cAnsText, isRight: isRight
-      };
+      let opts = q.opts || [], li = { A:0,B:1,C:2,D:3 };
+      let u = userAnswers[idx] || "Skipped";
+      let c = q.ans ? String(q.ans).toUpperCase().trim() : "";
+      let uText = (li[u] !== undefined) ? (opts[li[u]] || "") : "Skipped";
+      let cText = (li[c] !== undefined) ? (opts[li[c]] || "") : "";
+      let right = (u !== "Skipped" && u === c);
+      if (right) correct++;
+      let key = "Q" + ((q.id===undefined||q.id===null||q.id==="") ? (idx+1) : q.id);
+      logs[key] = { question:q.q, userAnswerLetter:u, userAnswerText:uText, correctAnswerLetter:c, correctAnswerText:cText, isRight:right };
     });
 
-    let resultPayload = {
-      total: currentQuestions.length, correct: correct, detailedLogs: detailedLogs,
-      flag: (forceReason === "Disqualified") ? "Disqualified" : (forceReason === "Timeout" ? "Timeout" : "")
-    };
+    let payload = { total: currentQuestions.length, correct: correct, detailedLogs: logs,
+      flag: (forceReason === "Disqualified") ? "Disqualified" : (forceReason === "Timeout" ? "Timeout" : "") };
 
     let submitRes = await apiCall("submitWeeklyQuiz", {
-      name: userData.name, phone: userData.phone,
-      month: activeModuleObj.month, week: activeModuleObj.week,
-      results: resultPayload
+      name:userData.name, phone:userData.phone, month:activeModuleObj.month, week:activeModuleObj.week, results:payload
     });
 
     if (!submitRes || submitRes.error) {
       let msg = (submitRes && submitRes.error) ? submitRes.error : "Submission failed.";
-      let alreadyDone = msg.indexOf("already submitted") !== -1;
-      if (alreadyDone) clearQuizState();
+      let done = msg.indexOf("already submitted") !== -1;
+      if (done) clearQuizState();
       safeGet("quiz-wizard").innerHTML =
-        "<div style='text-align:center; padding:50px 20px;'>" +
-          '<div style="font-size:42px; margin-bottom:18px;">⚠️</div>' +
-          "<h2 style='color:#dc2626; margin:0; font-size:21px;'>Submission " + (alreadyDone ? "Blocked" : "Failed") + "</h2>" +
-          "<p style='color:var(--text-muted); font-size:14px; margin:14px 0 24px 0;'>" + escapeHtml(msg) +
-          (alreadyDone ? "" : "<br>Your answers are still saved in this browser. Please do not close this page.") + "</p>" +
-          (alreadyDone
-            ? '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="location.reload()">Back to Dashboard</button>'
-            : '<button class="btn" style="max-width:320px; margin:0 auto;" onclick="retrySubmit(&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>') +
-        "</div>";
+        '<div class="card" style="text-align:center;padding:44px 20px;">' +
+          '<div style="font-size:40px;margin-bottom:14px;">⚠️</div>' +
+          '<h2 style="color:var(--danger);margin:0;font-size:var(--fs-xl);">Submission ' + (done ? "Blocked" : "Failed") + '</h2>' +
+          '<p style="color:var(--text-muted);font-size:var(--fs-sm);margin:12px 0 22px;">' + escapeHtml(msg) +
+          (done ? "" : "<br>Your answers are still saved in this browser. Please do not close this page.") + '</p>' +
+          (done
+            ? '<button class="btn" style="max-width:320px;margin:0 auto;" onclick="location.reload()">Back to Dashboard</button>'
+            : '<button class="btn" style="max-width:320px;margin:0 auto;" onclick="retrySubmit(&quot;' + escapeHtml(forceReason) + '&quot;)">🔄 Retry Submission</button>') +
+        '</div>';
       isSubmitting = false;
       return;
     }
@@ -1742,19 +1965,12 @@
     clearQuizState();
     stopCamera();
 
-    if (forceReason === "Disqualified") {
-      await wepAlert("You were disqualified and your test has been submitted.", "Test Submitted", "danger", "🚨");
-    } else {
-      await wepAlert("Your assessment has been submitted successfully. Results will appear once the Admin publishes them.",
-                     "Submitted Successfully", "success", "🎉");
-    }
+    if (forceReason === "Disqualified") await wepAlert("You were disqualified and your test has been submitted.", "Test Submitted", "danger", "🚨");
+    else await wepAlert("Your assessment has been submitted successfully. Results appear once the Admin publishes them.", "Submitted Successfully", "success", "🎉");
     location.reload();
   }
 
-  function retrySubmit(forceReason) {
-    isSubmitting = false;
-    submitQuiz(true, forceReason);
-  }
+  function retrySubmit(forceReason) { isSubmitting = false; submitQuiz(true, forceReason); }
 </script>
 </body>
 </html>
