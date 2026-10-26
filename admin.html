@@ -1749,6 +1749,8 @@
       }
     }
     mSelect.innerHTML = html.join("");
+    // One click less: open the most recent attempt straight away.
+    if (mSelect.options.length > 1) mSelect.selectedIndex = mSelect.options.length - 1;
     renderDetailedLogs();
   }
 
