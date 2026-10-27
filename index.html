@@ -11,7 +11,7 @@
   <script>
     // ==========================================
     // PLACE YOUR DEPLOYED WEB APP URL HERE:
-    const API_URL = "https://script.google.com/macros/s/AKfycbyb9iycbUFlDQqK_k53kttmKYWsqi0MGSdxBC3R3odIeJDZHSabyBrIZ9P6E19VS7ZO/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwcNbP8xkhQZorZQkugLz97u808p89VoSwFZWOHATOjJPRl_rJ4xHUFzHbkhZp4hS5o/exec";
     // ==========================================
 
     const API_TIMEOUT_MS = 40000;
@@ -200,13 +200,15 @@
     .combo-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 6px);background:#fff;
                 border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-3);
                 max-height:min(52vh,280px);overflow-y:auto;display:none;overscroll-behavior:contain;
-                -webkit-overflow-scrolling:touch;}
+                -webkit-overflow-scrolling:touch;touch-action:pan-y;}
     .combo.open .combo-list{display:block;animation:slideDown .14s ease-out;}
     .combo-head{padding:9px 14px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.6px;
                 text-transform:uppercase;color:var(--text-faint);background:var(--surface-2);
                 border-bottom:1px solid var(--border);position:sticky;top:0;}
     .combo-item{padding:12px 14px;font-size:var(--fs-md);cursor:pointer;border-bottom:1px solid #f1f5f9;
-                font-weight:600;color:var(--text-strong);display:flex;align-items:center;gap:10px;min-height:var(--tap);}
+                font-weight:600;color:var(--text-strong);display:flex;align-items:center;gap:10px;min-height:var(--tap);
+                touch-action:pan-y;-webkit-tap-highlight-color:rgba(37,99,235,.14);}
+    .combo-item.pressed{background:var(--accent-soft);}
     .combo-item:last-child{border-bottom:none;}
     .combo-item:hover,.combo-item.active{background:var(--accent-soft);}
     .combo-item .av{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:#e0e7ff;color:#3730a3;
@@ -729,6 +731,7 @@
 
   // Login name list
   let USER_NAMES = [], userListMode = "ON", comboIndex = -1, nameListState = "loading";
+  let comboTouching = false, comboStart = null, comboLastTouch = 0;   // tap-vs-scroll tracking on touch devices
   let trainingData = null, trainingDismissed = false;
 
   /* ==========================================================
@@ -1179,7 +1182,7 @@
     if (comboIndex < 0) comboIndex = items.length - 1;
     if (comboIndex >= items.length) comboIndex = 0;
     for (let i = 0; i < items.length; i++) items[i].classList.toggle('active', i === comboIndex);
-    items[comboIndex].scrollIntoView({ block:"nearest" });
+    if (items[comboIndex].scrollIntoView) items[comboIndex].scrollIntoView({ block:"nearest" });
   }
 
   /** Single place that decides what the name field looks like. */
@@ -1262,7 +1265,17 @@
       nameInput.addEventListener('focus', function () { openCombo(false); });
       nameInput.addEventListener('click', function () { openCombo(false); });
       nameInput.addEventListener('input', function () { openCombo(true); });
-      nameInput.addEventListener('blur',  function () { setTimeout(closeCombo, 180); });
+      // comboTouching stays true for the whole finger-on-screen gesture, so a
+      // scroll that blurs the input does NOT close the list underneath it.
+      // A touch inside the list blurs the input. Browsers fire that blur either
+      // before or after the gesture, so the list is kept open while the finger
+      // is down AND for a moment afterwards.
+      nameInput.addEventListener('blur',  function () {
+          setTimeout(function () {
+              if (comboTouching || (Date.now() - comboLastTouch) < 500) return;
+              closeCombo();
+          }, 180);
+      });
       nameInput.addEventListener('keydown', function (ev) {
           let isOpen = comboEl().classList.contains('open');
           if (ev.key === "ArrowDown") { ev.preventDefault(); if (!isOpen) openCombo(true); else moveCombo(1); return; }
@@ -1275,11 +1288,55 @@
               else { closeCombo(); safeGet('uPhone').focus(); }
           }
       });
-      safeGet('comboList').addEventListener('pointerdown', function (ev) {
+      /**
+       * TOUCH FIX: pointerdown used to select immediately, so the very first
+       * touch picked whatever name was under the finger and the list could
+       * never be scrolled. Now a touch only selects if the finger did NOT
+       * move (a tap); any drag is left to the browser as a normal scroll.
+       */
+      let comboList = safeGet('comboList');
+      comboList.addEventListener('pointerdown', function (ev) {
           let item = ev.target.closest('.combo-item');
-          if (!item) return;
-          ev.preventDefault();
-          selectComboName(item.getAttribute('data-name'));
+          comboTouching = true; comboLastTouch = Date.now();
+          comboStart = { x: ev.clientX, y: ev.clientY, t: Date.now(), item: item || null, id: ev.pointerId };
+          if (item) item.classList.add('pressed');
+          // Only a mouse gets preventDefault (to keep the input focused).
+          // Doing it for touch would cancel the scroll gesture entirely.
+          if (ev.pointerType === 'mouse') ev.preventDefault();
+      });
+
+      comboList.addEventListener('pointermove', function (ev) {
+          if (!comboStart || ev.pointerId !== comboStart.id) return;
+          comboLastTouch = Date.now();
+          if (Math.abs(ev.clientY - comboStart.y) > 8 || Math.abs(ev.clientX - comboStart.x) > 8) {
+              // The finger is dragging - this is a scroll, not a tap.
+              if (comboStart.item) comboStart.item.classList.remove('pressed');
+              comboStart.item = null;
+          }
+      });
+
+      function endComboPointer(ev) {
+          if (!comboStart || (ev && ev.pointerId !== undefined && ev.pointerId !== comboStart.id)) return;
+          let picked = comboStart.item;
+          if (picked) picked.classList.remove('pressed');
+          comboStart = null; comboLastTouch = Date.now();
+          setTimeout(function () { comboTouching = false; }, 60);
+          if (!picked) return;                       // it was a scroll - leave the list open
+          if (ev && ev.cancelable) ev.preventDefault();
+          selectComboName(picked.getAttribute('data-name'));
+      }
+
+      comboList.addEventListener('scroll', function () { comboLastTouch = Date.now(); });
+      comboList.addEventListener('pointerup', endComboPointer);
+      comboList.addEventListener('pointercancel', function () {
+          if (comboStart && comboStart.item) comboStart.item.classList.remove('pressed');
+          comboStart = null;
+          setTimeout(function () { comboTouching = false; }, 60);
+      });
+      // Safety net for browsers that fire click without a usable pointerup.
+      comboList.addEventListener('click', function (ev) {
+          let item = ev.target.closest('.combo-item');
+          if (item && comboEl().classList.contains('open')) selectComboName(item.getAttribute('data-name'));
       });
       safeGet('comboCaret').addEventListener('pointerdown', function (ev) {
           ev.preventDefault();
